@@ -19,7 +19,7 @@ Currently, any searches done by Open WebUI have to use http.
 
 
 1. [Install docker](https://docs.docker.com/install/)
-2. Get searxng-docker
+2. Get SIA
 
 ```shell
 cd ~
@@ -27,10 +27,10 @@ git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
 
-3. Edit the [.env](https://github.com/searxng/searxng-docker/blob/master/.env) file to set the hostname and an email
+3. Edit the [.env](https://github.com/joshua-hvmn/SIA/blob/main/.env) file to set the hostname and an email
 4. Generate the secret key `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
    On a Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`
-5. Edit [searxng/settings.yml](https://github.com/searxng/searxng-docker/blob/master/searxng/settings.yml) according to
+5. Edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
    your needs
 
 > [!NOTE]
@@ -58,40 +58,54 @@ cd SIA
 > network mode) with the `BIND_ADDRESS` environment variable (defaults to `[::]:8080`). The environment variable can be
 > set directly inside `compose.yaml`.
 
-## Troubleshooting - How to access the logs
+10. Install an Ollama LLM from [their search directory](https://ollama.com/search).
+
+`docker exec ollama ollama run [Model ID, i.e. llama3.1:8b]`
+
+## Post Install
+
+1. Access Open WebUI at [http://localhost:3000](http://localhost:3000) by default.
+2. Create an admin account and bookmark the page.
+3. Connect Ollama to Open WebUI:
+   - Click name in corner > Admin Panel > Settings > Connections > Ollama API > Manage Ollama API Connections > Configure (gear icon)
+   - Make sure Ollama API is enabled, and the API connection is set to `http://ollama:11434`
+4. Connect SearXNG to Open WebUI:
+   - Admin Panel > Settings > Web Search
+   - Enable, set to SearXNG
+   - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
+   - Note that in this version of SIA, web searches done by Open WebUI are unencrypted. If this is problematic, skip this step. The self signed keys aren't trusted.
+5. Use SearXNG at [https://localhost:443](https://localhost:443) by default, and accept the security warning for the self signed certificates.
+   - In Chromium browsers, set the search bar to `https://localhost/search?q=%s`
+
+## Troubleshooting
+
+### How to access the logs
 
 To access the logs from all the containers use: `docker compose logs -f`.
 
 To access the logs of one specific container:
 
-- Caddy: `docker compose logs -f caddy`
-- SearXNG: `docker compose logs -f searxng`
-- Valkey: `docker compose logs -f redis`
+`docker compose logs -f [container name]`
 
-### Start SearXNG with systemd
+Container Names:
+- caddy
+- searxng
+- redis
+- ollama
+- open-webui
 
-You can skip this step if you don't use systemd.
-
-1. Copy the service template file:
-   ```sh
-   cp searxng-docker.service.template searxng-docker.service
-   ```
-
-2. Edit the content of ```WorkingDirectory``` in the ```searxng-docker.service``` file (only if the installation path is
-   different from ```/usr/local/searxng-docker```)
-
-3. Enable the service:
-   ```sh
-   systemctl enable $(pwd)/searxng-docker.service
-   ```
-
-4. Start the service:
-   ```sh
-   systemctl start searxng-docker.service
-   ```
-
-**Note:** Ensure the service file path matches your installation directory before enabling it.
-
+### Start & Stop Containers
+- Start: `docker compose up -d`
+- Stop: `docker compose down`
+- Restart: `docker compose up -d --force-recreate`
+- Restart Harder:
+```shell
+docker kill $(docker ps -q)
+docker compose down -v
+docker compose up -d
+```
+- CAUTION: Delete existing stopped containers: `docker container prune`
+   - This will delete all chats
 ## Multi Architecture Docker images
 
 Supported architecture:
@@ -116,4 +130,5 @@ Or the old way (with the old docker-compose version):
 git pull
 docker-compose pull
 docker-compose up -d
-```
+``` 
+WORK IN PROGRESS
