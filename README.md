@@ -23,7 +23,7 @@ Currently, any searches done by Open WebUI have to use http.
 
 ```shell
 cd ~
-git clone /home/joshvmn/PROJECTS/SIA
+git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
 
