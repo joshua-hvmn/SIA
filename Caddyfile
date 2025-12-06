@@ -89,9 +89,11 @@
 
 }
 
+# The following should be uncommented if you wish to use the open-webui interface through caddy / https.
+#
+# Default setup runs open-webui in offline mode.
+#
 # chat.localhost {
 #    reverse_proxy open-webui:8080
 #    tls {$SEARXNG_TLS}
 #}
-
-# Test
