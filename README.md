@@ -44,14 +44,14 @@ cd SIA
 
 ### Method 1: With Caddy included (recommended for beginners)
 
-6. Run SearXNG in the background: `docker compose up -d`
+6. Run SIA in the background: `docker compose up -d`
 
 ### Method 2: Bring your own reverse proxy (experienced users)
 
 6. Remove the caddy related parts in `compose.yaml` such as the caddy service and its volumes.
 7. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
 8. Generate and configure the required TLS certificates with the reverse proxy of your choice.
-9. Run SearXNG in the background: `docker compose up -d`
+9. Run SIA in the background: `docker compose up -d`
 
 > [!NOTE]
 > You can change the port `searxng` listens on inside the docker container (e.g. if you want to operate in `host`
