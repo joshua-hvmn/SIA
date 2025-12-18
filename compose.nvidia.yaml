@@ -57,19 +57,20 @@ services:
   ollama:
     container_name: ollama
     image: ollama/ollama
-    runtime: nvidia                           # Nvidia only
+    runtime: nvidia
     restart: unless-stopped
     networks:
       - SIAintranet
-  #  ports:                 # uncomment if you want to use 
+  #  ports:                 # uncomment if you want to use
   #    - "11434:11434"      # http://localhost:11434/ to diagnose ollama
     volumes:
       - ./ollama:/root/.ollama
     environment:
-      - USE_CUDA_DOCKER=true                  # Nvidia only
+      - USE_CUDA_DOCKER=true
       - DOCKER=true
-      - USE_CUDA=true                         # Nvidia only
-    deploy:                                   # Nvidia only
+      - USE_CUDA=true
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
       resources:
         reservations:
           devices:
@@ -79,8 +80,8 @@ services:
 
   open-webui:
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:cuda # Nvidia specific image if applicable
-    runtime: nvidia                           # Nvidia only
+    image: ghcr.io/open-webui/open-webui:cuda
+    runtime: nvidia
     restart: unless-stopped
     networks:
       - SIAintranet
@@ -93,11 +94,12 @@ services:
       - WEBUI_URL=http://localhost:3000/
       - WEB_SEARCH_ENGINE=searxng
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
-      - USE_CUDA_DOCKER=true                   # Nvidia only
+      - USE_CUDA_DOCKER=true
       - DOCKER=true
-      - USE_CUDA=true                          # Nvidia only
+      - USE_CUDA=true
+      - NVIDIA_VISIBLE_DEVICES=all
       - OFFLINE_MODE=true # Optional, you will have to manually check for updates
-    deploy:                                    # Nvidia only
+    deploy:
       resources:
         reservations:
           devices:
@@ -113,4 +115,3 @@ volumes:
   caddy-config:
   valkey-data2:
   searxng-data:
-  
