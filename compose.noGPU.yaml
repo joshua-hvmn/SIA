@@ -57,7 +57,6 @@ services:
   ollama:
     container_name: ollama
     image: ollama/ollama
-    runtime: nvidia                           # Nvidia only
     restart: unless-stopped
     networks:
       - SIAintranet
@@ -66,21 +65,12 @@ services:
     volumes:
       - ./ollama:/root/.ollama
     environment:
-      - USE_CUDA_DOCKER=true                  # Nvidia only
       - DOCKER=true
-      - USE_CUDA=true                         # Nvidia only
-    deploy:                                   # Nvidia only
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+
 
   open-webui:
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:main # Nvidia specific image if applicable
-#    runtime: nvidia                           # Nvidia only
+    image: ghcr.io/open-webui/open-webui:main
     restart: unless-stopped
     networks:
       - SIAintranet
@@ -93,17 +83,8 @@ services:
       - WEBUI_URL=http://localhost:3000/
       - WEB_SEARCH_ENGINE=searxng
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
-#      - USE_CUDA_DOCKER=true                   # Nvidia only
       - DOCKER=true
-#      - USE_CUDA=true                          # Nvidia only
       - OFFLINE_MODE=true # Optional, you will have to manually check for updates
-#    deploy:                                    # Nvidia only
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: all
-#              capabilities: [gpu]
 
 networks:
   SIAintranet:
