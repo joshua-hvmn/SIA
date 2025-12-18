@@ -1,0 +1,116 @@
+services:
+  caddy:
+    container_name: caddy
+    image: docker.io/library/caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - SIAintranet
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data:rw
+      - caddy-config:/config:rw
+    environment:
+      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME}
+      - SEARXNG_TLS=${SEARXNG_TLS}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  redis:
+    container_name: redis
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    networks:
+      - SIAintranet
+    volumes:
+      - valkey-data2:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  searxng:
+    container_name: searxng
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
+    networks:
+      - SIAintranet
+    volumes:
+      - ./searxng:/etc/searxng:rw
+      - searxng-data:/var/cache/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost/
+      - DOCKER=true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  ollama:
+    container_name: ollama
+    image: ollama/ollama
+    runtime: nvidia                           # Nvidia only
+    restart: unless-stopped
+    networks:
+      - SIAintranet
+  #  ports:                 # uncomment if you want to use 
+  #    - "11434:11434"      # http://localhost:11434/ to diagnose ollama
+    volumes:
+      - ./ollama:/root/.ollama
+    environment:
+      - USE_CUDA_DOCKER=true                  # Nvidia only
+      - DOCKER=true
+      - USE_CUDA=true                         # Nvidia only
+    deploy:                                   # Nvidia only
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  open-webui:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:main # Nvidia specific image if applicable
+#    runtime: nvidia                           # Nvidia only
+    restart: unless-stopped
+    networks:
+      - SIAintranet
+    ports:                   # Removable when https working right
+      - "3000:8080"
+    volumes:
+      - ./open-webui:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_URL=http://localhost:3000/
+      - WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+#      - USE_CUDA_DOCKER=true                   # Nvidia only
+      - DOCKER=true
+#      - USE_CUDA=true                          # Nvidia only
+      - OFFLINE_MODE=true # Optional, you will have to manually check for updates
+#    deploy:                                    # Nvidia only
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: all
+#              capabilities: [gpu]
+
+networks:
+  SIAintranet:
+
+volumes:
+  caddy-data:
+  caddy-config:
+  valkey-data2:
+  searxng-data:
+  

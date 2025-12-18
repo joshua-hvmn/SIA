@@ -89,7 +89,7 @@
 
 }
 
-# The following should be uncommented if you wish to use the open-webui interface through caddy / https.
+# The following should be uncommented if you wish to use the open-webui interface through https.
 #
 # Default setup runs open-webui in offline mode.
 #
