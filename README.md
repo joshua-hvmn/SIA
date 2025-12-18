@@ -52,6 +52,8 @@ cd SIA
 
 8. Run SIA in the background: `docker compose up -d`
 
+- Move to Step 12.
+
 #### Method 2: Bring your own reverse proxy (experienced users)
 
 8. Remove the caddy related parts in `compose.yaml` such as the caddy service and its volumes.
@@ -68,7 +70,7 @@ cd SIA
 
 `docker exec ollama ollama run [Model ID, i.e. llama3.1:8b]`
 
-## Post Install
+### IV. Post Install
 
 1. Access Open WebUI at [http://localhost:3000](http://localhost:3000) by default.
 2. Create an admin account and bookmark the page.
@@ -82,6 +84,28 @@ cd SIA
    - Note that in this version of SIA, web searches done by Open WebUI are unencrypted. If this is problematic, skip this step. The self signed keys aren't trusted.
 5. Use SearXNG at [https://localhost:443](https://localhost:443) by default, and accept the security warning for the self signed certificates.
    - In Chromium browsers, set the search bar to `https://localhost/search?q=%s`
+
+### V. Restarting
+When you restart your computer, you must restart the containers, you may have errors.
+
+1. Try to restart:
+```shell
+docker compose up -d --force-recreate
+```
+2. It may fail to start all containers. You can use the following command to check what is active on a given port:
+```shell
+sudo lsof -i :[port number]
+```
+- ports used are: 80, 443, 11434, 3000, and 8080
+3. Stop whatever is running
+```shell
+sudo systemctl stop [container name, i.e. apache2]
+```
+- I only need to stop apache2
+4. Restart the containers again:
+```shell
+docker compose up -d --force-recreate
+```
 
 ## Troubleshooting
 
@@ -112,29 +136,8 @@ docker compose up -d
 ```
 - CAUTION: Delete existing stopped containers: `docker container prune`
    - This will delete all chats
-## Multi Architecture Docker images
 
-Supported architecture:
+## How to update
 
-- amd64
-- arm64
-- arm/v7
 
-## How to update ?
-
-To update the SearXNG stack:
-
-```sh
-git pull
-docker compose pull
-docker compose up -d
-```
-
-Or the old way (with the old docker-compose version):
-
-```sh
-git pull
-docker-compose pull
-docker-compose up -d
-``` 
 WORK IN PROGRESS
