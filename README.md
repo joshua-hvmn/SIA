@@ -1,6 +1,11 @@
 # Synthetic Intelligence App
 
-Create a locally hosted AI chat app with search capabilities via a local SearXNG instance included in the Compose file. Comes bundled with Caddy.
+Take back some sovereignty with just a few commands.
+
+Here is a simple, all-in-one Docker Compose app that provides self hosted AI chat, a chat GUI, SearXNG web search, and a reverse proxy.
+
+SIA uses popular open source tools, and it's extensible.
+
 
 ## What is included?
 
@@ -10,14 +15,12 @@ Create a locally hosted AI chat app with search capabilities via a local SearXNG
 | [SearXNG](https://github.com/searxng/searxng) | SearXNG by itself                                              | [docker.io/searxng/searxng:latest](https://hub.docker.com/r/searxng/searxng) | [builder.dockerfile](https://github.com/searxng/searxng/blob/master/container/builder.dockerfile) [dist.dockerfile](https://github.com/searxng/searxng/blob/master/container/dist.dockerfile) |
 | [Valkey](https://github.com/valkey-io/valkey) | In-memory database                                             | [docker.io/valkey/valkey:8-alpine](https://hub.docker.com/r/valkey/valkey)   | [Dockerfile](https://github.com/valkey-io/valkey-container/blob/mainline/Dockerfile.template)                                                                                                 |
 | [Ollama](https://github.com/ollama/ollama) | LLM runner                                             | [docker.io/ollama/ollama](https://hub.docker.com/r/ollama/ollama)   |                                                                                                  |
-| [Open WebUI](https://github.com/open-webui/open-webui) | AI Chat front end                                             | ghcr.io/open-webui/open-webui   |                                                                                                  |
+| [Open WebUI](https://github.com/open-webui/open-webui) | AI chat GUI                                             | ghcr.io/open-webui/open-webui   |                                                                                                  |
 
-## How to use it
-
-Firstly, the Caddy proxy is mostly for SearXNG. You can use your own proxy by removing it from the compose file and deleting the caddyfile. 
-Currently, any searches done by Open WebUI have to use http.
+## Usage
 
 
+### I. Install
 1. [Install docker](https://docs.docker.com/install/)
 2. Get SIA
 
@@ -26,39 +29,42 @@ cd ~
 git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
+### II. Setup
+3. If applicable, edit the [.env](https://github.com/joshua-hvmn/SIA/blob/main/.env) file to set the hostname and an email (not necessary for local use)
+4. Generate the secret key
 
-3. Edit the [.env](https://github.com/joshua-hvmn/SIA/blob/main/.env) file to set the hostname and an email
-4. Generate the secret key `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
-   On a Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`
-5. Edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
-   your needs
+   Linux: `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
+   Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
+   Windows Powershell Script:
+ ```powershell
+ $randomBytes = New-Object byte[] 32
+ (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)
+ $secretKey = -join ($randomBytes | ForEach-Object { "{0:x2}" -f $_ })
+ (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml
+ ``` 
+5. You may edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
+   your needs.
+6. Select the appropriate compose file based on your GPU (or lack thereof), rename it to `compose.yaml`
+7. Delete or move the other two compose files.
 
-> [!NOTE]
-> Windows users can use the following powershell script to generate the secret key:
-> ```powershell
-> $randomBytes = New-Object byte[] 32
-> (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)
-> $secretKey = -join ($randomBytes | ForEach-Object { "{0:x2}" -f $_ })
-> (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml
-> ```
+### III. Startup
+#### Method 1: With Caddy included (recommended for beginners)
 
-### Method 1: With Caddy included (recommended for beginners)
+8. Run SIA in the background: `docker compose up -d`
 
-6. Run SIA in the background: `docker compose up -d`
+#### Method 2: Bring your own reverse proxy (experienced users)
 
-### Method 2: Bring your own reverse proxy (experienced users)
-
-6. Remove the caddy related parts in `compose.yaml` such as the caddy service and its volumes.
-7. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
-8. Generate and configure the required TLS certificates with the reverse proxy of your choice.
-9. Run SIA in the background: `docker compose up -d`
+8. Remove the caddy related parts in `compose.yaml` such as the caddy service and its volumes.
+9. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
+10. Generate and configure the required TLS certificates with the reverse proxy of your choice.
+11. Run SIA in the background: `docker compose up -d`
 
 > [!NOTE]
 > You can change the port `searxng` listens on inside the docker container (e.g. if you want to operate in `host`
 > network mode) with the `BIND_ADDRESS` environment variable (defaults to `[::]:8080`). The environment variable can be
 > set directly inside `compose.yaml`.
 
-10. Install an Ollama LLM from [their search directory](https://ollama.com/search).
+12. Install an Ollama LLM from [their search directory](https://ollama.com/search).
 
 `docker exec ollama ollama run [Model ID, i.e. llama3.1:8b]`
 
