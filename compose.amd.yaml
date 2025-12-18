@@ -56,8 +56,8 @@ services:
 
   ollama:
     container_name: ollama
-    image: ollama/ollama
-#    runtime: nvidia                           # Nvidia only
+    image: ollama/ollama:rocm
+    runtime: amd
     restart: unless-stopped
     networks:
       - SIAintranet
@@ -67,18 +67,17 @@ services:
       - ./ollama:/root/.ollama
     environment:
       - DOCKER=true
-#    deploy:                                   # Nvidia only
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: all
-#              capabilities: [gpu]
+      - AMD_VISIBLE_DEVICES=all
+    devices:                # \
+      - /dev/kfd            #  Optional if AMD Container Runtime Toolkit present
+      - /dev/dri            # /
+    security_opt:
+      - seccomp=unconfined
 
   open-webui:
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:rocm
-#    runtime: nvidia                           # Nvidia only
+    image: ghcr.io/open-webui/open-webui:main
+    runtime: amd
     restart: unless-stopped
     networks:
       - SIAintranet
@@ -87,19 +86,18 @@ services:
     volumes:
       - ./open-webui:/app/backend/data
     environment:
+      - AMD_VISIBLE_DEVICES=all
       - OLLAMA_BASE_URL=http://ollama:11434
       - WEBUI_URL=http://localhost:3000/
       - WEB_SEARCH_ENGINE=searxng
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
       - DOCKER=true
       - OFFLINE_MODE=true # Optional, you will have to manually check for updates
-#    deploy:                                    # Nvidia only
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: all
-#              capabilities: [gpu]
+    devices:                # \
+      - /dev/kfd            #  Optional if AMD Container Runtime Toolkit present
+      - /dev/dri            # /
+    security_opt:
+      - seccomp=unconfined
 
 networks:
   SIAintranet:
