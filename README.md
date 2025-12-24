@@ -30,43 +30,35 @@ git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
 ### II. Setup
-3. If applicable, edit the [.env](https://github.com/joshua-hvmn/SIA/blob/main/.env) file to set the hostname and an email (not necessary for local use)
+3. Run the setup script: `./setup.sh`
 4. Generate the secret key
 
    Linux: `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
-   Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
-   Windows Powershell Script:
- ```powershell
- $randomBytes = New-Object byte[] 32
- (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($randomBytes)
- $secretKey = -join ($randomBytes | ForEach-Object { "{0:x2}" -f $_ })
- (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml
- ``` 
-5. You can edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
-   your needs.
-6. Select the appropriate compose file based on your GPU (or lack thereof), rename it to `compose.yaml`
-7. Delete or move the other two compose files.
+   Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml` 
+
+**Optional:** 
+
+5. *If applicable, edit the [.env](https://github.com/joshua-hvmn/SIA/blob/main/.env) file to set the hostname and an email (not necessary for local use)*
+6. *You can edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
+   your needs.*
 
 ### III. Startup
 #### Method 1: With Caddy included (recommended for beginners)
 
-8. Run SIA in the background: `docker compose up -d`
+7. Run SIA in the background: `./start.sh`
 
-- Move to Step 12.
+- Move to Step 11.
 
 #### Method 2: Bring your own reverse proxy (experienced users)
 
-8. Remove the caddy related parts in `compose.yaml` such as the caddy service and its volumes.
-9. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
-10. Generate and configure the required TLS certificates with the reverse proxy of your choice.
-11. Run SIA in the background: `docker compose up -d`
+7. Remove the caddy related parts in `compose.yaml` such as the caddy service and its volumes.
+8. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
+9. Generate and configure the required TLS certificates with the reverse proxy of your choice.
+10. Run SIA in the background: `docker compose up -d`
 
-> [!NOTE]
-> You can change the port `searxng` listens on inside the docker container (e.g. if you want to operate in `host`
-> network mode) with the `BIND_ADDRESS` environment variable (defaults to `[::]:8080`). The environment variable can be
-> set directly inside `compose.yaml`.
+----
 
-12. Install an Ollama LLM from [their search directory](https://ollama.com/search).
+11. Install an Ollama LLM from [their search directory](https://ollama.com/search).
 
 `docker exec ollama ollama run [Model ID, i.e. llama3.1:8b]`
 
@@ -90,7 +82,7 @@ When you restart your computer, you must restart the containers, you may have er
 
 1. Restart:
 ```shell
-docker compose up -d --force-recreate
+./start.sh
 ```
 2. If it fails to restart, you can use the following command to check what is active on the busy port:
 ```shell
