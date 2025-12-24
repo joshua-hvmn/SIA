@@ -42,7 +42,7 @@ cd SIA
  $secretKey = -join ($randomBytes | ForEach-Object { "{0:x2}" -f $_ })
  (Get-Content searxng/settings.yml) -replace 'ultrasecretkey', $secretKey | Set-Content searxng/settings.yml
  ``` 
-5. You may edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
+5. You can edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
    your needs.
 6. Select the appropriate compose file based on your GPU (or lack thereof), rename it to `compose.yaml`
 7. Delete or move the other two compose files.
@@ -88,20 +88,19 @@ cd SIA
 ### V. Restarting
 When you restart your computer, you must restart the containers, you may have errors.
 
-1. Try to restart:
+1. Restart:
 ```shell
 docker compose up -d --force-recreate
 ```
-2. It may fail to start all containers. You can use the following command to check what is active on a given port:
+2. If it fails to restart, you can use the following command to check what is active on the busy port:
 ```shell
 sudo lsof -i :[port number]
 ```
-- ports used are: 80, 443, 11434, 3000, and 8080
+- ports used are: 443, 11434, 3000, 8888, and 8080
 3. Stop whatever is running
 ```shell
-sudo systemctl stop [container name, i.e. apache2]
+sudo systemctl stop [container name, i.e. ollama]
 ```
-- I only need to stop apache2
 4. Restart the containers again:
 ```shell
 docker compose up -d --force-recreate
