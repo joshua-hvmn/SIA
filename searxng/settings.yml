@@ -5,7 +5,8 @@ server:
   secret_key: "ultrasecretkey"  # change this!
   limiter: false  # enable this when running the instance for a public usage on the internet
   image_proxy: true
-  bind_address: "0.0.0.0"
+  bind_address: "127.0.0.1"
+  ports: "127.0.0.1:8888:8888"
 search:
   formats:
     - html
