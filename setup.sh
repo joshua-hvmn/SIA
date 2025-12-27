@@ -29,7 +29,7 @@ editFunc () {
     echo "Moving extra files to Archive"
     for i in "${!fileNames[@]}"; do
         if [[ -f "${fileNames[i]}" ]]; then
-            mv "${fileNames[i]}"  "Archive/"
+            mv "${fileNames[$i]}"  "Archive/"
         fi
     done
     exit
