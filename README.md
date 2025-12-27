@@ -30,7 +30,7 @@ git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
 ### II. Setup
-3. Run the setup script: `./setup.sh`
+3. Run the setup script and select a systema architecture: `./setup.sh`
 4. Generate the secret key
 
    Linux: `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
