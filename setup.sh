@@ -2,38 +2,56 @@
 
 # VARIABLES:
 
-options=("CPU Only" "Nvidia GPU" "AMD GPU")
+options=("CPU Only" "Nvidia GPU" "AMD GPU" "Exit Setup")
 fileNames=("compose.cpu.yaml" "compose.nvidia.yaml" "compose.amd.yaml")
 
 # FUNCTIONS:
 
 editFunc () {
-    mv ${fileNames[$1]} "compose.yaml"
-    unset 'fileNames[$1]'
-    fileNames=("${fileNames[@]}")
+    local index=$1
+    local  selectedFile="${fileNames[$index]}"
+
+    echo "Selected ${options[index]}"
+
+    # Safety Checks    
+    if [[ ! -f "$selectedFile" ]]; then
+        echo "ERROR: "$selectedFile" not found! Maybe you've already done the setup."
+        echo "Check the Wiki for troubleshooting advice."
+        exit
+    fi
+    mkdir -p "Archive"
+
+    # Rename File
+    echo "Renaming $selectedFile to compose.yaml"
+    mv "$selectedFile" "compose.yaml"
+
+    # Move Remaining Files
+    echo "Moving extra files to Archive"
     for i in "${!fileNames[@]}"; do
-        mv "$fileNames" "Archive/"
-        unset 'fileNames[$i]'
-        fileNames=("${fileNames[@]}")
+        if [[ -f "${fileNames[i]}" ]]; then
+            mv "${fileNames[i]}"  "Archive/"
+        fi
     done
+    exit
 }
 
 executeFunc () {
     case "$1" in
         "CPU Only")
             editFunc 0
-            exit
             ;;
         "Nvidia GPU")
             editFunc 1
-            exit
             ;;
         "AMD GPU")
             editFunc 2
+            ;;
+        "Exit Setup")
+            echo "Exiting."
             exit
             ;;
         *)
-            echo "Invalid choice, select a number between 1 and 3."
+            echo "Invalid choice, select a number between 1 and 4."
             ;;
     esac
 }
