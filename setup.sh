@@ -19,7 +19,11 @@ resetFunc () {
         [[ -e "$file" ]] || [[ -e "Archive/$file" ]] && ((count++))
     done
     [[ -f "compose.yaml" ]] && ((count++))
-    [[ $count -ne $targetCount ]] && echo "ERROR: UNABLE TO AUTO-RESET: a compose file is missing from the SIA system folders!" && echo "Please check the Wiki for troubleshooting advice." && exit
+    if [[ $count -ne $targetCount ]]; then
+        echo "ERROR: UNABLE TO AUTO-RESET: a compose file is missing from the SIA system folders!"
+        echo "Please check the Wiki for troubleshooting advice."
+        exit
+    fi
 
     # Reset File Names
     for file in "${fileNames[@]}"; do
@@ -28,8 +32,10 @@ resetFunc () {
             echo "Renamed compose.yaml to $file and restored other files from the archive."
         fi
     done
+    for file in "${fileNames[@]}"; do
+        [[ -f "Archive/$file" ]] && mv "Archive/$file"  .
+    done
 
-    mv Archive/* .
     changeSetup=1
     echo "ERROR FIXED!"
 }
@@ -41,7 +47,10 @@ editFunc () {
     echo "Selected ${options[index]}"
 
     # Safety Checks    
-    [[ ! -f "$selectedFile" ]] && echo "ERROR: "$selectedFile" isn't in the right place! Maybe you've already done the setup." && resetFunc
+    if [[ ! -f "$selectedFile" ]]; then
+        echo "ERROR: "$selectedFile" isn't in the right place! Maybe you've already done the setup."
+        resetFunc
+    fi
     mkdir -p "Archive"
 
     # Rename File
