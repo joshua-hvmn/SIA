@@ -21,9 +21,8 @@ resetFunc () {
         fi
     done
     [[ -f "compose.yaml" ]] && ((count++))
-    local presentFiles=$((targetCount - count))
     if [[ $count -ne $targetCount ]]; then
-        echo "ERROR: UNABLE TO AUTO-RESET: $presentFiles compose file[s] is/are missing from the SIA system folders!"
+        echo "ERROR: UNABLE TO AUTO-RESET: $((targetCount - count)) compose file[s] is/are missing from the SIA system folders!"
         echo "Please check the Wiki for troubleshooting advice."
         exit
     fi
