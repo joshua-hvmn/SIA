@@ -4,8 +4,35 @@
 
 options=("CPU Only" "Nvidia GPU" "AMD GPU" "Exit Setup")
 fileNames=("compose.cpu.yaml" "compose.nvidia.yaml" "compose.amd.yaml")
+changeSetup=0
 
 # FUNCTIONS:
+
+resetFunc () {
+    local count=0
+    local targetCount=${#fileNames[@]}
+
+    echo "AUTO-RESETTING..."
+
+    # Safety Checks
+    for file in "${fileNames[@]}"; do
+        [[ -e "$file" ]] || [[ -e "Archive/$file" ]] && ((count++))
+    done
+    [[ -f "compose.yaml" ]] && ((count++))
+    [[ $count -ne $targetCount ]] && echo "ERROR: UNABLE TO AUTO-RESET: a compose file is missing from the SIA system folders!" && echo "Please check the Wiki for troubleshooting advice." && exit
+
+    # Reset File Names
+    for file in "${fileNames[@]}"; do
+        if [[ ! -f "Archive/$file" ]]; then
+            [[ -f "compose.yaml" ]] && mv "compose.yaml"  "$file"
+            echo "Renamed compose.yaml to $file and restored other files from the archive."
+        fi
+    done
+
+    mv Archive/* .
+    changeSetup=1
+    echo "ERROR FIXED!"
+}
 
 editFunc () {
     local index=$1
@@ -14,24 +41,20 @@ editFunc () {
     echo "Selected ${options[index]}"
 
     # Safety Checks    
-    if [[ ! -f "$selectedFile" ]]; then
-        echo "ERROR: "$selectedFile" not found! Maybe you've already done the setup."
-        echo "Check the Wiki for troubleshooting advice."
-        exit
-    fi
+    [[ ! -f "$selectedFile" ]] && echo "ERROR: "$selectedFile" isn't in the right place! Maybe you've already done the setup." && resetFunc
     mkdir -p "Archive"
 
     # Rename File
-    echo "Renaming $selectedFile to compose.yaml"
     mv "$selectedFile" "compose.yaml"
+    echo "Renamed $selectedFile to compose.yaml"
 
     # Move Remaining Files
-    echo "Moving extra files to Archive"
     for i in "${!fileNames[@]}"; do
-        if [[ -f "${fileNames[$i]}" ]]; then
-            mv "${fileNames[$i]}"  "Archive/"
-        fi
+        [[ -f "${fileNames[$i]}" ]] && mv "${fileNames[$i]}"  "Archive/"
     done
+    echo "Moved extra files to Archive"
+    echo "SIA Initial Setup Complete"
+    [[ $changeSetup = 1 ]] && echo "If you've run SIA before on the previous architecture, run ./start.sh to restart on the new one."
     exit
 }
 
