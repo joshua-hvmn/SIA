@@ -16,7 +16,9 @@ resetFunc () {
 
     # Safety Checks
     for file in "${fileNames[@]}"; do
-        [[ -e "$file" ]] || [[ -e "Archive/$file" ]] && ((count++))
+        if [[ -e "$file" ]] || [[ -e "Archive/$file" ]]; then
+            ((count++))
+        fi
     done
     [[ -f "compose.yaml" ]] && ((count++))
     if [[ $count -ne $targetCount ]]; then
