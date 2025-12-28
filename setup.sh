@@ -30,6 +30,7 @@ resetFunc () {
         if [[ ! -f "Archive/$file" ]]; then
             [[ -f "compose.yaml" ]] && mv "compose.yaml"  "$file"
             echo "Renamed compose.yaml to $file and restored other files from the archive."
+            break
         fi
     done
     for file in "${fileNames[@]}"; do
