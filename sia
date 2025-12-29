@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # VARIABLES
 
 options=("CPU Only" "Nvidia GPU" "AMD GPU" "Exit Setup")
@@ -30,7 +32,7 @@ ensureSecretKey () {
 ## Help :
 
 printUsage () {
-    local arg=$1
+    local arg=$@
     case "$arg" in
         down|-d|--down)
             cat << EOF
@@ -160,7 +162,7 @@ case "$firstArg" in
         exit
         ;;
     help|-h|--help)
-        printUsage "$1"
+        printUsage "$@"
         ;;
     down|-d|--down)
             echo "Stopping SIA..."
