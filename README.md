@@ -4,7 +4,7 @@ Take back some sovereignty with just a few commands.
 
 Here is a simple, all-in-one Docker Compose app that provides self hosted AI chat, a chat GUI, SearXNG web search, and a reverse proxy.
 
-SIA uses popular open source tools, and it's extensible.
+SIA uses popular open source tools; it's extensible; and setup and management are greatly simplified by the included scripts.
 
 
 ## What is included?
@@ -21,8 +21,9 @@ SIA uses popular open source tools, and it's extensible.
 
 
 ### I. Install
-1. [Install docker](https://docs.docker.com/install/)
-2. Get SIA
+**1. [Install docker](https://docs.docker.com/install/)**
+
+**2. Get SIA**
 
 ```shell
 cd ~
@@ -30,11 +31,24 @@ git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
 ### II. Setup
-3. Run the setup script and select a system architecture: `./setup.sh`
-4. Generate the secret key
+**3. Run the start script** and choose yes when it asks to run the setup script: 
+```
+./start.sh
+```
+It will ask how your system is configured. Enter the number corresponding to your choice.
 
-   Linux: `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
-   Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml` 
+If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can manually run `./setup.sh` to change the setup! Just don't delete the archive, or the scripts might not work.
+
+**4. Generate the Secret Key**:
+
+Linux: 
+```
+sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml
+```  
+Mac: 
+```
+sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml
+``` 
 
 **Optional:** 
 
@@ -45,20 +59,21 @@ cd SIA
 ### III. Startup
 #### Method 1: With Caddy included (recommended for beginners)
 
-7. Run SIA in the background: `./start.sh`
-
-- Move to Step 11.
+**7. Run SIA** in the background and move to Step 11: 
+```
+./start.sh
+```
 
 #### Method 2: Bring your own reverse proxy (experienced users)
 
-7. Remove the caddy related parts in `compose.yaml` such as the caddy service and its volumes.
+7. Remove the caddy related parts in `compose.<architecture of choice>.yaml` such as the caddy service and its volumes.
 8. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
 9. Generate and configure the required TLS certificates with the reverse proxy of your choice.
-10. Run SIA in the background: `docker compose up -d`
+10. Run SIA in the background: `./start.sh`
 
 ----
 
-11. Install an Ollama LLM from [their search directory](https://ollama.com/search).
+**11. Install an Ollama LLM** from [their search directory](https://ollama.com/search).
 
 `docker exec ollama ollama run [Model ID, i.e. llama3.1:8b]`
 
@@ -66,10 +81,10 @@ cd SIA
 
 1. Access Open WebUI at [http://localhost:3000](http://localhost:3000) by default.
 2. Create an admin account and bookmark the page.
-3. Connect Ollama to Open WebUI:
+3. Connect Ollama to Open WebUI if necessary:
    - Click name in corner > Admin Panel > Settings > Connections > Ollama API > Manage Ollama API Connections > Configure (gear icon)
    - Make sure Ollama API is enabled, and the API connection is set to `http://ollama:11434`
-4. Connect SearXNG to Open WebUI:
+4. Connect SearXNG to Open WebUI if necessary:
    - Admin Panel > Settings > Web Search
    - Enable, set to SearXNG
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
@@ -78,7 +93,7 @@ cd SIA
    - In Chromium browsers, set the search bar to `https://localhost/search?q=%s`
 
 ### V. Restarting
-When you restart your computer, you must restart the containers, you may have errors.
+When you restart your computer, you must restart the containers:
 
 1. Restart:
 ```shell
