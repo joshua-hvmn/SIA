@@ -39,41 +39,30 @@ It will ask how your system is configured. Enter the number corresponding to you
 
 If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can run `./start.sh -s` to change the setup! Just don't delete the archive, or the scripts might not work.
 
-**4. Generate the Secret Key**:
-
-Linux: 
-```
-sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml
-```  
-Mac: 
-```
-sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml
-``` 
-
 **Optional:** 
 
-5. *If applicable, edit the [.env](https://github.com/joshua-hvmn/SIA/blob/main/.env) file to set the hostname and an email (not necessary for local use)*
-6. *You can edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
+4. *If applicable, edit the [.env](https://github.com/joshua-hvmn/SIA/blob/main/.env) file to set the hostname and an email (not necessary for local use)*
+5. *You can edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
    your needs.*
 
 ### III. Startup
 #### Method 1: With Caddy included (recommended for beginners)
 
-**7. Run SIA** in the background and move to Step 11: 
+**6. Run SIA** in the background and move to Step 10: 
 ```
 ./start.sh
 ```
 
 #### Method 2: Bring your own reverse proxy (experienced users)
 
-7. Remove the caddy related parts in `compose.<architecture of choice>.yaml` such as the caddy service and its volumes.
-8. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
-9. Generate and configure the required TLS certificates with the reverse proxy of your choice.
-10. Run SIA in the background: `./start.sh`
+6. Remove the caddy related parts in `compose.<architecture of choice>.yaml` such as the caddy service and its volumes.
+7. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
+8. Generate and configure the required TLS certificates with the reverse proxy of your choice.
+9. Run SIA in the background: `./start.sh`
 
 ----
 
-**11. Install an Ollama LLM** from [their search directory](https://ollama.com/search).
+**10. Install an Ollama LLM** from [their search directory](https://ollama.com/search).
 
 `./start.sh -dl [model of choice, i.e llama3.2:3b]`
 

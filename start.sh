@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # VARIABLES
 
@@ -8,8 +8,27 @@ scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 changeSetup=0
 firstArg="${1:-start}"
 shift || true
+# Detect OS
+
 
 # FUNCTIONS
+
+## Secret Key
+
+genSecretKey () {
+    if [[ ! -f ".siaSecretKey" ]]; then
+        echo "Generating secret key..."
+        openssl rand -hex 32 > .siaSecretKey
+    fi
+
+    local secretKey=$(cat .siaSecretKey)
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s/ultrasecretkey/$secretKey/g" searxng/settings.yml # Mac
+    else
+        sed -i "s/ultrasecretkey/$secretKey/g" searxng/settings.yml   # Linux
+    fi
+}
 
 ## Help :
 
@@ -139,7 +158,6 @@ editFunc () {
     echo "Moved extra files to Archive"
     echo "SIA Initial Setup Complete"
     [[ $changeSetup = 1 ]] && echo "If you've run SIA before on the previous architecture, run ./start.sh to restart on the new one."
-    exit
 }
 
 executeFunc () {
@@ -210,10 +228,13 @@ stateCheck () {
             1)
                 echo "It seems you haven't done the initial setup yet!"
                 startSetup
+                genSecretKey
+                exit
                 ;;
             0)
                 echo "The compose file is missing and something has been changed, but the setup script might be able to fix it!"
                 startSetup
+                exit
                 ;;
             *)
                 echo "ERROR: I'm not sure what went wrong!"
@@ -247,26 +268,31 @@ case "$firstArg" in
         ;;
     setup|-s|--setup)
         setupFunc
+        exit
         ;;
     help|-h|--help)
         printUsage "$1"
         ;;
     down|-d|--down)
-        if [[ $1 ]]; then
-            docker compose down $1
-        else
-            docker compose down
-        fi
+            echo "Stopping SIA..."
+            docker compose down "$@"
         ;;
     logs|-l|--logs)
-        if [[ $1 ]]; then
-            docker compose logs $1
+        if [[ $# -eq 0 ]]; then
+            echo "Showing last 100 logs:"
+            docker compose logs --tail 100
         else
-            docker compose logs -f
+            echo "Running 'docker compose logs $@'"
+            docker compose logs "$@"
         fi
         ;;
     download|-dl|--download)
+        if [[ -z "$(docker compose ps -q ollama)" ]]; then
+            echo "ERROR: SIA isn't running. Please run ./setup.sh without arguments."
+            exit
+        fi
         if [[ $1 ]]; then
+            echo "Downloading $1..."
             docker exec ollama ollama run $1
             echo "$1 is ready to use!"
             exit
