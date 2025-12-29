@@ -185,7 +185,8 @@ setupFunc () {
     echo "Please select your processor type."
     echo "System Architecture:"
     select opt in "${options[@]}"; do
-    executeFunc "$opt"
+        executeFunc "$opt"
+        break
     done
 }
 
@@ -292,8 +293,8 @@ case "$firstArg" in
             exit
         fi
         if [[ $1 ]]; then
-            echo "Downloading $1..."
-            docker exec ollama ollama run $1
+            echo "Running docker exec ollama ollama run $@"
+            docker exec ollama ollama run $@
             echo "$1 is ready to use!"
             exit
         else
