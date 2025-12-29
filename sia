@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-command -v docker >/dev/null && docker compose version >/dev/null || { echo "Docker Compose not found!"; echo "Exiting with code 2: improper configuration."; exit 2; }
+command -v docker >/dev/null && docker compose version >/dev/null || { echo "Docker Compose not found!" >&2; echo "Exiting with code 2: improper configuration." >&2; exit 2; }
 
 # VARIABLES
 
@@ -116,8 +116,8 @@ setupFunc () {
                     echo "Selected: $REPLY: $opt ($selectedFile)"
                     # Check file is present
                     if [[ ! -f $selectedFile ]]; then
-                        echo "ERROR: Compose file $selectedFile not found"
-                        echo "Exiting with code 2: improper configuration."
+                        echo "ERROR: Compose file $selectedFile not found" >&2
+                        echo "Exiting with code 2: improper configuration." >&2
                         exit 2
                     fi
 
@@ -130,7 +130,7 @@ setupFunc () {
                     ensureSecretKey
                     echo "Configuration saved to .env."
                 else
-                    echo "Invalid selection"
+                    echo "Invalid selection" >&2
                 fi
         esac
         break
@@ -142,7 +142,7 @@ setupFunc () {
 startCheck () {
     # Check if a compose file has already been defined, if not: setup, else start/restart
     if [[ ! -f .env ]] || ! grep -q "COMPOSE_FILE" .env; then
-        echo "First time setup detected (or missing configuration)"
+        echo "First time setup detected (or missing configuration)" >&2
         setupFunc
     else
         if [[ ! -d "ollama" ]]; then
@@ -185,8 +185,8 @@ case "$firstArg" in
         ;;
     download|-dl|--download)
         if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
-            echo "ERROR: SIA isn't running. Please run $scriptName without arguments."
-            echo "Exiting with code 2: improper configuration."
+            echo "ERROR: SIA isn't running. Please run $scriptName without arguments." >&2
+            echo "Exiting with code 2: improper configuration." >&2
             exit 2
         fi
         if [[ $1 ]]; then
@@ -195,16 +195,16 @@ case "$firstArg" in
             echo "$1 is ready to use!"
             exit
         else
-            echo "Please enter an Ollama model code to download (i.e. llama3.2:1b)"
-            echo "Example: $scriptName download llama3.2:1b"
-            echo "Exiting with code 1: improper usage."
+            echo "Please enter an Ollama model code to download (i.e. llama3.2:1b)" >&2
+            echo "Example: $scriptName download llama3.2:1b" >&2
+            echo "Exiting with code 1: improper usage." >&2
             exit 1
         fi
         ;;
     *)
-        echo "ERROR: Unknown command: $firstArg"
+        echo "ERROR: Unknown command: $firstArg" >&2
         printUsage
-        echo "Exiting with code 1: improper usage."
+        echo "Exiting with code 1: improper usage." >&2
         exit 1
         ;;
 esac
