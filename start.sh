@@ -289,7 +289,7 @@ case "$firstArg" in
         ;;
     download|-dl|--download)
         if [[ -z "$(docker compose ps -q ollama)" ]]; then
-            echo "ERROR: SIA isn't running. Please run ./setup.sh without arguments."
+            echo "ERROR: SIA isn't running. Please run ./start.sh without arguments."
             exit
         fi
         if [[ $1 ]]; then
