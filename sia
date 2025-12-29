@@ -84,11 +84,11 @@ Commands:
 Pass additional arguments to pass them to the underlying docker command.
 
 Examples:
-    ./start.sh                 Starts the containers. On first start, runs setup.
-    ./start.sh setup           Runs setup, for changing which setup you're using.
-    ./start.sh -d              Stops all SIA containers.
-    ./start.sh --help          Shows the help message.
-    ./start.sh -l --verbose    Shows the logs and passes the --verbose argument.
+    $scriptName                 Starts the containers. On first start, runs setup and generates the secret key.
+    $scriptName setup           Runs setup, for changing which setup you're using.
+    $scriptName -d              Stops all SIA containers.
+    $scriptName --help          Shows the help message.
+    $scriptName -l --verbose    Shows the logs and passes the --verbose argument.
 EOF
             ;;
     esac
