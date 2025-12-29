@@ -273,6 +273,7 @@ case "$firstArg" in
         else
             echo "Please enter an Ollama model code to download (i.e. llama3.2:1b)"
             exit
+        fi
         ;;
     *)
         echo "ERROR: Unknown command: $firstArg"
