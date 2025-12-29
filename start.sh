@@ -8,8 +8,6 @@ scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 changeSetup=0
 firstArg="${1:-start}"
 shift || true
-# Detect OS
-
 
 # FUNCTIONS
 
@@ -196,14 +194,19 @@ startSetup () {
     echo "Would you like to run the setup script? [Y/n]"
     read -r response
 
-    case "$response" in
+    local input="${response:-y}"
+
+    case "$input" in
         n|N|[nN]o|[nN]O|[nN][oO])
             echo "Exiting..."
             exit
             ;;
-        *)
+        [yY]|[yY][eE][sS])
             echo "Running setup..."
             setupFunc
+        *)
+            echo "Invalid choice, exiting."
+            exit   
             ;;
     esac
 }
