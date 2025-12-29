@@ -10,7 +10,7 @@ firstArg="${1:-start}"
 shift || true
 scriptName="./sia"
 
-cd $scriptWorkingDir
+cd "$scriptWorkingDir"
 
 # FUNCTIONS
 
