@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-command -v docker >/dev/null && docker compose version >/dev/null || { echo "Docker Compose not found!"; exit; }
+command -v docker >/dev/null && docker compose version >/dev/null || { echo "Docker Compose not found!"; echo "Exiting with code 2: improper configuration."; exit 2; }
 
 # VARIABLES
 
@@ -103,6 +103,7 @@ setupFunc () {
     select opt in "${options[@]}"; do
         # Convert menu response to index (associative array not used for Mac compatibility)
         local index="$((REPLY-1))"
+        local selectedFile=${fileNames[index]}
 
         case "$opt" in
             "Exit Setup")
@@ -111,9 +112,14 @@ setupFunc () {
                 ;;
             *)
                 # Check choice is valid
-                if [[ -n "${fileNames[index]}" ]]; then
-                    local selectedFile=${fileNames[index]}
+                if [[ -n "$selectedFile" ]]; then
                     echo "Selected: $REPLY: $opt ($selectedFile)"
+                    # Check file is present
+                    if [[ ! -f $selectedFile ]]; then
+                        echo "ERROR: Compose file $selectedFile not found"
+                        echo "Exiting with code 2: improper configuration."
+                        exit 2
+                    fi
 
                     # Create or Update .env
                     if grep -q "COMPOSE_FILE=" .env 2>/dev/null; then
@@ -180,7 +186,8 @@ case "$firstArg" in
     download|-dl|--download)
         if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
             echo "ERROR: SIA isn't running. Please run $scriptName without arguments."
-            exit
+            echo "Exiting with code 2: improper configuration."
+            exit 2
         fi
         if [[ $1 ]]; then
             echo "Running docker exec ollama ollama run $@"
@@ -190,12 +197,14 @@ case "$firstArg" in
         else
             echo "Please enter an Ollama model code to download (i.e. llama3.2:1b)"
             echo "Example: $scriptName download llama3.2:1b"
-            exit
+            echo "Exiting with code 1: improper usage."
+            exit 1
         fi
         ;;
     *)
         echo "ERROR: Unknown command: $firstArg"
         printUsage
-        exit
+        echo "Exiting with code 1: improper usage."
+        exit 1
         ;;
 esac
