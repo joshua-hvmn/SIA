@@ -29,6 +29,7 @@ SIA uses popular open source tools; it's extensible; and setup and management ar
 cd ~
 git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
+chmod +x sia # Make command line tool executable
 ```
 ### II. Setup
 **3. Run the SIA command line interface**: 
@@ -39,7 +40,6 @@ It will ask how your system is configured. Enter the number corresponding to you
 
 If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can run `./sia -s` to change the setup!
 
-*Note*: you may have to make the sia tool executable. Run: `chmod -x sia` if running the CLI doesn't work.
 
 **Optional:** 
 
