@@ -103,7 +103,6 @@ setupFunc () {
     select opt in "${options[@]}"; do
         # Convert menu response to index (associative array not used for Mac compatibility)
         local index="$((REPLY-1))"
-        local selectedFile=${fileNames[index]}
 
         case "$opt" in
             "Exit Setup")
@@ -112,7 +111,8 @@ setupFunc () {
                 ;;
             *)
                 # Check choice is valid
-                if [[ -n "$selectedFile" ]]; then
+                if [[ -n "${fileNames[index]}" ]]; then
+                    local selectedFile=${fileNames[index]}
                     echo "Selected: $REPLY: $opt ($selectedFile)"
                     # Check file is present
                     if [[ ! -f $selectedFile ]]; then
