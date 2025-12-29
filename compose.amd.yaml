@@ -48,6 +48,7 @@ services:
     environment:
       - SEARXNG_BASE_URL=http://localhost/
       - DOCKER=true
+      - SEARXNG_SECRET=${SEARXNG_SECRET}
     logging:
       driver: "json-file"
       options:
