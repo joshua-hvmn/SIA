@@ -32,7 +32,7 @@ ensureSecretKey () {
 ## Help :
 
 printUsage () {
-    local arg=$@
+    local arg="$@"
     case "$arg" in
         down|-d|--down)
             cat << EOF
