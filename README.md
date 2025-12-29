@@ -115,6 +115,9 @@ sudo systemctl stop [container name, i.e. ollama]
 
 ## Troubleshooting
 
+Run `./start.sh -h` for help.
+or `./start.sh -h <command>` for help with a specific command.
+
 ### How to access the logs
 
 To access the logs from all the containers use: `./start.sh -l`.
