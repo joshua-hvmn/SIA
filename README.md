@@ -37,7 +37,7 @@ cd SIA
 ```
 It will ask how your system is configured. Enter the number corresponding to your choice.
 
-If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can manually run `./setup.sh` to change the setup! Just don't delete the archive, or the scripts might not work.
+If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can run `./start.sh -s` to change the setup! Just don't delete the archive, or the scripts might not work.
 
 **4. Generate the Secret Key**:
 
@@ -75,7 +75,7 @@ sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml
 
 **11. Install an Ollama LLM** from [their search directory](https://ollama.com/search).
 
-`docker exec ollama ollama run [Model ID, i.e. llama3.1:8b]`
+`./start.sh -dl [model of choice, i.e llama3.2:3b]`
 
 ### IV. Post Install
 
@@ -110,18 +110,18 @@ sudo systemctl stop [container name, i.e. ollama]
 ```
 4. Restart the containers again:
 ```shell
-docker compose up -d --force-recreate
+./start.sh
 ```
 
 ## Troubleshooting
 
 ### How to access the logs
 
-To access the logs from all the containers use: `docker compose logs -f`.
+To access the logs from all the containers use: `./start.sh -l`.
 
 To access the logs of one specific container:
 
-`docker compose logs -f [container name]`
+`./start.sh -l [container name]`
 
 Container Names:
 - caddy
@@ -130,15 +130,16 @@ Container Names:
 - ollama
 - open-webui
 
+Or pass any single argument that can be used with `docker compose logs`
+
 ### Start & Stop Containers
-- Start: `docker compose up -d`
-- Stop: `docker compose down`
-- Restart: `docker compose up -d --force-recreate`
+- Start/Restart: `./start.sh`
+- Stop: `./start.sh -d`
 - Restart Harder:
 ```shell
 docker kill $(docker ps -q)
-docker compose down -v
-docker compose up -d
+./start.sh -d -v
+./start.sh
 ```
 - CAUTION: Delete existing stopped containers: `docker container prune`
    - This will delete all chats
