@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+command -v docker >/dev/null && docker compose version >/dev/null || { echo "Docker Compose not found!"; exit; }
 
 # VARIABLES
 
@@ -112,7 +113,7 @@ setupFunc () {
                 # Check choice is valid
                 if [[ -n "${fileNames[index]}" ]]; then
                     local selectedFile=${fileNames[index]}
-                    echo "Selected: $REPLY: $opt "$selectedFile" "
+                    echo "Selected: $REPLY: $opt ($selectedFile)"
 
                     # Create or Update .env
                     if grep -q "COMPOSE_FILE=" .env 2>/dev/null; then
@@ -122,7 +123,6 @@ setupFunc () {
                     fi
                     ensureSecretKey
                     echo "Configuration saved to .env."
-                    break
                 else
                     echo "Invalid selection"
                 fi
