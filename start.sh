@@ -204,6 +204,7 @@ startSetup () {
         [yY]|[yY][eE][sS])
             echo "Running setup..."
             setupFunc
+            ;;
         *)
             echo "Invalid choice, exiting."
             exit   
