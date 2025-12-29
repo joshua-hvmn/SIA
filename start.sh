@@ -298,7 +298,7 @@ case "$firstArg" in
         fi
         if [[ $1 ]]; then
             echo "Running docker exec ollama ollama run $@"
-            docker exec ollama ollama run $@
+            docker exec ollama ollama run "$@"
             echo "$1 is ready to use!"
             exit
         else
