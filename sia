@@ -8,7 +8,7 @@ scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 changeSetup=0
 firstArg="${1:-start}"
 shift || true
-scriptName="./start.sh"
+scriptName="./sia"
 
 cd $scriptWorkingDir
 

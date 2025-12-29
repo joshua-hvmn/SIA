@@ -31,13 +31,15 @@ git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
 ### II. Setup
-**3. Run the start script** and choose yes when it asks to run the setup script: 
+**3. Run the SIA command line interface**: 
 ```
-./start.sh
+./sia
 ```
 It will ask how your system is configured. Enter the number corresponding to your choice.
 
-If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can run `./start.sh -s` to change the setup! Just don't delete the archive, or the scripts might not work.
+If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can run `./sia -s` to change the setup!
+
+*Note*: you may have to make the sia tool executable. Run: `chmod -x sia` if running the CLI doesn't work.
 
 **Optional:** 
 
@@ -50,7 +52,7 @@ If you accidentally pick the wrong one or you change your system (i.e. *upgrade*
 
 **6. Run SIA** in the background and move to Step 10: 
 ```
-./start.sh
+./sia
 ```
 
 #### Method 2: Bring your own reverse proxy (experienced users)
@@ -58,13 +60,13 @@ If you accidentally pick the wrong one or you change your system (i.e. *upgrade*
 6. Remove the caddy related parts in `compose.<architecture of choice>.yaml` such as the caddy service and its volumes.
 7. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
 8. Generate and configure the required TLS certificates with the reverse proxy of your choice.
-9. Run SIA in the background: `./start.sh`
+9. Run SIA in the background: `./sia`
 
 ----
 
 **10. Install an Ollama LLM** from [their search directory](https://ollama.com/search).
 
-`./start.sh -dl [model of choice, i.e llama3.2:3b]`
+`./sia -dl [model of choice, i.e llama3.2:3b]`
 
 ### IV. Post Install
 
@@ -86,7 +88,7 @@ When you restart your computer, you must restart the containers:
 
 1. Restart:
 ```shell
-./start.sh
+./sia
 ```
 2. If it fails to restart, you can use the following command to check what is active on the busy port:
 ```shell
@@ -99,21 +101,20 @@ sudo systemctl stop [container name, i.e. ollama]
 ```
 4. Restart the containers again:
 ```shell
-./start.sh
+./sia
 ```
 
 ## Troubleshooting
 
-Run `./start.sh -h` for help.
-or `./start.sh -h <command>` for help with a specific command.
+Run `./sia -h` for help, or `./sia -h <command>` for help with a specific command.
 
 ### How to access the logs
 
-To access the logs from all the containers use: `./start.sh -l`.
+To access the the last 100 logs from all the containers use: `./sia -l`
 
 To access the logs of one specific container:
 
-`./start.sh -l [container name]`
+`./sia -l [container name]`
 
 Container Names:
 - caddy
@@ -122,16 +123,16 @@ Container Names:
 - ollama
 - open-webui
 
-Or pass any single argument that can be used with `docker compose logs`
+Or pass any arguments that can be used with `docker compose logs`
 
 ### Start & Stop Containers
-- Start/Restart: `./start.sh`
-- Stop: `./start.sh -d`
+- Start/Restart: `./sia`
+- Stop: `./sia -d` (accepts all docker compose down args)
 - Restart Harder:
 ```shell
 docker kill $(docker ps -q)
-./start.sh -d -v
-./start.sh
+./sia -d -v
+./sia
 ```
 - CAUTION: Delete existing stopped containers: `docker container prune`
    - This will delete all chats
