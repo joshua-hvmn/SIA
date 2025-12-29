@@ -59,7 +59,7 @@ Usage: $scriptName -l <command>
 Command being run: docker compose logs <command>
 
 Commands:
-    (no argument)     -f, full logs, CTRL+C to stop (default)
+    (no argument)     "--tail 100" shows last 100 logs by default
     <container name>  View logs for that container.
     --timestamps | -t Show timestamps for each file.
     --no-color        Black and white.
