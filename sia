@@ -142,15 +142,23 @@ setupFunc () {
 ## Start :
 
 startCheck () {
-    # Check if a compose file has already been defined, if not: setup, else start/restart
+    echo "SIA Starting..."
+    echo "Checking configuration..."
+    # Check if a compose file is defined, if not: setup, else start/restart
     if [[ ! -f .env ]] || ! grep -q "^COMPOSE_FILE=" .env; then
-        echo "First time setup detected (or missing configuration)" >&2
+        echo "First time setup detected (or missing configuration)!" >&2
         setupFunc
+    # should add elif for the -f .env above. Cannot run setup without the .env. Could pull with consent
     else
-        if [[ ! -d "ollama" ]]; then
-            echo Compose file present - Starting!
+        if grep -q "^PREVIOUSLY_RUN=true" .env 2>/dev/null; then
+            echo "Valid configuration - Restarting!"
         else
-            echo "Compose file present - Restarting!"
+            echo "Valid configuration - Starting for the first time, enjoy!"
+            # Append to .env:
+            if ! grep -q "^PREVIOUSLY_RUN=true" .env 2>/dev/null; then
+                [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+                echo "PREVIOUSLY_RUN=true" >> .env
+            fi
         fi
         docker compose up -d --force-recreate
     fi
@@ -161,8 +169,6 @@ startCheck () {
 case "$firstArg" in
     start|"")
         # Default
-        echo "SIA Startup"
-        echo "Checking configuration!"
         startCheck
         ;;
     setup|-s|--setup)
