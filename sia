@@ -184,7 +184,7 @@ case "$firstArg" in
     start|"")
         # Default
         echo "SIA Starting..."
-        startCheck 1
+        startCheck
         ;;
     setup|-s|--setup)
         setupFunc 0
