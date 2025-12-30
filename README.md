@@ -41,7 +41,7 @@ If you accidentally pick the wrong one or you change your system (i.e. *upgrade*
 
 *Note: If you receive a permission denied error, you might need to make the sia file executable with* `chmod +x sia`
 
-The SeaXNG secret key is stored in the .env if you need it.
+The SearXNG secret key is stored in the .env if you need it.
 
 **Optional:** 
 
