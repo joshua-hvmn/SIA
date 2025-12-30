@@ -6,7 +6,7 @@ command -v docker >/dev/null && docker compose version >/dev/null || { echo "Doc
 # VARIABLES
 
 options=("CPU Only" "Nvidia GPU" "AMD GPU" "Exit Setup")
-fileNames=("compose.cpu.yaml" "compose.nvidia.yaml" "compose.amd.yaml")
+fileNames=(".compose.cpu.yaml" ".compose.nvidia.yaml" ".compose.amd.yaml")
 scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 changeSetup=0
 firstArg="${1:-start}"
