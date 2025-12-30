@@ -26,7 +26,8 @@ ensureSecretKey () {
         # Generate:
         local secretKey=$(openssl rand -hex 32)
         # Append to .env:
-        echo "^SEARXNG_SECRET=$secretKey" >> .env
+        [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+        echo "SEARXNG_SECRET=$secretKey" >> .env
     fi
 }
 
@@ -125,7 +126,8 @@ setupFunc () {
                     if grep -q "^COMPOSE_FILE=" .env 2>/dev/null; then
                         sed -i.bak "s|^COMPOSE_FILE=.*|COMPOSE_FILE=$selectedFile|" .env && rm .env.bak
                     else
-                        echo "^COMPOSE_FILE=$selectedFile" >> .env
+                        [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+                        echo "COMPOSE_FILE=$selectedFile" >> .env
                     fi
                     ensureSecretKey
                     echo "Configuration saved to .env."
