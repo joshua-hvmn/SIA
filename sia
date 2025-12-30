@@ -104,58 +104,53 @@ setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
     select opt in "${options[@]}"; do
         # Check that input is valid
         if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
-            if [[ "$REPLY" -le "${#fileNames[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
-                # Convert menu response to index (associative array not used for Mac compatibility)
-                local index="$((REPLY-1))"
-            elif [[ "$REPLY" -eq 4 ]]; then
-                : # Do nothing, will exit without error.
+            if [[ "$REPLY" -le "${#options[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
+                case "$opt" in
+                    "Exit Setup")
+                        echo "Exiting."
+                        exit
+                        ;;
+                    *)
+                        local index="$((REPLY-1))"
+                        # Check menu choice is associated with a file name
+                        if [[ -n "${fileNames[index]}" ]]; then
+                            local selectedFile=${fileNames[index]}
+                            echo "Selected: $REPLY: $opt ($selectedFile)"
+                            # Check file is present
+                            if [[ ! -f $selectedFile ]]; then
+                                echo "ERROR: Compose file $selectedFile not found" >&2
+                                echo "Exiting with code 2: improper configuration." >&2
+                                exit 2
+                            fi
+
+                            # Create or Update .env
+                            if grep -q "^COMPOSE_FILE=" .env 2>/dev/null; then
+                                sed -i.bak "s|^COMPOSE_FILE=.*|COMPOSE_FILE=$selectedFile|" .env && rm .env.bak
+                            else
+                                [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+                                echo "COMPOSE_FILE=$selectedFile" >> .env
+                            fi
+                            ensureSecretKey
+                            echo "Configuration saved to .env."
+
+                            # Check if previously run
+                            if [[ $@ -ne 1 ]] && grep -q "^PREVIOUSLY_RUN=true" .env 2>/dev/null; then
+                                echo "Previous run detected: automatically restarting..."
+                                startCheck
+                            fi
+                            break
+                        else
+                            echo "Invalid selection" >&2
+                        fi
+                esac
             else
                 echo "Invalid Selection: $REPLY" >&2
                 echo "Try again. Enter a number between 1 and ${#options[@]}"
-                setupFunc $@
             fi
         else
             echo "Invalid Selection: $REPLY" >&2
             echo "Try again. Enter a number between 1 and ${#options[@]}"
-            setupFunc $@
         fi
-        case "$opt" in
-            "Exit Setup")
-                echo "Exiting."
-                exit
-                ;;
-            *)
-                # Check menu choice is associated with a file name
-                if [[ -n "${fileNames[index]}" ]]; then
-                    local selectedFile=${fileNames[index]}
-                    echo "Selected: $REPLY: $opt ($selectedFile)"
-                    # Check file is present
-                    if [[ ! -f $selectedFile ]]; then
-                        echo "ERROR: Compose file $selectedFile not found" >&2
-                        echo "Exiting with code 2: improper configuration." >&2
-                        exit 2
-                    fi
-
-                    # Create or Update .env
-                    if grep -q "^COMPOSE_FILE=" .env 2>/dev/null; then
-                        sed -i.bak "s|^COMPOSE_FILE=.*|COMPOSE_FILE=$selectedFile|" .env && rm .env.bak
-                    else
-                        [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
-                        echo "COMPOSE_FILE=$selectedFile" >> .env
-                    fi
-                    ensureSecretKey
-                    echo "Configuration saved to .env."
-
-                    # Check if previously run
-                    if [[ $@ -ne 1 ]] && grep -q "^PREVIOUSLY_RUN=true" .env 2>/dev/null; then
-                        echo "Previous run detected: automatically restarting..."
-                        startCheck
-                    fi
-                else
-                    echo "Invalid selection" >&2
-                fi
-        esac
-        break
     done
 }
 
@@ -191,7 +186,7 @@ case "$firstArg" in
         startCheck
         ;;
     setup|-s|--setup)
-        setupFunc
+        setupFunc 0
         exit
         ;;
     help|-h|--help)
