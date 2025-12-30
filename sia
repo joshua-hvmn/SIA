@@ -21,12 +21,12 @@ cd "$scriptWorkingDir"
 
 ensureSecretKey () {
     # Check if key exists and generate one if it doesn't
-    if ! grep -q "SEARXNG_SECRET" .env 2>/dev/null; then
+    if ! grep -q "^SEARXNG_SECRET=" .env 2>/dev/null; then
         echo "Generating secret key..."
         # Generate:
         local secretKey=$(openssl rand -hex 32)
         # Append to .env:
-        echo "SEARXNG_SECRET=$secretKey" >> .env
+        echo "^SEARXNG_SECRET=$secretKey" >> .env
     fi
 }
 
@@ -122,10 +122,10 @@ setupFunc () {
                     fi
 
                     # Create or Update .env
-                    if grep -q "COMPOSE_FILE=" .env 2>/dev/null; then
+                    if grep -q "^COMPOSE_FILE=" .env 2>/dev/null; then
                         sed -i.bak "s|^COMPOSE_FILE=.*|COMPOSE_FILE=$selectedFile|" .env && rm .env.bak
                     else
-                        echo "COMPOSE_FILE=$selectedFile" >> .env
+                        echo "^COMPOSE_FILE=$selectedFile" >> .env
                     fi
                     ensureSecretKey
                     echo "Configuration saved to .env."
@@ -141,7 +141,7 @@ setupFunc () {
 
 startCheck () {
     # Check if a compose file has already been defined, if not: setup, else start/restart
-    if [[ ! -f .env ]] || ! grep -q "COMPOSE_FILE" .env; then
+    if [[ ! -f .env ]] || ! grep -q "^COMPOSE_FILE=" .env; then
         echo "First time setup detected (or missing configuration)" >&2
         setupFunc
     else
