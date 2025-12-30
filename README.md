@@ -42,7 +42,7 @@ cd SIA
 
 **4. Select a system architecture**:  The tool will ask how your system is configured. Enter the corresponding number of your choice.
 
-If you accidentally pick the wrong one or you modify your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can run `./sia -s` to change the setup!
+If you accidentally pick the wrong one or you modify your system (i.e. *upgrade* from an NVIDIA GPU to an AMD GPU), you can run `./sia -s` to change the setup!
 
 The SearXNG secret key will be randomly generated upon first setup, and stored in the .env if you need it, or want to change it. (Show hidden files in your file explorer to see it and the compose yaml files!)
 
@@ -69,8 +69,8 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
    - Admin Panel > Settings > Web Search
    - Enable, set to SearXNG
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
-   - Note that in this version of SIA, web searches done by Open WebUI are unencrypted. If this is problematic, skip this step. The self signed keys aren't trusted.
-10. Use SearXNG at [https://localhost:443](https://localhost:443) by default, and accept the security warning for the self signed certificates.
+   - Note that in this version of SIA, web searches done by Open WebUI are unencrypted. If this is problematic, skip this step. The self-signed keys aren't trusted.
+10. Use SearXNG at [https://localhost:443](https://localhost:443) by default, and accept the security warning for the self-signed certificates.
    - In Chromium browsers, set the search bar to `https://localhost/search?q=%s`
 
 11. That's pretty much everything, enjoy!
@@ -114,23 +114,21 @@ The `./sia` command line tool comes equipped with several subcommands and an abi
 | setup         | -s, --setup       | Runs the setup wizard. Run if you change between CPU/Nvidia/AMD. |
 | down          | -d, --down        | Stop the SIA stack. Accepts additional arguments. (Docker Compose command) |
 | logs          | -l, --logs        | View relevant logs Accepts additional arguments. (Docker Compose command) |
-| download      | -dl. --download   | Download an Ollama model. Requires an additional argument. (Docker command) |
+| download      | -dl, --download   | Download an Ollama model. Requires an additional argument. (Docker command) |
 | help          | -h, --help        | Show a useful help message. Can pass "down" or "logs" commands for extra help. |
 
 ## Troubleshooting
 
 ### How to access the logs
 
-To access the the last 100 logs from all the containers use: `./sia -l`
+To access the last 100 logs from all containers in use: `./sia -l`
 
-To access the logs of one specific container:
-
-`./sia -l [container name]`
+To access the logs of one specific container: `./sia -l [container name]`
 
 Container Names:
 - caddy
 - searxng
-- redis
+- redis (valkey)
 - ollama
 - open-webui
 
@@ -146,6 +144,6 @@ docker kill $(docker ps -q)
 ./sia
 ```
 - CAUTION: Delete existing stopped containers: `docker container prune`
-   - This will delete all chats
+   - This will delete all chats.
 
 The wiki is in production, it will contain more information.
