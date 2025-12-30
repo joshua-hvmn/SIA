@@ -4,7 +4,7 @@ Take back some sovereignty with just a few commands.
 
 Here is a simple, all-in-one Docker Compose app that provides self hosted AI chat, a chat GUI, SearXNG web search, and a reverse proxy.
 
-SIA uses popular open source tools; it's extensible; and setup and management are greatly simplified by the included scripts.
+SIA uses popular open source tools; it's extensible; and setup and management are greatly simplified by the included command line tool (script).
 
 
 ## What is included?
@@ -29,10 +29,9 @@ SIA uses popular open source tools; it's extensible; and setup and management ar
 cd ~
 git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
-chmod +x sia # Make command line tool executable
 ```
 ### II. Setup
-**3. Run the SIA command line interface**: 
+**3. Run the SIA command line tool** (it's just a simple script): 
 ```
 ./sia
 ```
@@ -40,6 +39,9 @@ It will ask how your system is configured. Enter the number corresponding to you
 
 If you accidentally pick the wrong one or you change your system (i.e. *upgrade* from an Nvidia GPU to an AMD GPU), you can run `./sia -s` to change the setup!
 
+*Note: If you receive a permission denied error, you might need to make the sia file executable with* `chmod +x sia`
+
+The SeaXNG secret key is stored in the .env if you need it.
 
 **Optional:** 
 
@@ -57,8 +59,8 @@ If you accidentally pick the wrong one or you change your system (i.e. *upgrade*
 
 #### Method 2: Bring your own reverse proxy (experienced users)
 
-6. Remove the caddy related parts in `compose.<architecture of choice>.yaml` such as the caddy service and its volumes.
-7. Point your reverse proxy to the port set for the `searxng` service in `compose.yaml` (8080 by default).
+6. Remove the caddy related parts in `.compose.<architecture of choice>.yaml` such as the caddy service and its volumes.
+7. Point your reverse proxy to the port set for the `searxng` service in the compose file (8080 by default).
 8. Generate and configure the required TLS certificates with the reverse proxy of your choice.
 9. Run SIA in the background: `./sia`
 
@@ -137,7 +139,4 @@ docker kill $(docker ps -q)
 - CAUTION: Delete existing stopped containers: `docker container prune`
    - This will delete all chats
 
-## How to update
-
-
-WORK IN PROGRESS
+The wiki is in production, it will contain more information.
