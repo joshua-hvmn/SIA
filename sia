@@ -101,6 +101,7 @@ EOF
 setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
     echo "Please select your processor type."
     echo "System Architecture:"
+    [[ "$@" -eq 1 ]] && local dontRestart=1 || local dontRestart=0
     select opt in "${options[@]}"; do
         # Check that input is valid
         if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
@@ -133,8 +134,8 @@ setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
                             ensureSecretKey
                             echo "Configuration saved to .env."
 
-                            # Check if previously run
-                            if [[ $@ -ne 1 ]] && grep -q "^PREVIOUSLY_RUN=true" .env 2>/dev/null; then
+                            # Check if previously run / need to restart
+                            if [[ $dontRestart -eq 0 ]] && grep -q "^PREVIOUSLY_RUN=true" .env 2>/dev/null; then
                                 echo "Previous run detected: automatically restarting..."
                                 startCheck
                             fi
