@@ -87,7 +87,6 @@ When you restart your computer, you must restart the containers:
 sudo lsof -i :[port number]
 ```
 - ports used are: 443, 11434, 3000, 8888, and 8080
-- a common issue is that Ollama was previously installed directly (not via Docker). It may need to be manually stopped each time you restart the system in order to restart SIA.
 3. Stop whatever is running
 ```shell
 sudo systemctl stop [container name, i.e. ollama]

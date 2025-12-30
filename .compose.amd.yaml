@@ -62,8 +62,8 @@ services:
     restart: unless-stopped
     networks:
       - SIAintranet
-  #  ports:                 # uncomment if you want to use 
-  #    - "11434:11434"      # http://localhost:11434/ to diagnose ollama
+    ports:                 # uncomment if you want to use 
+      - "11435:11434"      # http://localhost:11434/ to diagnose ollama
     volumes:
       - ./ollama:/root/.ollama
     environment:
@@ -88,7 +88,7 @@ services:
       - ./open-webui:/app/backend/data
     environment:
       - AMD_VISIBLE_DEVICES=all
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=http://ollama:11435
       - WEBUI_URL=http://localhost:3000/
       - WEB_SEARCH_ENGINE=searxng
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
