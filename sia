@@ -101,7 +101,7 @@ EOF
 setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
     echo "Please select your processor type."
     echo "System Architecture:"
-    [[ "$@" -eq 1 ]] && local dontRestart=1 || local dontRestart=0
+    local dontRestart="${1:-0}"
     select opt in "${options[@]}"; do
         # Check that input is valid
         if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
@@ -184,7 +184,7 @@ case "$firstArg" in
     start|"")
         # Default
         echo "SIA Starting..."
-        startCheck
+        startCheck 1
         ;;
     setup|-s|--setup)
         setupFunc 0
