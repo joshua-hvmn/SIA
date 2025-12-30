@@ -102,16 +102,30 @@ setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
     echo "Please select your processor type."
     echo "System Architecture:"
     select opt in "${options[@]}"; do
-        # Convert menu response to index (associative array not used for Mac compatibility)
-        local index="$((REPLY-1))"
-
+        # Check that input is valid
+        if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
+            if [[ "$REPLY" -le "${#fileNames[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
+                # Convert menu response to index (associative array not used for Mac compatibility)
+                local index="$((REPLY-1))"
+            elif [[ "$REPLY" -eq 4 ]]; then
+                : # Do nothing, will exit without error.
+            else
+                echo "Invalid Selection: $REPLY" >&2
+                echo "Try again. Enter a number between 1 and ${#options[@]}"
+                setupFunc $@
+            fi
+        else
+            echo "Invalid Selection: $REPLY" >&2
+            echo "Try again. Enter a number between 1 and ${#options[@]}"
+            setupFunc $@
+        fi
         case "$opt" in
             "Exit Setup")
                 echo "Exiting."
                 exit
                 ;;
             *)
-                # Check choice is valid
+                # Check menu choice is associated with a file name
                 if [[ -n "${fileNames[index]}" ]]; then
                     local selectedFile=${fileNames[index]}
                     echo "Selected: $REPLY: $opt ($selectedFile)"
