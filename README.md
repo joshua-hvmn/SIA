@@ -147,3 +147,19 @@ docker kill $(docker ps -q)
    - This will delete all chats.
 
 The wiki is in production, it will contain more information.
+
+## Licensing
+
+This project is multi-licensed to respect the upstream source while providing maximum flexibility for the original tooling created for SIA.
+
+### 1. GNU AGPL-3.0
+
+- All files are derived from the [searxng-docker](https://github.com/searxng/searxng-docker) project unless otherwise specified below.
+- These files inherit the GNU Affero General Public License v3.0.
+- **Key Requirement:** If you modify these files and run them on a server accessible over a network, you must make your modified source code available to your users.
+
+### 2. MIT License
+
+- The primary management script (`sia`) in this repository is an *original work* created by [Joshua Haveman](https://github.com/joshua-hvmn).
+- The sia file is licensed under the permissive MIT License.
+- You are free to use, copy, modify, and distribute the sia script (only) with minimal restrictions.
