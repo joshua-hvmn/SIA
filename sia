@@ -1,65 +1,23 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-command -v docker >/dev/null && docker compose version >/dev/null || { echo "Docker Compose not found!" >&2; echo "Exiting with code 2: improper configuration." >&2; exit 2; }
 
 # VARIABLES
 
 options=("CPU Only" "Nvidia GPU" "AMD GPU" "Exit Setup")
 fileNames=(".compose.cpu.yaml" ".compose.nvidia.yaml" ".compose.amd.yaml")
+dependencies=("docker")
 scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 changeSetup=0
 firstArg="${1:-start}"
 shift || true
 scriptName="./$(basename "$0")"
 
-cd "$scriptWorkingDir"
-
 # FUNCTIONS
 
-## .env editor
-
-editEnv () { # Pass string to be appended/ modified
-    local contents="$1"
-    touch .env
-    [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
-    echo "$1" >> .env
-}
-
-## Secret Key
-
-ensureSecretKey () {
-    # Check if key exists and generate one if it doesn't
-    touch .env
-    if ! grep -q "^SEARXNG_SECRET=" .env 2>/dev/null; then
-        echo "Generating secret key..."
-        local secretKey
-        # Generate the key
-        # Try OpenSSL :
-        if command -v openssl >/dev/null 2>&1; then
-            secretKey=$(openssl rand -hex 32)
-        # Try od (POSIX) :
-        elif command -v od >/dev/null 2>&1; then
-            secretKey=$(od -An -N32 -tx1 < /dev/urandom | tr -d '[:space:]')
-        else
-            # Try Python :
-            if command -v python3 >/dev/null 2>&1; then
-                secretKey=$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || true)
-            fi
-            # Fallback: cksum, not crypto secure :
-            if [[ -z "$secretKey" ]]; then
-                secretKey=$(head -c32 /dev/urandom | cksum | cut -d' ' -f1)
-            fi
-        fi
-        # Append to .env:
-        editEnv "SEARXNG_SECRET=$secretKey"
-        # touch .env
-        # [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
-        # echo "SEARXNG_SECRET=$secretKey" >> .env
-    fi
-}
-
 ## Help :
+# - Accepts one extra argument
+# - Add help menus for new commands by adding them to the case statement
 
 printUsage () {
     local arg="$@"
@@ -124,9 +82,116 @@ EOF
     esac
 }
 
-## Setup :
+## Error Exit
+# - Call with the number of you error code in place of "exit #"
+# - Extend by adding to the case statement
 
-setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
+errExit () {
+    local errorCode="$1"
+    local errorDesc
+    case $errorCode in
+        1)
+            errorDesc="usage"
+            ;;
+        2)
+            errorDesc="confuration"
+            ;;
+        *)
+            errorDesc="something!"
+            ;;
+    esac
+    echo "Exiting with code $errorCode: improper $errorDesc." >&2
+    exit $errorCode
+}
+
+## Check Dependencies
+#  - Add more in the dependencies array
+
+checkDependencies () {
+    for cmd in ${dependencies}; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            echo "Error: $cmd not found. Please make sure it is installed and you have permission to use it."
+            errExit 2
+        fi
+    done
+}
+
+## .env editor
+# - Pass "KEY=VALUE"
+# - Updates the .env with given "KEY=VALUE" 
+# - Ensures new line and creates an .env if necessary
+# - Should add conditional and inject the 2 other required lines to the .env if it has to create a new one.
+
+editEnv () {
+    local entry="$1"
+    local key="${entry%%=*}" # Extracts everything before the '='
+    local emptyEnv=0
+
+    # Check if the .env is missing or empty and fix if necessary
+    if [[ ! -s .env ]]; then
+        emptyEnv=1
+    fi
+    touch .env
+    if [[ emptyEnv -eq 1 ]]; then
+        echo "SEARXNG_HOSTNAME=localhost" >> .env
+        echo "SEARXNG_TLS=internal" >> .env
+    fi
+    # Check if "KEY=VALUE" exists and create or edit it
+    if grep -q "^${key}=" .env 2>/dev/null; then
+        # Update if "KEY=VALUE" exists
+        sed -i.bak "s|^${key}=.*|${entry}|" .env && rm .env.bak
+        return 0
+    else
+        # Append "KEY=VALUE" if it is missing
+        [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+        echo "$entry" >> .env
+        return 0
+    fi
+}
+
+## Secret Key
+# - Checks if a secret key exists and randomly generate one if it doesn't
+# - Tries in this order: openssl, od, python3, cksum
+# - Nested conditional make this annoying to extend, but it shouldn't need to be extended.
+
+ensureSecretKey () {
+    # Check if key exists and generate one if it doesn't
+    touch .env
+    if ! grep -q "^SEARXNG_SECRET=" .env 2>/dev/null; then
+        echo "Generating secret key..."
+        local secretKey
+        # Generate the key
+        # Try OpenSSL :
+        if command -v openssl >/dev/null 2>&1; then
+            secretKey=$(openssl rand -hex 32)
+        # Try od (POSIX) :
+        elif command -v od >/dev/null 2>&1; then
+            secretKey=$(od -An -N32 -tx1 < /dev/urandom | tr -d '[:space:]')
+        else
+            # Try Python :
+            if command -v python3 >/dev/null 2>&1; then
+                secretKey=$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || true)
+            fi
+            # Fallback: cksum, not crypto secure :
+            if [[ -z "$secretKey" ]]; then
+                secretKey=$(head -c32 /dev/urandom | cksum | cut -d' ' -f1)
+                echo "I couldn't generate a cryptographically secure Secret Key, so I fell back on a less secure alternative."
+                echo "SIA should still work but consider manually generating a random 64 character hex string and manually editing the .env"
+            fi
+        fi
+        # Append to .env:
+        editEnv "SEARXNG_SECRET=$secretKey"
+        return 0
+    fi
+}
+
+## Setup :
+# - Pass 1 after calling to prevent inbuilt auto-restart
+# - Asks user to select which compose file to use.
+# - Checks or generates the secret key.
+# - SIA will restart automatically when you select or change a setup.
+
+setupFunc () {
     echo "Please select your processor type."
     echo "System Architecture:"
     local dontRestart="${1:-0}"
@@ -148,18 +213,11 @@ setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
                             # Check file is present
                             if [[ ! -f $selectedFile ]]; then
                                 echo "ERROR: Compose file $selectedFile not found" >&2
-                                echo "Exiting with code 2: improper configuration." >&2
-                                exit 2
+                                errExit 2
                             fi
 
                             # Create or Update .env
-                            if grep -q "^COMPOSE_FILE=" .env 2>/dev/null; then
-                                sed -i.bak "s|^COMPOSE_FILE=.*|COMPOSE_FILE=$selectedFile|" .env && rm .env.bak
-                            else
-                                editEnv "COMPOSE_FILE=$selectedFile"
-                                # [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
-                                # echo "COMPOSE_FILE=$selectedFile" >> .env
-                            fi
+                            editEnv "COMPOSE_FILE=$selectedFile"
                             ensureSecretKey
                             echo "Configuration saved to .env."
 
@@ -185,14 +243,16 @@ setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
 }
 
 ## Start :
+# - Checks for valid configuration by checking the .env
+# - Repairs broken/missing .env files.
+# - Checks for previous run for appropriate start/restart messaging.
 
 startCheck () {
     echo "Checking configuration..."
     # Check if a compose file is defined, if not: setup, else start/restart
-    if [[ ! -f .env ]] || ! grep -q "^COMPOSE_FILE=" .env; then
+    if [[ ! -s .env ]] || ! grep -q "^COMPOSE_FILE=" .env; then
         echo "First time setup detected (or missing configuration)!" >&2
         setupFunc 1
-    # should add elif for the -f .env above. Cannot run setup without the .env. Could pull with consent
     fi
     if grep -q "^PREVIOUSLY_RUN=true" .env 2>/dev/null; then
         echo "Valid configuration - Restarting!"
@@ -205,10 +265,18 @@ startCheck () {
         fi
     fi
     docker compose up -d --force-recreate
+    return 0
 }
 
 # Main
 
+## Switch to script directory
+cd "$scriptWorkingDir"
+
+## Check for dependencies
+checkDependencies
+
+## Check command
 case "$firstArg" in
     start|"")
         # Default
@@ -238,8 +306,7 @@ case "$firstArg" in
     download|-dl|--download)
         if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
             echo "ERROR: SIA isn't running. Please run $scriptName without arguments." >&2
-            echo "Exiting with code 2: improper configuration." >&2
-            exit 2
+            errExit 2
         fi
         if [[ $1 ]]; then
             echo "Running docker exec ollama ollama run $@"
@@ -249,14 +316,12 @@ case "$firstArg" in
         else
             echo "Please enter an Ollama model code to download (i.e. llama3.2:1b)" >&2
             echo "Example: $scriptName download llama3.2:1b" >&2
-            echo "Exiting with code 1: improper usage." >&2
-            exit 1
+            errExit 1
         fi
         ;;
     *)
         echo "ERROR: Unknown command: $firstArg" >&2
         printUsage
-        echo "Exiting with code 1: improper usage." >&2
-        exit 1
+        errExit 1
         ;;
 esac
