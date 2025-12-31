@@ -71,6 +71,12 @@ envVars=( # don't include the secret key or compose file variables, they are han
 #    echo "[MOCK] git $@"
 #}
 
+## Detect outdated Docker Compose and change commands if necessary
+
+if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
+    docker() { if [[ "$1" == "compose" ]]; then shift; command docker-compose "$@"; else command docker "$@"; fi; }
+fi
+
 ## Help :
 #  - Accepts one extra argument
 #  - Add help menus for new commands by adding them to the case statement
@@ -231,11 +237,9 @@ editEnv () {
         grep -v "^${key}=" "$envFileLocal" > "${envFileLocal}.tmp"
         echo "$entry" >> "${envFileLocal}.tmp"
         mv "${envFileLocal}.tmp" "$envFileLocal"
-#        sed -i.bak "s|^${key}=.*|${entry}|" .env && rm .env.bak
         return 0
     else
         # Append "KEY=VALUE" if it is missing
-    #    echo "$key is missing from the .env file. Fixing..."
         [[ -s "$envFileLocal" && -n "$(tail -c 1 "$envFileLocal" 2>/dev/null)" ]] && echo "" >> "$envFileLocal"
         echo "$entry" >> "$envFileLocal"
         return 0
