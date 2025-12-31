@@ -106,9 +106,9 @@ EOF
 #  - Extend by adding to the case statement
 
 errExit () {
-    local errorCode="$1"
+    local errorCode="${1:-99}"
     local errorDesc
-    case $errorCode in
+    case $errorCode in # Don't use code 99
         1)
             errorDesc="usage"
             ;;
@@ -116,10 +116,11 @@ errExit () {
             errorDesc="configuration"
             ;;
         *)
-            errorDesc="something!"
+            errorDesc="internal error code"
+            errorCode=99
             ;;
     esac
-    echo "Exiting with code $errorCode: improper $errorDesc." >&2
+    echo "Exiting with code $errorCode: improper $errorDesc!" >&2
     exit $errorCode
 }
 
