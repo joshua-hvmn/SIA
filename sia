@@ -20,7 +20,7 @@ scriptName="./$(basename "$0")"
 #  - Add help menus for new commands by adding them to the case statement
 
 printUsage () {
-    local arg="$@"
+    local arg="${1:-}"
     case "$arg" in
         down|-d|--down)
             cat << EOF
@@ -295,16 +295,17 @@ cd "$scriptWorkingDir"
 
 ## Check for dependencies
 checkArray
-checkArray envVars
 
 ## Check command
 case "$firstArg" in
     start|"")
         # Default
         echo "SIA Starting..."
+        checkArray envVars
         startCheck
         ;;
     setup|-s|--setup)
+        checkArray envVars
         setupFunc 0
         exit
         ;;
