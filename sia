@@ -4,6 +4,8 @@ set -euo pipefail
 
 # VARIABLES
 
+searxngBaseURL="https://localhost/"
+webUiURL="http://localhost:3000/"
 options=(
     "CPU Only"
     "Nvidia GPU"
@@ -19,8 +21,8 @@ dependencies=("docker")
 envVars=( # don't include the secret key or compose file variables, they are handled by other parts of the script
     "SEARXNG_HOSTNAME=localhost"
     "SEARXNG_TLS=internal"
-    "SEARXNG_BASE_URL=http://localhost/"
-    "WEBUI_URL=http://localhost:3000/"
+    "SEARXNG_BASE_URL=$searxngBaseURL"
+    "WEBUI_URL=$webUiURL"
     "OLLAMA_BASE_URL=http://ollama:11434"
     "WEB_SEARCH_ENGINE=searxng"
     "SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json"
@@ -302,6 +304,21 @@ startCheck () {
         fi
     fi
     docker compose up -d --force-recreate
+    cat << EOF
+
+           SIA Startup Complete!
+              Version: 0.9.2
+
+Access the AI Chat interface at:      $webUiURL
+
+Access the SearXNG search engine at:  $searxngBaseURL
+
+Security Tip: For secure public access, edit .env:
+    - Set SEARXNG_HOSTNAME=yourdomain.com
+    - Set SEARXNG_TLS=letsencrypt  (your key)
+    - Modify the envVars array in the $scriptName script so it doesn't overwrite your changes!
+    - Then run $scriptName to restart, and enjoy!
+EOF
     return 0
 }
 
