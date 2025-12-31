@@ -3,22 +3,50 @@
 set -euo pipefail
 
 # VARIABLES
-
+## Standards (change to change across script and .env file)
 searxngBaseURL="https://localhost/"
 webUiURL="http://localhost:3000/"
-options=(
+
+### Set app name based on script file name and set version tag
+if [[ -d .git ]]; then
+    appVersion="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v0.9.2+")"
+else
+    appVersion=0.9.2+
+fi
+scriptName="./$(basename "$0")"
+appName=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+### Consume first argument to be used for commands and shift so subfunctions can use subsequent arguments
+firstArg="${1:-start}"
+shift || true
+
+## Arrays
+options=( # Must be ordered like fileNames with one extra "Exit Setup" option always at the end. Associative arrays are avoided for portability.
     "CPU Only"
     "Nvidia GPU"
     "AMD GPU"
     "Exit Setup"
 )
-fileNames=(
+fileNames=( # Must be ordered like options with no file to associate with the exit option in that array.
     ".compose.cpu.yaml"
     ".compose.nvidia.yaml"
     ".compose.amd.yaml"
 )
-dependencies=("docker")
-envVars=( # don't include the secret key or compose file variables, they are handled by other parts of the script
+dependencies=( # Simply add the command to be tested to this array.
+    "docker"
+    "git"
+)
+envVars=( # don't include the secret key or compose file variables, they are handled by other parts of the script. File constructed if necessary.
+    "#   $appName  =  $appVersion"
+    "#  For public access, change:"
+    "#  - SEARXNG_HOSTNAME to your domain name"
+    "#  - SEARXNG_TLS=letsencrypt  (your key)"
+    "#  - Uncomment and set a LETSENCRYPT email in order to create a Let's Encrypt certificate"
+    "#  TO CHANGE:" 
+    "#  - $scriptName will overwrite any changes to the .env, except changing the Secret Key or selected COMPOSE_FILE"
+    "#  - You must edit the envVars array in the $appName script instead of changing the .env file to make changes to anything in the array ($appName restores it on run)"
+    "# LETSENCRYPT_EMAIL="
     "SEARXNG_HOSTNAME=localhost"
     "SEARXNG_TLS=internal"
     "SEARXNG_BASE_URL=$searxngBaseURL"
@@ -26,13 +54,21 @@ envVars=( # don't include the secret key or compose file variables, they are han
     "OLLAMA_BASE_URL=http://ollama:11434"
     "WEB_SEARCH_ENGINE=searxng"
     "SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json"
+    "SEARXNG_SECRET"
+    "COMPOSE_FILE"
+    "PREVIOUSLY_RUN"
 )
-scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-firstArg="${1:-start}"
-shift || true
-scriptName="./$(basename "$0")"
 
 # FUNCTIONS
+## Testing :
+#  - uncomment to block relevant commands during testing
+
+#docker() {
+#  echo "[MOCK] docker $@"
+#}
+#git() {
+#    echo "[MOCK] git $@"
+#}
 
 ## Help :
 #  - Accepts one extra argument
@@ -81,9 +117,9 @@ EOF
 Usage: $scriptName <command>
 
 Commands:
-    (no argument)    Start or restart the SIA stack (default)
+    (no argument)    Start or restart the $appName stack (default)
     setup | -s       Run or rerun the setup wizard to change the setup
-    down | -d        Stop the SIA stack. Accepts an additional argument. (Docker command)
+    down | -d        Stop the $appName stack. Accepts an additional argument. (Docker command)
     logs | -l        View relevant logs Accepts an additional argument. (Docker command)
     download | -dl   Download an Ollama model. Requires an additional argument. (Docker command)
     help | -h        Show this help message
@@ -93,7 +129,7 @@ Pass additional arguments to pass them to the underlying docker command.
 Examples:
     $scriptName                 Starts the containers. On first start, runs setup and generates the secret key.
     $scriptName setup           Runs setup, for changing which setup you're using.
-    $scriptName -d              Stops all SIA containers.
+    $scriptName -d              Stops all $appName containers.
     $scriptName --help          Shows the help message.
     $scriptName -l --verbose    Shows the logs and passes the --verbose argument.
 EOF
@@ -143,9 +179,22 @@ checkArray () {
             done
             ;;
         envVars)
-            for name in "${!arrayRef}"; do
-                if ! grep -q "^$name=" .env 2>/dev/null; then
-                    editEnv "$name"
+            for entry in "${!arrayRef}"; do
+                if [[ "$entry" =~ ^# ]]; then
+                    # Comment: check for the exact string
+                    if ! grep -qF "$entry" .env 2>/dev/null; then
+                        # Append the comment directly
+                        [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+                        echo "$entry" >> .env
+                    fi
+                else
+                    # Variable: extract key and use editEnv logic
+                    local key="${entry%%=*}"
+                    if ! grep -q "^$key=" .env 2>/dev/null; then
+                        if [[ "$entry" == *"="* ]]; then
+                            editEnv "$entry"
+                        fi
+                    fi
                 fi
             done
             ;;
@@ -157,10 +206,9 @@ checkArray () {
 }
 
 ## .env editor
-#  - Pass "KEY=VALUE"
-#  - Updates the .env with given "KEY=VALUE" 
+#  - Pass "KEY=VALUE" to update the VALUE or append if missing.
+#  - Pass "VALUE" to just write it to the .env
 #  - Ensures new line and creates an .env if necessary
-#  - Should add conditional and inject the 2 other required lines to the .env if it has to create a new one.
 
 editEnv () {
     local entry="$1"
@@ -182,7 +230,7 @@ editEnv () {
         return 0
     else
         # Append "KEY=VALUE" if it is missing
-        echo "$key is missing from the .env file. Fixing..."
+    #    echo "$key is missing from the .env file. Fixing..."
         [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
         echo "$entry" >> .env
         return 0
@@ -216,7 +264,7 @@ ensureSecretKey () {
             if [[ -z "$secretKey" ]]; then
                 secretKey=$(head -c32 /dev/urandom | cksum | cut -d' ' -f1)
                 echo "I couldn't generate a cryptographically secure Secret Key, so I fell back on a less secure alternative."
-                echo "SIA should still work but consider manually generating a random 64 character hex string and manually editing the .env"
+                echo "$appName should still work but consider manually generating a random 64 character hex string and manually editing the .env"
             fi
         fi
         # Append to .env:
@@ -228,8 +276,8 @@ ensureSecretKey () {
 ## Setup :
 # - Pass 1 after calling to prevent inbuilt auto-restart
 # - Asks user to select which compose file to use.
-# - Checks or generates the secret key.
-# - SIA will restart automatically when you select or change a setup.
+# - Checks for or generates secret key with ensureSecretKey
+# - Stack will restart automatically when you select or change a setup.
 
 setupFunc () {
     echo "Please select your processor type."
@@ -307,8 +355,8 @@ startCheck () {
     docker compose up -d --force-recreate
     cat << EOF
 
-           SIA Startup Complete!
-              Version: 0.9.2
+           $appName Startup Complete!
+              Version: $appVersion
 
 Access the AI Chat interface at:      $webUiURL
 
@@ -324,7 +372,6 @@ EOF
 }
 
 # Main
-
 ## Switch to script directory
 cd "$scriptWorkingDir"
 
@@ -332,7 +379,7 @@ cd "$scriptWorkingDir"
 case "$firstArg" in
     start|"")
         # Default
-        echo "SIA Starting..."
+        echo "$appName Starting..."
         # Check for dependencies
         checkArray
         checkArray envVars
@@ -353,8 +400,8 @@ case "$firstArg" in
     down|-d|--down)
         # Check for dependencies
         checkArray
-        # Stop SIA
-        echo "Stopping SIA..."
+        # Stop Stack
+        echo "Stopping $appName..."
         docker compose down "$@"
         ;;
     logs|-l|--logs)
@@ -374,7 +421,7 @@ case "$firstArg" in
         checkArray
         # Check that the ollama container is running
         if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
-            echo "ERROR: SIA isn't running. Please run $scriptName without arguments." >&2
+            echo "ERROR: $appName isn't running. Please run $scriptName without arguments." >&2
             errExit 2
         fi
         # Download a model
