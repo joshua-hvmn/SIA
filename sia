@@ -293,19 +293,22 @@ startCheck () {
 ## Switch to script directory
 cd "$scriptWorkingDir"
 
-## Check for dependencies
-checkArray
-
 ## Check command
 case "$firstArg" in
     start|"")
         # Default
         echo "SIA Starting..."
+        # Check for dependencies
+        checkArray
         checkArray envVars
+        # Start and run setup if needed
         startCheck
         ;;
     setup|-s|--setup)
+        # Check for dependencies
+        checkArray
         checkArray envVars
+        # Run setup and then start
         setupFunc 0
         exit
         ;;
@@ -313,10 +316,16 @@ case "$firstArg" in
         printUsage "$@"
         ;;
     down|-d|--down)
-            echo "Stopping SIA..."
-            docker compose down "$@"
+        # Check for dependencies
+        checkArray
+        # Stop SIA
+        echo "Stopping SIA..."
+        docker compose down "$@"
         ;;
     logs|-l|--logs)
+        # Check for dependencies
+        checkArray
+        # Show logs
         if [[ $# -eq 0 ]]; then
             echo "Showing last 100 logs:"
             docker compose logs --tail 100
@@ -326,10 +335,14 @@ case "$firstArg" in
         fi
         ;;
     download|-dl|--download)
+        # Check for dependencies
+        checkArray
+        # Check that the ollama container is running
         if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
             echo "ERROR: SIA isn't running. Please run $scriptName without arguments." >&2
             errExit 2
         fi
+        # Download a model
         if [[ $1 ]]; then
             echo "Running docker exec ollama ollama run $@"
             docker exec ollama ollama run "$@"
