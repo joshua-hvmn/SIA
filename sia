@@ -17,17 +17,45 @@ cd "$scriptWorkingDir"
 
 # FUNCTIONS
 
+## .env editor
+
+editEnv () { # Pass string to be appended/ modified
+    local contents="$1"
+    touch .env
+    [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+    echo "$1" >> .env
+}
+
 ## Secret Key
 
 ensureSecretKey () {
     # Check if key exists and generate one if it doesn't
+    touch .env
     if ! grep -q "^SEARXNG_SECRET=" .env 2>/dev/null; then
         echo "Generating secret key..."
-        # Generate:
-        local secretKey=$(openssl rand -hex 32)
+        local secretKey
+        # Generate the key
+        # Try OpenSSL :
+        if command -v openssl >/dev/null 2>&1; then
+            secretKey=$(openssl rand -hex 32)
+        # Try od (POSIX) :
+        elif command -v od >/dev/null 2>&1; then
+            secretKey=$(od -An -N32 -tx1 < /dev/urandom | tr -d '[:space:]')
+        else
+            # Try Python :
+            if command -v python3 >/dev/null 2>&1; then
+                secretKey=$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || true)
+            fi
+            # Fallback: cksum, not crypto secure :
+            if [[ -z "$secretKey" ]]; then
+                secretKey=$(head -c32 /dev/urandom | cksum | cut -d' ' -f1)
+            fi
+        fi
         # Append to .env:
-        [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
-        echo "SEARXNG_SECRET=$secretKey" >> .env
+        editEnv "SEARXNG_SECRET=$secretKey"
+        # touch .env
+        # [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+        # echo "SEARXNG_SECRET=$secretKey" >> .env
     fi
 }
 
@@ -128,8 +156,9 @@ setupFunc () { # Pass 1 after calling to prevent inbuilt auto-restart
                             if grep -q "^COMPOSE_FILE=" .env 2>/dev/null; then
                                 sed -i.bak "s|^COMPOSE_FILE=.*|COMPOSE_FILE=$selectedFile|" .env && rm .env.bak
                             else
-                                [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
-                                echo "COMPOSE_FILE=$selectedFile" >> .env
+                                editEnv "COMPOSE_FILE=$selectedFile"
+                                # [[ -f .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
+                                # echo "COMPOSE_FILE=$selectedFile" >> .env
                             fi
                             ensureSecretKey
                             echo "Configuration saved to .env."
