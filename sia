@@ -7,8 +7,8 @@ set -euo pipefail
 options=("CPU Only" "Nvidia GPU" "AMD GPU" "Exit Setup")
 fileNames=(".compose.cpu.yaml" ".compose.nvidia.yaml" ".compose.amd.yaml")
 dependencies=("docker")
+envVars=("SEARXNG_HOSTNAME=localhost" "SEARXNG_TLS=internal") # don't include the secret key or compose file variables, they are handled by other parts of the script
 scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-changeSetup=0
 firstArg="${1:-start}"
 shift || true
 scriptName="./$(basename "$0")"
@@ -16,8 +16,8 @@ scriptName="./$(basename "$0")"
 # FUNCTIONS
 
 ## Help :
-# - Accepts one extra argument
-# - Add help menus for new commands by adding them to the case statement
+#  - Accepts one extra argument
+#  - Add help menus for new commands by adding them to the case statement
 
 printUsage () {
     local arg="$@"
@@ -83,8 +83,8 @@ EOF
 }
 
 ## Error Exit
-# - Call with the number of you error code in place of "exit #"
-# - Extend by adding to the case statement
+#  - Call with the number of you error code in place of "exit #"
+#  - Extend by adding to the case statement
 
 errExit () {
     local errorCode="$1"
@@ -94,7 +94,7 @@ errExit () {
             errorDesc="usage"
             ;;
         2)
-            errorDesc="confuration"
+            errorDesc="configuration"
             ;;
         *)
             errorDesc="something!"
@@ -104,45 +104,65 @@ errExit () {
     exit $errorCode
 }
 
-## Check Dependencies
-#  - Add more in the dependencies array
+## Check Arrays
+#  - Add more dependencies in the dependencies array.
+#  - Add more environment variables in the envVars array.
+#  - Add additional cases to handle new arrays.
+#  - Pass the name of the array you want to check.
 
-checkDependencies () {
-    for cmd in ${dependencies[@]}; do
-        if ! command -v "$cmd" >/dev/null 2>&1; then
-            echo "Error: $cmd not found. Please make sure it is installed and you have permission to use it."
-            errExit 2
-        fi
-    done
+checkArray () {
+    local arrayName="${1:-dependencies}"
+    local arrayRef="${arrayName}[@]"
+    case $arrayName in
+        dependencies)
+            for cmd in "${!arrayRef}"; do
+                if ! command -v "$cmd" >/dev/null 2>&1; then
+                    echo "Error: $cmd not found. Please make sure it is installed and you have permission to use it."
+                    errExit 2
+                fi
+            done
+            ;;
+        envVars)
+            for name in "${!arrayRef}"; do
+                if ! grep -q "^$name=" .env 2>/dev/null; then
+                    editEnv "$name"
+                fi
+            done
+            ;;
+        *)
+            echo "ERROR UNKNOWN"
+            errExit 1
+        ;;
+    esac
 }
 
 ## .env editor
-# - Pass "KEY=VALUE"
-# - Updates the .env with given "KEY=VALUE" 
-# - Ensures new line and creates an .env if necessary
-# - Should add conditional and inject the 2 other required lines to the .env if it has to create a new one.
+#  - Pass "KEY=VALUE"
+#  - Updates the .env with given "KEY=VALUE" 
+#  - Ensures new line and creates an .env if necessary
+#  - Should add conditional and inject the 2 other required lines to the .env if it has to create a new one.
 
 editEnv () {
     local entry="$1"
     local key="${entry%%=*}" # Extracts everything before the '='
     local emptyEnv=0
 
-    # Check if the .env is missing or empty and fix if necessary
-    if [[ ! -s .env ]]; then
-        emptyEnv=1
-    fi
+    # Create .env if it doesn't exist
     touch .env
-    if [[ emptyEnv -eq 1 ]]; then       # Use an init function and remove the included .env from the repository. Call here
-        echo "SEARXNG_HOSTNAME=localhost" >> .env
-        echo "SEARXNG_TLS=internal" >> .env
+
+    # Check if already in the file
+    if grep -q "^${entry}$" .env 2>/dev/null; then
+        return 0
     fi
     # Check if "KEY=VALUE" exists and create or edit it
     if grep -q "^${key}=" .env 2>/dev/null; then
         # Update if "KEY=VALUE" exists
+        echo "$key exists in the .env file. Modifying..."
         sed -i.bak "s|^${key}=.*|${entry}|" .env && rm .env.bak
         return 0
     else
         # Append "KEY=VALUE" if it is missing
+        echo "$key is missing from the .env file. Fixing..."
         [[ -s .env && -n "$(tail -c 1 .env 2>/dev/null)" ]] && echo "" >> .env
         echo "$entry" >> .env
         return 0
@@ -274,7 +294,8 @@ startCheck () {
 cd "$scriptWorkingDir"
 
 ## Check for dependencies
-checkDependencies
+checkArray
+checkArray envVars
 
 ## Check command
 case "$firstArg" in
