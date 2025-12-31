@@ -108,7 +108,7 @@ errExit () {
 #  - Add more in the dependencies array
 
 checkDependencies () {
-    for cmd in ${dependencies}; do
+    for cmd in ${dependencies[@]}; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             echo "Error: $cmd not found. Please make sure it is installed and you have permission to use it."
             errExit 2
@@ -132,7 +132,7 @@ editEnv () {
         emptyEnv=1
     fi
     touch .env
-    if [[ emptyEnv -eq 1 ]]; then
+    if [[ emptyEnv -eq 1 ]]; then       # Use an init function and remove the included .env from the repository. Call here
         echo "SEARXNG_HOSTNAME=localhost" >> .env
         echo "SEARXNG_TLS=internal" >> .env
     fi
