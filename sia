@@ -1,3 +1,11 @@
+# |----------------------------------------------------------------------------|
+# |                        SIA Management Script                               |
+# |----------------------------------------------------------------------------|
+# |              SPDX-License-Identifier: MIT                                  |
+# |              SPDX-FileCopyrightText: 2026 Joshua Haveman                   |
+# | This script is released under the MIT License: modify & distribute freely. |
+# |----------------------------------------------------------------------------|
+
 #!/usr/bin/env bash
 
 set -euo pipefail
