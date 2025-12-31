@@ -4,10 +4,27 @@ set -euo pipefail
 
 # VARIABLES
 
-options=("CPU Only" "Nvidia GPU" "AMD GPU" "Exit Setup")
-fileNames=(".compose.cpu.yaml" ".compose.nvidia.yaml" ".compose.amd.yaml")
+options=(
+    "CPU Only"
+    "Nvidia GPU"
+    "AMD GPU"
+    "Exit Setup"
+)
+fileNames=(
+    ".compose.cpu.yaml"
+    ".compose.nvidia.yaml"
+    ".compose.amd.yaml"
+)
 dependencies=("docker")
-envVars=("SEARXNG_HOSTNAME=localhost" "SEARXNG_TLS=internal") # don't include the secret key or compose file variables, they are handled by other parts of the script
+envVars=( # don't include the secret key or compose file variables, they are handled by other parts of the script
+    "SEARXNG_HOSTNAME=localhost"
+    "SEARXNG_TLS=internal"
+    "SEARXNG_BASE_URL=http://localhost/"
+    "WEBUI_URL=http://localhost:3000/"
+    "OLLAMA_BASE_URL=http://ollama:11434"
+    "WEB_SEARCH_ENGINE=searxng"
+    "SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json"
+)
 scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 firstArg="${1:-start}"
 shift || true
