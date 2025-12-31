@@ -6,19 +6,19 @@ set -euo pipefail
 ## Standards (change to change across script and .env file)
 searxngBaseURL="https://localhost/"
 webUiURL="http://localhost:3000/"
-envFile=".env"
+envFile=".env" # Change if you want to use a different .env file name.
 
-### Set app name based on script file name and set version tag
+### Set app name and version number (Rename this script as you please, it should still work).
 if [[ -d .git ]]; then
     appVersion="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v0.9.2+")"
 else
-    appVersion=0.9.2+
+    appVersion="v0.9.2+"
 fi
 scriptName="./$(basename "$0")"
 appName=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-### Consume first argument to be used for commands and shift so subfunctions can use subsequent arguments
+### Consume first argument to be used for commands and shift so subfunctions can use subsequent arguments.
 firstArg="${1:-start}"
 shift || true
 
