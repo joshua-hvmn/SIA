@@ -335,8 +335,8 @@ envCommandListEdit () {
     local selector="${arrayName}[@]"
     
     local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
+    
     local PS3="Select a variable to edit: "
-
     select arg in "${!selector}"; do
         local menuOptions=(
             "Edit default value and make $appName validate it on each restart"
@@ -356,8 +356,6 @@ envCommandListEdit () {
             # Proceed with "exists" or "default" logic
         fi
         PS3="Choose action for $key: "
-        echo $PS3
-        echo "What action would you like to take?"
         select opt in "${menuOptions[@]}"; do
             # Check that input is valid
             # 
