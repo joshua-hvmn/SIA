@@ -332,12 +332,17 @@ envCommandListEdit () {
         echo "Internal Error: Array Undefined: $arrayName"
         errExit 99
     fi
-    local selector="${arrayName}[@]"
+    local placeholder="${arrayName}[@]"
+    local selector=()
+    for item in "${!placeholder}"; do
+        [[ "$item" =~ ^# ]] && continue # Skip comments
+        selector+=("$item")
+    done
     
     local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
     
     local PS3="Select a variable to edit: "
-    select arg in "${!selector}"; do
+    select arg in "${selector[@]}"; do
         local menuOptions=(
             "Edit default value and make $appName validate it on each restart"
             "Prevent $appName from overwriting edits to the value of this variable in the $envFile file"
@@ -355,10 +360,9 @@ envCommandListEdit () {
             local value="" 
             # Proceed with "exists" or "default" logic
         fi
-        PS3="Choose action for $key: "
-        select opt in "${menuOptions[@]}"; do
+        PS3="Choose action for $key [current: $value] "
+        select opt in "${menuOptions[@]}"; do # Will need to change if you want to universalize this function. i.e., "${!input}"
             # Check that input is valid
-            # 
             if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
                 if [[ "$REPLY" -le "${#menuOptions[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
                     case "$REPLY" in
@@ -571,10 +575,11 @@ Access the AI Chat interface at:      $webUiURL
 
 Access the SearXNG search engine at:  $searxngBaseURL
 
-Security Tip: For secure public access, edit $envFile:
+Security Tip: For secure public access, edit the environment variables:
     - Set SEARXNG_HOSTNAME=yourdomain.com
     - Set SEARXNG_TLS=letsencrypt  (your key)
-    - Modify the envVars array in the $scriptName script so it doesn't overwrite your changes!
+    - You CANNOT change the $envFile file like other apps: $appName validates/overwrites the $envFile file on each start.
+    - Run "$scriptName env" to view & change environment variables! 
     - Then run $scriptName to restart, and enjoy!
 EOF
     return 0
