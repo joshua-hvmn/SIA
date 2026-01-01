@@ -220,6 +220,184 @@ checkArray () {
     esac
 }
 
+## Edit Script Arrays
+# Usage: editAnyArray "arrayName" "KEY=VALUE" (to add/update)
+# Usage: editAnyArray "arrayName" "KEY="      (to remove default overrides and normalize .env editing for that KEY)
+# Usage: editAnyArray "arrayName" "KEY"       (to remove)
+# Note: this function was vibecoded, I haven't internalized it, there may be problems. I'm not sure the usage is correct.
+# - The idea is that it mimics the editEnv function but edits the arrays in the script code itself.
+
+editAnyArray() {
+    local arrayName="$1"
+    local arg="$2"
+    local scriptFile="$0"
+    local backupFile="${scriptFile}.bak"
+
+    [[ -z "$arrayName" || -z "$arg" ]] && { echo "Usage: editAnyArray name entry"; return 1; }
+
+    cp "$scriptFile" "$backupFile" || return 1
+
+    local lines=()
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        lines+=("$line")
+    done < "$scriptFile"
+
+    local start_idx=-1 end_idx=-1
+    local i
+    for i in "${!lines[@]}"; do
+        # Dynamically match the array name passed as $1
+        if [[ "${lines[i]}" =~ ^[[:space:]]*${arrayName}=\( ]]; then
+            start_idx=$i
+        elif [[ $start_idx -ge 0 && "${lines[i]}" =~ ^[[:space:]]*\) ]]; then
+            end_idx=$i
+            break
+        fi
+    done
+
+    [[ $start_idx -lt 0 || $end_idx -lt 0 ]] && { 
+        echo "Array $arrayName not found in $scriptFile"; 
+        rm -f "$backupFile"; return 1; 
+    }
+
+    local base_indent="${lines[start_idx]%%[![:space:]]*}"
+    local indent="${base_indent}    "
+    local remove_mode=0
+    local key entry
+
+    if [[ "$arg" == *"="* ]]; then
+        entry="$arg"
+        key="${entry%%=*}"
+    else
+        key="$arg"
+        remove_mode=1
+    fi
+
+    local match_idx=-1
+    local j
+    for ((j = start_idx + 1; j < end_idx; j++)); do
+        if [[ "${lines[j]}" =~ ^[[:space:]]*\"?${key}=[^\"]*\"?[[:space:]]*(#.*)?$ ]]; then
+            match_idx=$j
+            break
+        fi
+    done
+
+    if [[ $remove_mode -eq 1 ]]; then
+        if [[ $match_idx -ne -1 ]]; then
+            local before=("${lines[@]:0:match_idx}")
+            local after=("${lines[@]:match_idx+1}")
+            lines=("${before[@]}" "${after[@]}")
+        fi
+    else
+        if [[ $match_idx -ne -1 ]]; then
+            local current_indent="${lines[match_idx]%%[![:space:]]*}"
+            lines[match_idx]="${current_indent}\"${entry}\""
+        else
+            local before=("${lines[@]:0:end_idx}")
+            local after=("${lines[@]:$end_idx}")
+            lines=("${before[@]}" "${indent}\"${entry}\"" "${after[@]}")
+        fi
+    fi
+
+    printf "%s\n" "${lines[@]}" > "$scriptFile"
+
+    if ! bash -n "$scriptFile" >/dev/null 2>&1; then
+        mv "$backupFile" "$scriptFile"
+        return 1
+    fi
+    rm -f "$backupFile"
+}
+
+## envCommand List
+#  - pass the name of the array
+#  - can make this function universal by using an additional arg to indicate which menu options array to choose from, and storing the subfunction names in arrays
+#    and calling them based on the index of the selected option menu. That will take some thinking, not necessary for this app. It might be better to 
+#    switch to a newer Bash target so I can use associative arrays, but it isn't necessary for this idea.
+
+envCommandListEdit () {
+    local arrayName="${1:-arrayNotDefined}"
+    if [[ ! "$(declare -p "$arrayName" 2>/dev/null)" =~ "declare -a" ]]; then
+        echo "Internal Error: Array Undefined: $arrayName"
+        errExit 99
+    fi
+    local targetArray="${arrayName}[@]"
+#    for arg in "${!targetArray}"; do
+#        echo "$arg"
+#    done
+    select arg in "${targetArray[@]}"; do
+        local menuOptions=(
+            "Edit default value and make $appName validate it on each restart"
+            "Prevent $appName from overwriting edits to the value of this variable in the $envFile file"
+            "Remove from $appName .env validation checks totally"
+            "None, exit."
+        )
+        if [[ "$arg" == *"="* ]]; then
+            # The string contains an equals sign
+            local key="${arg%%=*}"
+            local value="${arg#*=}"
+            # Proceed with overwrite/update logic
+        else
+            # The string is just a bare key
+            local key="$arg"
+            local value="" 
+            # Proceed with "exists" or "default" logic
+        fi
+        echo "Modifying: $arg"
+        echo "What action would you like to take?"
+        select opt in "${menuOptions[@]}"; do
+            # Check that input is valid
+            # 
+            if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
+                if [[ "$REPLY" -le "${#menuOptions[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
+                    case "$REPLY" in
+                        1)
+                            read -p "Enter value for $key: " userInput
+                            editAnyArray $arrayName "$key=$userInput"
+                            ;;
+                        2)
+                            editAnyArray $arrayName "$key="
+                            ;;
+                        3)
+                            editAnyArray $arrayName "$key"
+                            ;;
+                        4)
+                            echo "Exiting."
+                            exit
+                            ;;
+                        *)
+                            echo "Invalid selection" >&2
+                    esac
+                else
+                    echo "Invalid Selection: $REPLY" >&2
+                    echo "Try again. Enter a number between 1 and ${#menuOptions[@]}"
+                fi
+            else
+                echo "Invalid Selection: $REPLY" >&2
+                echo "Try again. Enter a number between 1 and ${#menuOptions[@]}"
+            fi
+        done
+    done
+    select opt in ""
+        select envVar in "${targetArray[@]}"; do
+            case $envVar 
+        done
+}
+## Script environment command function
+
+envCommand () {
+    local firstArg="${1:-list}"
+    case $firstArg in
+        list|-l|--list)
+            envCommandListEdit envVars
+            ;;
+        add|-a|--add)
+            echo "Shortcut planned"
+            ;;
+        rm|-rm|--remove)
+            echo "Shortcut planned"
+            ;;
+    esac
+}
+
 ## .env editor
 #  - Pass "KEY=VALUE" to update the VALUE or append if missing.
 #  - Pass "VALUE" to just write it to the .env
@@ -452,6 +630,10 @@ case "$firstArg" in
             echo "Example: $scriptName download llama3.2:1b" >&2
             errExit 1
         fi
+        ;;
+    env|environment|-env|--environment)
+        # Check for args
+
         ;;
     *)
         echo "ERROR: Unknown command: $firstArg" >&2
