@@ -53,8 +53,8 @@ envVars=( # don't include the secret key or compose file variables, they are han
     "#  - SEARXNG_TLS=letsencrypt  (your key)"
     "#  - Uncomment and set a LETSENCRYPT email in order to create a Let's Encrypt certificate"
     "#  TO CHANGE:" 
-    "#  - $scriptName will overwrite any changes to the $envFile, except changing the Secret Key or selected COMPOSE_FILE"
-    "#  - You must edit the envVars array in the $appName script instead of changing the $envFile file to make changes to anything in the array ($appName restores it on run)"
+    "#  - $scriptName will overwrite any changes to the $envFile, except changing the SEARXNG_SECRET or COMPOSE_FILE."
+    "#  - To change defaults, run '$scriptName env'"
     "# LETSENCRYPT_EMAIL="
     "SEARXNG_HOSTNAME=localhost"
     "SEARXNG_TLS=internal"
@@ -63,9 +63,10 @@ envVars=( # don't include the secret key or compose file variables, they are han
     "OLLAMA_BASE_URL=http://ollama:11434"
     "WEB_SEARCH_ENGINE=searxng"
     "SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json"
-    "SEARXNG_SECRET"
+#    "SEARXNG_SECRET"
     "COMPOSE_FILE"
     "PREVIOUSLY_RUN"
+    "SETUP_COMPLETE"
 )
 
 # FUNCTIONS
@@ -207,16 +208,23 @@ checkArray () {
                 if [[ "$entry" =~ ^# ]]; then
                     # Comment: check for the exact string
                     if ! grep -qF "$entry" "$envFile" 2>/dev/null; then
-                        # Append the comment directly
                         [[ -s "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
                         echo "$entry" >> "$envFile"
                     fi
                 else
-                    # Variable: extract key and use editEnv logic
+                    # Variable logic
                     local key="${entry%%=*}"
-                    if ! grep -q "^$key=" "$envFile" 2>/dev/null; then
-                        if [[ "$entry" == *"="* ]]; then
-                            editEnv "$entry"
+                    
+                    if [[ "$entry" == *"="* ]]; then
+                        # If KEY=VALUE is defined in the array, enforce it in .env
+                        # We use editEnv because your editEnv already handles overwriting existing keys.
+                        editEnv "$entry"
+                    else
+                        # If it's just a bare KEY in the array, only add it to .env if missing
+                        if ! grep -q "^$key=" "$envFile" 2>/dev/null; then
+                             # We don't use editEnv here because it's just a placeholder check
+                             [[ -s "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
+                             echo "$key=" >> "$envFile"
                         fi
                     fi
                 fi
@@ -340,13 +348,14 @@ envCommandListEdit () {
     done
     
     local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
-    
+    echo "WARNING: Modifying the behavior of COMPOSE_FILE or SEARXNG_SECRET may break the tool."
+    echo "         You can edit those two variables directly in the $envFile file."
     local PS3="Select a variable to edit: "
     select arg in "${selector[@]}"; do
         local menuOptions=(
-            "Edit default value and make $appName validate it on each restart"
-            "Prevent $appName from overwriting edits to the value of this variable in the $envFile file"
-            "Remove from $appName .env validation checks totally"
+            "Edit default value and make $appName validates it on each restart."
+            "Prevent $appName from overwriting edits to the value of this variable in the $envFile file (like how SEARXNG_SECRET is handled by default)."
+            "Remove from $appName .env validation checks totally."
             "None, go back to the list of variables."
         )
         if [[ "$arg" == *"="* ]]; then
@@ -443,6 +452,12 @@ editEnv () {
         echo "$entry" >> "${envFileLocal}.tmp"
         mv "${envFileLocal}.tmp" "$envFileLocal"
         return 0
+    # Else if key exists without = sign, append without =
+#    elif grep -q "^${key}" "$envFileLocal" 2>/dev/null; then
+#        echo "$key exists in the "$envFileLocal" file. Modifying..."
+#        grep -v "^${key}" "$envFileLocal" > "${envFileLocal}.tmp"
+#        echo "$entry" >> "${envFileLocal}.tmp"
+#        mv "${envFileLocal}.tmp" "$envFileLocal"
     else
         # Append "KEY=VALUE" if it is missing
         [[ -s "$envFileLocal" && -n "$(tail -c 1 "$envFileLocal" 2>/dev/null)" ]] && echo "" >> "$envFileLocal"
@@ -482,6 +497,7 @@ ensureSecretKey () {
             fi
         fi
         # Append to .env:
+        # echo "$secretKey"
         editEnv "SEARXNG_SECRET=$secretKey"
         return 0
     fi
@@ -520,6 +536,7 @@ setupFunc () {
                             # Create or Update .env
                             editEnv "COMPOSE_FILE=$selectedFile"
                             ensureSecretKey
+                            editEnv "SETUP_COMPLETE=true"
                             echo "Configuration saved to "$envFile"."
 
                             # Check if previously run / need to restart
@@ -551,18 +568,25 @@ setupFunc () {
 startCheck () {
     echo "Checking configuration..."
     # Check if a compose file is defined, if not: setup, else start/restart
-    if [[ ! -s "$envFile" ]] || ! grep -q "^COMPOSE_FILE=" "$envFile"; then
+#    if [[ ! -s "$envFile" ]] || ! grep -q "^COMPOSE_FILE=" "$envFile"; then
+#        echo "First time setup detected (or missing configuration)!" >&2
+#        setupFunc 1
+#    fi
+    if [[ ! -s "$envFile" ]] || ! grep -q "^SETUP_COMPLETE=true" "$envFile" 2>/dev/null; then
         echo "First time setup detected (or missing configuration)!" >&2
         setupFunc 1
     fi
+    # Validate state
+#    checkArray envVars
     if grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
         echo "Valid configuration - Restarting!"
     else
         echo "Valid configuration - Starting for the first time, enjoy!"
         # Append to .env:
         if ! grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
-            [[ -f "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
-            echo "PREVIOUSLY_RUN=true" >> "$envFile"
+            editEnv "PREVIOUSLY_RUN=true"
+            # [[ -f "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
+            # echo "PREVIOUSLY_RUN=true" >> "$envFile"
         fi
     fi
     docker compose up -d --force-recreate
