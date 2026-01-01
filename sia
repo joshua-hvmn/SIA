@@ -18,9 +18,9 @@ envFile=".env" # Change if you want to use a different .env file name.
 
 ### Set app name and version number (Rename this script as you please, it should still work).
 if [[ -d .git ]]; then
-    appVersion="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v0.9.2+")"
+    appVersion="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v1.0.0+")"
 else
-    appVersion="v0.9.2+"
+    appVersion="v1.0.0+"
 fi
 scriptName="./$(basename "$0")"
 appName=$(basename "$0" | tr '[:lower:]' '[:upper:]')
