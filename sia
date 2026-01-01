@@ -152,6 +152,15 @@ EOF
     esac
 }
 
+## Good Exit With Message
+#  - Pass the message to be displayed or do not pass one to automatically display "Exiting"
+
+exitScriptGoodWithMessage() { 
+    local message="${*:-Exiting}"
+    echo "$message" >&2
+    exit
+}
+
 ## Error Exit
 #  - Call with the number of you error code in place of "exit #"
 #  - Extend by adding to the case statement
@@ -224,7 +233,7 @@ checkArray () {
 # Usage: editAnyArray "arrayName" "KEY=VALUE" (to add/update)
 # Usage: editAnyArray "arrayName" "KEY="      (to remove default overrides and normalize .env editing for that KEY)
 # Usage: editAnyArray "arrayName" "KEY"       (to remove)
-# Note: this function was vibecoded, I haven't internalized it, there may be problems. I'm not sure the usage is correct.
+# Note: this function was vibecoded, I haven't internalized it, there may be problems. I might have the usage wrong.
 # - The idea is that it mimics the editEnv function but edits the arrays in the script code itself.
 
 editAnyArray() {
@@ -239,7 +248,7 @@ editAnyArray() {
 
     local lines=()
     while IFS= read -r line || [[ -n "$line" ]]; do
-        lines+=("$line")
+        lines[${#lines[@]}]="$line"
     done < "$scriptFile"
 
     local start_idx=-1 end_idx=-1
@@ -274,8 +283,10 @@ editAnyArray() {
 
     local match_idx=-1
     local j
+    local regex="^[[:space:]]*\"?${key}=[^\"]*\"?[[:space:]]*(#.*)?$"
+
     for ((j = start_idx + 1; j < end_idx; j++)); do
-        if [[ "${lines[j]}" =~ ^[[:space:]]*\"?${key}=[^\"]*\"?[[:space:]]*(#.*)?$ ]]; then
+        if [[ "${lines[j]}" =~ $regex ]]; then
             match_idx=$j
             break
         fi
@@ -311,7 +322,9 @@ editAnyArray() {
 #  - pass the name of the array
 #  - can make this function universal by using an additional arg to indicate which menu options array to choose from, and storing the subfunction names in arrays
 #    and calling them based on the index of the selected option menu. That will take some thinking, not necessary for this app. It might be better to 
-#    switch to a newer Bash target so I can use associative arrays, but it isn't necessary for this idea.
+#    switch to a newer Bash target so I can use associative arrays, but it isn't necessary for this function.
+
+# Main Function:
 
 envCommandListEdit () {
     local arrayName="${1:-arrayNotDefined}"
@@ -319,16 +332,17 @@ envCommandListEdit () {
         echo "Internal Error: Array Undefined: $arrayName"
         errExit 99
     fi
-    local targetArray="${arrayName}[@]"
-#    for arg in "${!targetArray}"; do
-#        echo "$arg"
-#    done
-    select arg in "${targetArray[@]}"; do
+    local selector="${arrayName}[@]"
+    
+    local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
+    local PS3="Select a variable to edit: "
+
+    select arg in "${!selector}"; do
         local menuOptions=(
             "Edit default value and make $appName validate it on each restart"
             "Prevent $appName from overwriting edits to the value of this variable in the $envFile file"
             "Remove from $appName .env validation checks totally"
-            "None, exit."
+            "None, go back to the list of variables."
         )
         if [[ "$arg" == *"="* ]]; then
             # The string contains an equals sign
@@ -341,7 +355,8 @@ envCommandListEdit () {
             local value="" 
             # Proceed with "exists" or "default" logic
         fi
-        echo "Modifying: $arg"
+        PS3="Choose action for $key: "
+        echo $PS3
         echo "What action would you like to take?"
         select opt in "${menuOptions[@]}"; do
             # Check that input is valid
@@ -352,16 +367,19 @@ envCommandListEdit () {
                         1)
                             read -p "Enter value for $key: " userInput
                             editAnyArray $arrayName "$key=$userInput"
+                            exitScriptGoodWithMessage $exitMessage
                             ;;
                         2)
                             editAnyArray $arrayName "$key="
+                            exitScriptGoodWithMessage $exitMessage
                             ;;
                         3)
                             editAnyArray $arrayName "$key"
+                            exitScriptGoodWithMessage $exitMessage
                             ;;
                         4)
-                            echo "Exiting."
-                            exit
+                            echo "Going back... Select an option"
+                            break
                             ;;
                         *)
                             echo "Invalid selection" >&2
@@ -375,12 +393,10 @@ envCommandListEdit () {
                 echo "Try again. Enter a number between 1 and ${#menuOptions[@]}"
             fi
         done
+        PS3="Select a variable to edit: "
     done
-    select opt in ""
-        select envVar in "${targetArray[@]}"; do
-            case $envVar 
-        done
 }
+
 ## Script environment command function
 
 envCommand () {
@@ -402,6 +418,7 @@ envCommand () {
 #  - Pass "KEY=VALUE" to update the VALUE or append if missing.
 #  - Pass "VALUE" to just write it to the .env
 #  - Ensures new line and creates an .env if necessary
+#  - DEV NOTE: my gut says this function might be a little too simple with the addition of the other env editor functions.
 
 editEnv () {
     local entry="$1"
@@ -484,8 +501,7 @@ setupFunc () {
             if [[ "$REPLY" -le "${#options[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
                 case "$opt" in
                     "Exit Setup")
-                        echo "Exiting."
-                        exit
+                        exitScriptGoodWithMessage
                         ;;
                     *)
                         local index="$((REPLY-1))"
@@ -587,7 +603,7 @@ case "$firstArg" in
         checkArray envVars
         # Run setup and then start
         setupFunc 0
-        exit
+        exitScriptGoodWithMessage
         ;;
     help|-h|--help)
         printUsage "$@"
@@ -623,8 +639,7 @@ case "$firstArg" in
         if [[ $1 ]]; then
             echo "Running docker exec ollama ollama run $@"
             docker exec ollama ollama run "$@"
-            echo "$1 is ready to use!"
-            exit
+            exitScriptGoodWithMessage "$1 is ready to use!"
         else
             echo "Please enter an Ollama model code to download (i.e. llama3.2:1b)" >&2
             echo "Example: $scriptName download llama3.2:1b" >&2
@@ -633,7 +648,7 @@ case "$firstArg" in
         ;;
     env|environment|-env|--environment)
         # Check for args
-
+        envCommand "$@"
         ;;
     *)
         echo "ERROR: Unknown command: $firstArg" >&2
