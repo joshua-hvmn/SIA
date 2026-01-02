@@ -171,17 +171,20 @@ errExit () {
     local errorDesc
     case $errorCode in # Don't use code 99
         1)
-            errorDesc="usage"
+            errorDesc="improper usage!"
             ;;
         2)
-            errorDesc="configuration"
+            errorDesc="improper configuration!"
+            ;;
+        3)
+            errorDesc="Unable to generate a secure secret key. Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $envFile file."
             ;;
         *)
-            errorDesc="internal error code"
+            errorDesc="unknown error code"
             errorCode=99
             ;;
     esac
-    echo "Exiting with code $errorCode: improper $errorDesc!" >&2
+    echo "Exiting with code $errorCode: $errorDesc!" >&2
     exit $errorCode
 }
 
@@ -481,26 +484,16 @@ editEnv () {
     # Create .env if it doesn't exist
     touch "$envFileLocal"
 
-    # Check if already in the file
-#    if grep -q "^${entry}$" "$envFileLocal" 2>/dev/null; then
-#        return 0
-#    fi
     # Check if "KEY=VALUE" exists and create or edit it
     if grep -q "^${key}=" "$envFileLocal" 2>/dev/null; then
         if [[ "$mode" == "enforce" ]]; then
             # Update if "KEY=VALUE" exists
-            echo "$key exists in the "$envFileLocal" file. Modifying..."
+#            echo "$key exists in the "$envFileLocal" file. Modifying..."
             grep -v "^${key}=" "$envFileLocal" > "${envFileLocal}.tmp"
             echo "$key=$value" >> "${envFileLocal}.tmp"
             mv "${envFileLocal}.tmp" "$envFileLocal"
         fi
         return 0
-# Else if key exists without = sign, append without =
-#    elif grep -q "^${key}" "$envFileLocal" 2>/dev/null; then
-#        echo "$key exists in the "$envFileLocal" file. Modifying..."
-#        grep -v "^${key}" "$envFileLocal" > "${envFileLocal}.tmp"
-#        echo "$entry" >> "${envFileLocal}.tmp"
-#        mv "${envFileLocal}.tmp" "$envFileLocal"
     else
         # Append "KEY=VALUE" if it is missing
         [[ -s "$envFileLocal" && -n "$(tail -c 1 "$envFileLocal" 2>/dev/null)" ]] && echo "" >> "$envFileLocal"
@@ -535,15 +528,16 @@ ensureSecretKey () {
             if command -v python3 >/dev/null 2>&1; then
                 secretKey=$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || true)
             fi
-            # Fallback: cksum, not crypto secure :
+            # Error out if no easy way to generate a secure key :
             if [[ -z "$secretKey" ]]; then
-                secretKey=$(head -c32 /dev/urandom | cksum | cut -d' ' -f1)
-                echo "I couldn't generate a cryptographically secure Secret Key, so I fell back on a less secure alternative."
-                echo "$appName should still work but consider manually generating a random 64 character hex string and manually editing the $envFile"
+                errExit 3
+#                secretKey=$(head -c32 /dev/urandom | cksum | cut -d' ' -f1)
+#                echo "I couldn't generate a cryptographically secure Secret Key, so I fell back on a less secure alternative."
+#                echo "$appName should still work but consider manually generating a random 64 character hex string and manually editing the $envFile"
             fi
         fi
         # Append to .env:
-        # echo "$secretKey"
+#        echo "$secretKey"
         editEnv "SEARXNG_SECRET=$secretKey"
         return 0
     fi
@@ -614,10 +608,6 @@ setupFunc () {
 startCheck () {
     echo "Checking configuration..."
     # Check if a compose file is defined, if not: setup, else start/restart
-#    if [[ ! -s "$envFile" ]] || ! grep -q "^COMPOSE_FILE=" "$envFile"; then
-#        echo "First time setup detected (or missing configuration)!" >&2
-#        setupFunc 1
-#    fi
     if [[ ! -s "$envFile" ]] || ! grep -q "^SETUP_COMPLETE=true" "$envFile" 2>/dev/null; then
         echo "First time setup detected (or missing configuration)!" >&2
         setupFunc 1
@@ -631,8 +621,6 @@ startCheck () {
         # Append to .env:
         if ! grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
             editEnv "PREVIOUSLY_RUN=true"
-            # [[ -f "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
-            # echo "PREVIOUSLY_RUN=true" >> "$envFile"
         fi
     fi
     docker compose up -d --force-recreate
