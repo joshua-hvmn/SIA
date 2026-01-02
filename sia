@@ -3,7 +3,7 @@
 # |----------------------------------------------------------------------------|
 # |              SPDX-License-Identifier: MIT                                  |
 # |              SPDX-FileCopyrightText: 2025-2026 Joshua Haveman              |
-# | This script is released under the MIT License: modify & distribute freely. |
+# |  This tool is released under the MIT License: modify & distribute freely.  |
 # |----------------------------------------------------------------------------|
 
 #!/usr/bin/env bash
@@ -17,7 +17,7 @@ webUiURL="http://localhost:3000/"
 envFile=".env" # Change if you want to use a different .env file name.
 fallbackAppVersion="v1.1.0+ (?)"
 
-### Set app name and version number (Rename this script as you please, it should still work).
+### Set app name and version number (Rename this script as you please, it should still work, but note that the appName is automatically made uppercase based on script name).
 if [[ -d .git ]]; then
     appVersion="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "$fallbackAppVersion")"
 else
