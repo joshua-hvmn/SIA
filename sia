@@ -15,12 +15,13 @@ set -euo pipefail
 searxngBaseURL="https://localhost/"
 webUiURL="http://localhost:3000/"
 envFile=".env" # Change if you want to use a different .env file name.
+fallbackAppVersion="v1.1.0+ (?)"
 
 ### Set app name and version number (Rename this script as you please, it should still work).
 if [[ -d .git ]]; then
-    appVersion="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v1.0.0+")"
+    appVersion="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "$fallbackAppVersion")"
 else
-    appVersion="v1.0.0+"
+    appVersion="$fallbackAppVersion"
 fi
 scriptName="./$(basename "$0")"
 appName=$(basename "$0" | tr '[:lower:]' '[:upper:]')
