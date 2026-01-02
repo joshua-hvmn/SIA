@@ -159,14 +159,14 @@ exitScriptGoodWithMessage() {
     local message="${*:-}"
     if [[ -n "$message" ]]; then
         echo "$message" >&2
-        exit
+        exit 0
     else
-        exit
+        exit 0
     fi
 }
 
 ## Error Exit
-#  - Call with the number of you error code in place of "exit #"
+#  - Call with the number of the error code in place of "exit #"
 #  - Extend by adding to the case statement
 
 errExit () {
@@ -174,10 +174,10 @@ errExit () {
     local errorDesc
     case $errorCode in # Don't use code 99
         1)
-            errorDesc="improper usage!"
+            errorDesc="Improper usage!"
             ;;
         2)
-            errorDesc="improper configuration!"
+            errorDesc="Improper configuration!"
             ;;
         3)
             errorDesc="Unable to generate a secure secret key. Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $envFile file."
@@ -357,8 +357,8 @@ envCommandListEdit () {
     local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
 
     ## Function
-    echo "WARNING: Modifying the behavior of COMPOSE_FILE or may break the tool."
-    echo "         You can edit those two variables directly in the $envFile file."
+    echo "WARNING: Modifying the behavior of COMPOSE_FILE or SEARXNG_SECRET"
+    echo "         may break the tool. You can edit those two in the $envFile file."
     echo "---------------------------------------------------------------------------"
     PS3=$(cat << EOF
 ---------------------------------------------------------------------------
@@ -532,9 +532,14 @@ ensureSecretKey () {
 
 setupFunc () {
     local dontRestart="${1:-0}"
-    PS3="Select your processor style ('x' to go back): "
+
+    PS3=$(cat << EOF
+---------------------------------------------------------------------------
+Select your processor style or type 'x' to exit):  
+EOF
+    )
     select opt in "${options[@]}"; do
-        [[ "$REPLY" == "x" ]] && break
+        [[ "$REPLY" == "x" ]] && exitScriptGoodWithMessage
         # Check that input is valid
         if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
             if [[ "$REPLY" -le "${#options[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
@@ -588,6 +593,7 @@ startCheck () {
     # Check if a compose file is defined, if not: setup, else start/restart
     if [[ ! -s "$envFile" ]] || ! grep -q "^SETUP_COMPLETE=true" "$envFile" 2>/dev/null; then
         echo "First time setup detected (or missing configuration)!" >&2
+        echo "---------------------------------------------------------------------------"
         setupFunc 1
     fi
     # Validate state
@@ -603,20 +609,24 @@ startCheck () {
     fi
     docker compose up -d --force-recreate
     cat << EOF
+---------------------------------------------------------------------------
 
-           $appName Startup Complete!
-              Version: $appVersion
+                       $appName Startup Complete!
+                          Version: $appVersion
 
-Access the AI Chat interface at:      $webUiURL
+    Access the AI Chat interface at:      $webUiURL
 
-Access the SearXNG search engine at:  $searxngBaseURL
+    Access the SearXNG search engine at:  $searxngBaseURL
 
-Security Tip: For secure public access, edit the environment variables:
+    Security Tip: For secure public access, edit the environment variables:
     - Set SEARXNG_HOSTNAME=yourdomain.com
     - Set SEARXNG_TLS=letsencrypt  (your key)
-    - You CANNOT change the $envFile file like other apps: $appName validates/overwrites the $envFile file on each start.
+    - You CANNOT change the $envFile file like other apps: $appName validates
+      and overwrites it on each start.
     - Run "$scriptName env" to view & change environment variables! 
     - Then run $scriptName to restart, and enjoy!
+
+---------------------------------------------------------------------------
 EOF
     return 0
 }
