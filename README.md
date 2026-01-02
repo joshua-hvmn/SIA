@@ -62,10 +62,11 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 
 - *For public usage, follow the instructions provided at start (not necessary for local use).* 
 - NOTES FOR CHANGING ENVIRONMENT VARIABLES: 
-   - SIA is unique: you must change the environment variables in the envVars array in the SIA tool, rather than changing the .env file.
-   - The tool will overwrite any changes you make to variables that are defined in the envVars array (except the SearXNG secret key and COMPOSE_FILE variables, they can be modified manually).
-   - You can manually add <u>new</u> variables to the .env file without issue, but you should write them to the array in the tool so it can ensure they exist and to prevent their potential loss.
-- *You can edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
+   - SIA is unique: you must change the environment variables using the `sia` tool.
+   - The tool will overwrite any changes you make to the .env file (except the SearXNG secret key and COMPOSE_FILE variables, they can be modified manually by default).
+   - You can manage the environment variables easily with the built in `./sia env` command.
+   - Remember that the .env file is hidden by default.
+- *You can manually edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
    your needs.*
 
 ---------
@@ -73,7 +74,7 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 ### III. Post Install
 
 6. Access Open WebUI at [http://localhost:3000](http://localhost:3000) by default.
-7. Create an admin account and bookmark the page.
+7. Create an "admin account" and bookmark the page.
 8. Connect Ollama to Open WebUI if necessary:
    - Click name in corner > Admin Panel > Settings > Connections > Ollama API > Manage Ollama API Connections > Configure (gear icon)
    - Make sure Ollama API is enabled, and the API connection is set to `http://ollama:11434`
@@ -82,7 +83,7 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
    - Enable, set to SearXNG
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
    - Note: In this version of SIA, web searches are sent over HTTP (unencrypted) between containers to avoid certificate trust issues.
-10. Use SearXNG at [https://localhost:443](https://localhost:443) by default, and accept the security warning for the self-signed certificates.
+10. Use SearXNG at [https://localhost:443](https://localhost:443) by default. You will need to accept the security warning for the self-signed certificates.
    - In Chromium browsers, set the search bar to `https://localhost/search?q=%s`
 
 11. That's pretty much everything, enjoy!
@@ -90,7 +91,7 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 ---------
 
 ### IV. Restarting
-When you restart your computer, you must restart the containers:
+When you restart your computer, you have to restart the containers:
 
 <u>Restart:</u>
 ```shell
@@ -112,7 +113,7 @@ Restart the containers again: `./sia`
 
 Bring your own reverse proxy
 
-1. Remove the caddy related parts in `.compose.<architecture of choice>.yaml` such as the caddy service and its volumes.
+1. Remove the caddy related parts in `.compose.<architecture of choice>.yaml` such as the caddy service and its volumes. (Hidden files!)
 2. Point your reverse proxy to the port set for the `searxng` service in the compose file (8080 by default).
 3. Generate and configure the required TLS certificates with the reverse proxy of your choice.
 4. Run SIA: `./sia`
@@ -123,14 +124,15 @@ Bring your own reverse proxy
 
 The `./sia` command line tool comes equipped with several subcommands and an ability to pass arguments to the underlying Docker Compose commands. This feature set may well be extended in the future.
 
-| Command       | Other Names       | Description |
-| ----------    | ----------------- | ----------- |
-| (no command)  | n/a               | Runs start/restart subcommand. Automatically runs setup on first start. |
-| setup         | -s, --setup       | Runs the setup wizard. Run if you change between CPU/Nvidia/AMD. |
-| down          | -d, --down        | Stop the SIA stack. Accepts additional arguments. (Docker Compose command) |
-| logs          | -l, --logs        | View relevant logs Accepts additional arguments. (Docker Compose command) |
-| download      | -dl, --download   | Download an Ollama model. Requires an additional argument. (Ollama command) |
-| help          | -h, --help        | Show a useful help message. Can pass "down" or "logs" commands for extra help. |
+| Command       | Other Names                | Description |
+| ----------    | -------------------------- | ----------- |
+| (no command)  | n/a                        | Runs start/restart subcommand. Automatically runs setup on first start. |
+| setup         | -s, --setup                | Runs the setup wizard. Run if you change between CPU/Nvidia/AMD. |
+| down          | -d, --down                 | Stop the SIA stack. Accepts additional arguments. (Docker Compose command) |
+| logs          | -l, --logs                 | View relevant logs Accepts additional arguments. (Docker Compose command) |
+| download      | -dl, --download            | Download an Ollama model. Requires an additional argument. (Ollama command) |
+| help          | -h, --help                 | Show a useful help message. Can pass "down" or "logs" commands for extra help. |
+| environment   | env, -env, --environment   | Shows the list of controlled environment variables and gives options to modify/release. Subcommands planned. |
 
 -----------
 
