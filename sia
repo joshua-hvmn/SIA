@@ -157,7 +157,7 @@ EOF
 #  - Pass the message to be displayed or do not pass one to automatically display "Exiting"
 
 exitScriptGoodWithMessage() { 
-    local message="${*:-Exiting}"
+    local message="${*:-}"
     echo "$message" >&2
     exit
 }
@@ -206,30 +206,61 @@ checkArray () {
         envVars)
             for entry in "${!arrayRef}"; do
                 if [[ "$entry" =~ ^# ]]; then
-                    # Comment: check for the exact string
                     if ! grep -qF "$entry" "$envFile" 2>/dev/null; then
                         [[ -s "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
                         echo "$entry" >> "$envFile"
                     fi
                 else
-                    # Variable logic
                     local key="${entry%%=*}"
                     
-                    if [[ "$entry" == *"="* ]]; then
-                        # If KEY=VALUE is defined in the array, enforce it in .env
-                        # We use editEnv because your editEnv already handles overwriting existing keys.
-                        editEnv "$entry"
-                    else
-                        # If it's just a bare KEY in the array, only add it to .env if missing
-                        if ! grep -q "^$key=" "$envFile" 2>/dev/null; then
-                             # We don't use editEnv here because it's just a placeholder check
-                             [[ -s "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
-                             echo "$key=" >> "$envFile"
-                        fi
+                    # Logic: If it's a bare key in the list, check if it's "System Protected"
+                    if [[ "$entry" != *"="* ]]; then
+                        case "$key" in
+                            # These are handled by setupFunc and ensureSecretKey
+                            # We 'continue' so they stay out of .env until those functions run
+                            SEARXNG_SECRET|COMPOSE_FILE|SETUP_COMPLETE|PREVIOUSLY_RUN) continue ;;
+                        esac
                     fi
+
+                    # All other variables (like SEARXNG_HOSTNAME=localhost) get processed
+                    editEnv "$entry"
                 fi
             done
             ;;
+#        envVars)
+#            for entry in "${!arrayRef}"; do
+#                if [[ "$entry" =~ ^# ]]; then
+#                    # Comment: check for the exact string
+#                    if ! grep -qF "$entry" "$envFile" 2>/dev/null; then
+#                        [[ -s "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
+#                        echo "$entry" >> "$envFile"
+#                    fi
+#                else
+#                    # Variable logic
+#                    local key="${entry%%=*}"
+#                    
+#                    if [[ "$entry" == *"="* ]]; then
+#                        # If KEY=VALUE is defined in the array, enforce it in .env
+#                        # We use editEnv because your editEnv already handles overwriting existing keys.
+#                        editEnv "$entry"
+#                    else
+#                        # If it's just a bare KEY in the array, only add it to .env if missing
+#                        if [[ "$entry" != *"="* ]]; then
+#                        case "$key" in
+#                            SEARXNG_SECRET|COMPOSE_FILE|SETUP_COMPLETE|PREVIOUSLY_RUN) continue ;;
+#                        esac
+#
+#                        editEnv "$entry"
+#                        fi
+##                        if ! grep -q "^$key=" "$envFile" 2>/dev/null; then
+##                             # We don't use editEnv here because it's just a placeholder check
+##                             [[ -s "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
+##                             echo "$key=" >> "$envFile"
+##                        fi
+#                    fi
+#                fi
+#            done
+#            ;;
         *)
             echo "ERROR UNKNOWN"
             errExit 1
@@ -239,7 +270,7 @@ checkArray () {
 
 ## Edit Script Arrays
 # Usage: editAnyArray "arrayName" "KEY=VALUE" (to add/update)
-# Usage: editAnyArray "arrayName" "KEY="      (to remove default overrides and normalize .env editing for that KEY)
+# Usage: editAnyArray "arrayName" "KEY"      (to remove default overrides and normalize .env editing for that KEY)
 # Usage: editAnyArray "arrayName" "KEY"       (to remove)
 # Note: this function was vibecoded, I haven't internalized it, there may be problems. I might have the usage wrong.
 # - The idea is that it mimics the editEnv function but edits the arrays in the script code itself.
@@ -348,7 +379,7 @@ envCommandListEdit () {
     done
     
     local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
-    echo "WARNING: Modifying the behavior of COMPOSE_FILE or SEARXNG_SECRET may break the tool."
+    echo "WARNING: Modifying the behavior of COMPOSE_FILE or may break the tool."
     echo "         You can edit those two variables directly in the $envFile file."
     local PS3="Select a variable to edit: "
     select arg in "${selector[@]}"; do
@@ -357,6 +388,7 @@ envCommandListEdit () {
             "Prevent $appName from overwriting edits to the value of this variable in the $envFile file (like how SEARXNG_SECRET is handled by default)."
             "Remove from $appName .env validation checks totally."
             "None, go back to the list of variables."
+            "Exit"
         )
         if [[ "$arg" == *"="* ]]; then
             # The string contains an equals sign
@@ -366,7 +398,7 @@ envCommandListEdit () {
         else
             # The string is just a bare key
             local key="$arg"
-            local value="" 
+            local value
             # Proceed with "exists" or "default" logic
         fi
         PS3="Choose action for $key [current: $value] "
@@ -381,19 +413,25 @@ envCommandListEdit () {
                             exitScriptGoodWithMessage $exitMessage
                             ;;
                         2)
-                            editAnyArray $arrayName "$key="
+                            editAnyArray $arrayName "$key"
                             exitScriptGoodWithMessage $exitMessage
                             ;;
                         3)
-                            editAnyArray $arrayName "$key"
-                            exitScriptGoodWithMessage $exitMessage
+                            echo "Sorry, this feature isn't ready."
+                            break
+                            # editAnyArray $arrayName "$key"
+                            # exitScriptGoodWithMessage $exitMessage
                             ;;
                         4)
                             echo "Going back... Select an option"
                             break
                             ;;
+                        5)
+                            exitScriptGoodWithMessage "Exiting."
+                            ;;
                         *)
                             echo "Invalid selection" >&2
+                            ;;
                     esac
                 else
                     echo "Invalid Selection: $REPLY" >&2
@@ -434,25 +472,30 @@ envCommand () {
 editEnv () {
     local entry="$1"
     local key="${entry%%=*}" # Extracts everything before the '='
+    local value="${entry#*=}"
     local envFileLocal="$envFile"
-    local emptyEnv=0
+
+    local mode="bare"
+    [[ "$entry" == *"="* ]] && mode="enforce"
 
     # Create .env if it doesn't exist
     touch "$envFileLocal"
 
     # Check if already in the file
-    if grep -q "^${entry}$" "$envFileLocal" 2>/dev/null; then
-        return 0
-    fi
+#    if grep -q "^${entry}$" "$envFileLocal" 2>/dev/null; then
+#        return 0
+#    fi
     # Check if "KEY=VALUE" exists and create or edit it
     if grep -q "^${key}=" "$envFileLocal" 2>/dev/null; then
-        # Update if "KEY=VALUE" exists
-        echo "$key exists in the "$envFileLocal" file. Modifying..."
-        grep -v "^${key}=" "$envFileLocal" > "${envFileLocal}.tmp"
-        echo "$entry" >> "${envFileLocal}.tmp"
-        mv "${envFileLocal}.tmp" "$envFileLocal"
+        if [[ "$mode" == "enforce" ]]; then
+            # Update if "KEY=VALUE" exists
+            echo "$key exists in the "$envFileLocal" file. Modifying..."
+            grep -v "^${key}=" "$envFileLocal" > "${envFileLocal}.tmp"
+            echo "$key=$value" >> "${envFileLocal}.tmp"
+            mv "${envFileLocal}.tmp" "$envFileLocal"
+        fi
         return 0
-    # Else if key exists without = sign, append without =
+# Else if key exists without = sign, append without =
 #    elif grep -q "^${key}" "$envFileLocal" 2>/dev/null; then
 #        echo "$key exists in the "$envFileLocal" file. Modifying..."
 #        grep -v "^${key}" "$envFileLocal" > "${envFileLocal}.tmp"
@@ -461,8 +504,11 @@ editEnv () {
     else
         # Append "KEY=VALUE" if it is missing
         [[ -s "$envFileLocal" && -n "$(tail -c 1 "$envFileLocal" 2>/dev/null)" ]] && echo "" >> "$envFileLocal"
-        echo "$entry" >> "$envFileLocal"
-        return 0
+        if [[ "$mode" == "enforce" ]]; then
+            echo "$key=$value" >> "$envFileLocal"
+        else
+            echo "$key=" >> "$envFileLocal"
+        fi
     fi
 }
 
