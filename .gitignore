@@ -1,0 +1,46 @@
+*~
+
+searxng-docker.service
+srv
+searxng/uwsgi.ini
+
+# --- Environment Secrets ---
+# These contain your SEARXNG_SECRET and hostnames. NEVER commit these.
+.env
+sia-config.sh
+
+# --- Docker Runtime Data (Bind Mounts) ---
+# These folders are created/populated on startup and can be massive (GBs).
+ollama/
+open-webui/
+caddy/
+
+# --- SearXNG ---
+# Ignore everything generated in this folder
+searxng/*
+
+# DO NOT ignore these specific files/folders:
+!searxng/settings.yml
+!searxng/limiter.toml
+# NOTE: DO IGNORE searxng/secrets.yml if you change it in a  way that can't be made public.
+
+# Common temp files
+*.swp
+*.swo
+*#
+.DS_Store
+Thumbs.db
+
+# Python/Node/etc if applicable
+__pycache__/
+*.pyc
+node_modules/
+
+# --- Specific Configs (Optional) ---
+# If you want to provide default configs but allow users to change them:
+# 1. Commit 'Caddyfile' because it's usually static.
+# 2. If you want to keep the FOLDER structure but not the data:
+# !ollama/.gitkeep
+# !open-webui/.gitkeep
+# !searxng/.gitkeep
+

@@ -1,5 +1,5 @@
 # |----------------------------------------------------------------------------|
-# |                        SIA Management Script                               |
+# |                        SIA Management Tool                                 |
 # |----------------------------------------------------------------------------|
 # |              SPDX-License-Identifier: MIT                                  |
 # |              SPDX-FileCopyrightText: 2025-2026 Joshua Haveman              |
@@ -27,47 +27,30 @@ scriptName="./$(basename "$0")"
 appName=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+### Check for or restore local config
+LOCAL_CONFIG="sia-config.sh"
+TEMPLATE_CONFIG=".sia-config-template.sh"
+# If config template is missing (e.g. user deleted everything but sia), recover it
+if [[ ! -f "$scriptWorkingDir/.sia-config-template.sh" ]]; then
+    echo "sia-config-template.sh missing - recovering from latest version..."
+    curl -fsSL https://raw.githubusercontent.com/joshua-hvmn/SIA/main/.sia-config-template.sh -o "$scriptWorkingDir/sia-config.sh" || errExit 404
+fi
+# If first setup or missing local config, create
+if [[ ! -f "$LOCAL_CONFIG" ]]; then
+    if [[ -f "$TEMPLATE_CONFIG" ]]; then
+        echo "Creating local config from template..."
+        cp "$TEMPLATE_CONFIG" "$LOCAL_CONFIG"
+        chmod 600 "$LOCAL_CONFIG"  # protect potential secrets
+    else
+        echo "ERROR: Template $TEMPLATE_CONFIG not found!"
+        errExit 2
+    fi
+fi
+source "$LOCAL_CONFIG"
+
 ### Consume first argument to be used for commands and shift so subfunctions can use subsequent arguments.
 firstArg="${1:-start}"
 shift || true
-
-## Arrays
-options=( # Must be ordered like fileNames. Associative arrays are avoided for portability.
-    "CPU Only"
-    "Nvidia GPU"
-    "AMD GPU"
-)
-fileNames=( # Must be ordered like options.
-    ".compose.cpu.yaml"
-    ".compose.nvidia.yaml"
-    ".compose.amd.yaml"
-)
-dependencies=( # Simply add the command to be tested to this array.
-    "docker"
-    "git"
-)
-envVars=( # don't include the secret key or compose file variables, they are handled by other parts of the script. File constructed if necessary.
-    "#   $appName  =  $appVersion"
-    "#  For public access, change:"
-    "#  - SEARXNG_HOSTNAME to your domain name"
-    "#  - SEARXNG_TLS=letsencrypt  (your key)"
-    "#  - Uncomment and set a LETSENCRYPT email in order to create a Let's Encrypt certificate"
-    "#  TO CHANGE:" 
-    "#  - $scriptName will overwrite any changes to the $envFile, except changing the SEARXNG_SECRET or COMPOSE_FILE."
-    "#  - To change defaults, run '$scriptName env'"
-    "# LETSENCRYPT_EMAIL="
-    "SEARXNG_HOSTNAME=localhost"
-    "SEARXNG_TLS=internal"
-    "SEARXNG_BASE_URL=$searxngBaseURL"
-    "WEBUI_URL=$webUiURL"
-    "OLLAMA_BASE_URL=http://ollama:11434"
-    "WEB_SEARCH_ENGINE=searxng"
-    "SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json"
-    "SEARXNG_SECRET"
-    "COMPOSE_FILE"
-    "PREVIOUSLY_RUN"
-    "SETUP_COMPLETE"
-)
 
 # FUNCTIONS
 ## Testing :
@@ -183,12 +166,15 @@ errExit () {
         3)
             errorDesc="Unable to generate a secure secret key. Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $envFile file."
             ;;
+        404)
+            errorDesc="Could not curl replacement config template. Check internet/repo!"
+            ;;
         *)
             errorDesc="unknown error code"
             errorCode=99
             ;;
     esac
-    echo "Exiting with code $errorCode: $errorDesc!" >&2
+    echo "Exiting with code $errorCode: $errorDesc" >&2
     exit $errorCode
 }
 
@@ -252,7 +238,7 @@ editAnyArray() {
     local arrayName="$1"
     local arg="$2"
     local arg2="${3:-}"
-    local scriptFile="$0"
+    local scriptFile="$scriptWorkingDir/sia-config.sh"
     local backupFile="${scriptFile}.bak"
 
     [[ -z "$arrayName" || -z "$arg" ]] && { echo "Usage: editAnyArray name entry"; return 1; }
