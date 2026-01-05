@@ -17,6 +17,8 @@ webUiURL="http://localhost:3000/"
 envFile=".env" # Change if you want to use a different .env file name.
 fallbackAppVersion="v2.0.0+ (?)"
 verbosity=2
+termWidthFallback=80
+termMaxWidth=120
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the appName is automatically made uppercase based on script name).
 if [[ -d .git ]]; then
@@ -97,15 +99,85 @@ log() {
 
 # SEMANTIC WRAPPERS
 # These call log() internally so you don't have to remember the numbers.
+wrap_text() {
+    local text="$1"
+    local prefix_width=0  # Extra space reserved for the prefix (e.g., "[INFO]    ")
+    local wrap_indent="${2:-10}"    # How far in the continued lines should start
 
-msg_error()   { log 1 "${RED}[ERROR]${NC}   $*"; }
-msg_usage()   { log 2 "${YELLOW}[USAGE]${NC}   $*"; }
-msg_warn()    { log 2 "${YELLOW}[WARN]${NC}    $*"; }
-msg_info()    { log 2 "${BLUE}[INFO]${NC}    $*"; }
-msg_success() { log 2 "${GREEN}[CHECK]${NC}   $*"; } # SUCCESS is longest, so it has 1 space
-msg_debug()   { log 3 "${BOLD}[DEBUG]${NC}   $*"; }
-msg_normal()  { log 2 "          $*"; }           # 10 spaces to match the tags above
-msg_header()  { log 2 "\n${BOLD}== $* ==${NC}"; }
+    # Wrap the text to the available width (total 75 minus prefix space)
+    printf "%s" "$text" | fold -s -w $((75 - prefix_width)) | \
+    awk -v pw="$prefix_width" -v iw="$wrap_indent" '
+    {
+        if (NR == 1) {
+            printf "%*s%s\n", pw, "", $0
+        } else {
+            printf "%*s%s\n", iw, "", $0
+        }
+    }'
+}
+
+msg_error()   { log 1 "${RED}[ERROR]${NC}   $(wrap_text "$*")"; }
+msg_usage()   { log 2 "${YELLOW}[USAGE]${NC}   $(wrap_text "$*")"; }
+msg_warn()    { log 2 "${YELLOW}[WARN]${NC}    $(wrap_text "$*")"; }
+msg_info()    { log 2 "${BLUE}[INFO]${NC}    $(wrap_text "$*")"; }
+msg_success() { log 2 "${GREEN}[CHECK]${NC}   $(wrap_text "$*")"; }
+msg_debug()   { log 3 "${BOLD}[DEBUG]${NC}   $(wrap_text "$*")"; }
+msg_normal()  { log 2 " $(wrap_text "$*")"; }
+# msg_normal()  { log 2 "$(printf "%*s" $((10)) '')$(wrap_text "$*")"; }
+msg_header() {
+    # Check if color defined else bold
+    if [[ "$1" =~ ^\\033 ]]; then
+        local color="$1"
+        shift
+        log 2 "\n${color}== $* ==${NC}"
+    else
+        log 2 "\n${BOLD}== $* ==${NC}"
+    fi
+}
+msg_title() {
+    local termWidth=$(tput cols 2>/dev/null || echo $termWidthFallback)
+    [[ "$termWidth" -gt $termMaxWidth ]] && termWidth=$termMaxWidth
+    local color
+    # if color else bold
+    if [[ "$1" =~ ^\\033 ]]; then
+        local color="$1"
+        shift
+    else
+        color=$BOLD
+    fi
+    local text="$*"
+    # Calc visible chars
+    local visibleText=$(echo -e "$text" | sed 's/\x1b\[[0-9;]*m//g')
+    local textLength=${#visibleText}
+    # Math
+    local padding=$(( (termWidth - textLength) / 2 ))
+    [[ "$padding" -lt 0 ]] && padding=0
+
+    log 2 "$(printf '%*s%b%b%b' "$padding" '' "$color" "$text" "$NC")"
+}
+msg_blank()  { log 2 ""; }
+msg_line() { # for lines that are terminal width
+    local termWidth=$(tput cols 2>/dev/null || echo $termWidthFallback)
+    [[ "$termWidth" -gt $termMaxWidth ]] && termWidth=$termMaxWidth
+    # local maxWidth=75 # Your script's standard max width # I have literally no idea what the AI was doing here.
+    # local width=$(( termWidth < maxWidth ? termWidth : maxWidth ))
+    local line=$(printf '%*s' "$termWidth" '' | tr ' ' '-')
+    log 2 "${NC}$line${NC}"
+}
+msg_col() {
+    local left="   $1"
+    local right="$2"
+    local padding=18
+
+    local leftLength=${#left}
+    local diff="$((padding - leftLength))"
+
+    [[ $diff -lt 1 ]] && diff=1
+
+    local spacer="$(printf '%*s' "$diff" "")"
+    
+    log 2 "$(wrap_text "${left}${spacer}${right}" "$padding")"
+}
 
 ## Help :
 #  - Accepts one extra argument
