@@ -13,7 +13,20 @@
 
 #!/usr/bin/env bash
 
+if [[ "${siaMainLoaded:-}" != "true" ]]; then
+    echo "Error: This script is a component of SIA and cannot be run directly."
+    echo "Please run: ./sia"
+    exit 1
+fi
+
 ## Arrays
+configArrays=(
+    "options"
+    "fileNames"
+    "dependencies"
+    "envVars"
+    "envCLMenuOptions"
+)
 options=( # Must be ordered like fileNames. Associative arrays are avoided for portability.
     "CPU Only"
     "Nvidia GPU"
@@ -49,4 +62,10 @@ envVars=( # don't include the secret key or compose file variables, they are han
     "COMPOSE_FILE"
     "PREVIOUSLY_RUN"
     "SETUP_COMPLETE"
+)
+envCLMenuOptions=(
+    "Edit default value and make $appName validates it on each restart."
+    "Prevent $appName from overwriting edits to the value of this variable in the $envFile file (like how SEARXNG_SECRET is handled by default)."
+    "Remove from $appName .env validation checks totally."
+    "Exit"
 )
