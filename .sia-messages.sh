@@ -17,41 +17,6 @@ if [[ "${siaMainLoaded:-}" != "true" ]]; then
     exit 1
 fi
 
-# VERBOSITY AND SEMANTICS
-# ANSI Color Codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
-# Default verbosities: 0: Silent, 1: Errors only, 2: Standard (Info), 3: Debug (Trace)
-
-log() {
-    local msg_lvl=$1; shift
-    [[ $verbosity -lt $msg_lvl ]] && return 0
-    
-    # Send errors (Level 1) to stderr, everything else to stdout
-    if [[ $msg_lvl -eq 1 ]]; then
-        echo -e "$*" >&2
-    else
-        echo -e "$*"
-    fi
-}
-
-# SEMANTIC WRAPPERS
-# These call log() internally so you don't have to remember the numbers.
-
-msg_error()   { log 1 "${RED}[ERROR]${NC}   $*"; }
-msg_usage()   { log 2 "${YELLOW}[USAGE]${NC}   $*"; }
-msg_warn()    { log 2 "${YELLOW}[WARN]${NC}    $*"; }
-msg_info()    { log 2 "${BLUE}[INFO]${NC}    $*"; }
-msg_success() { log 2 "${GREEN}[SUCCESS]${NC} $*"; } # SUCCESS is longest, so it has 1 space
-msg_debug()   { log 3 "${BOLD}[DEBUG]${NC}   $*"; }
-msg_normal()  { log 2 "          $*"; }           # 10 spaces to match the tags above
-msg_header()  { log 2 "\n${BOLD}== $* ==${NC}"; }
-
-
 # HELP MENUS
 printHelp_general() {
     cat << EOF
@@ -151,12 +116,12 @@ startMes_startDone() {
     Security Tip: For secure public access, edit the environment variables:
         - Set SEARXNG_HOSTNAME=yourdomain.com
         - Set SEARXNG_TLS=letsencrypt  (your key)
-    ∙ See https://docs.searxng.org for TLS setup.
-    ∙ You CANNOT change the $envFile file like other apps: $appName validates
+    - See https://docs.searxng.org for TLS setup.
+    - You CANNOT change the $envFile file like other apps: $appName validates
       and overwrites changes on each start, except ones not tracked by $appName.
-    ∙ Run "$scriptName env" to view & change environment variables / $appName control! 
-    ∙ Then run $scriptName to restart, and enjoy!
-    ∙ '$scriptName help [optional command]' to show the help menus!
+    - Run "$scriptName env" to view & change environment variables / $appName control! 
+    - Then run $scriptName to restart, and enjoy!
+    - '$scriptName help [optional command]' to show the help menus!
 
 ---------------------------------------------------------------------------
 EOF
