@@ -326,12 +326,13 @@ editAnyArray() {
 }
 
 ## envCommand List
-#  - pass the name of the array
+#  - pass the name of the array to see a list of options to edit it. Currently this
+#    list function only supports the envVars array.
 #  - can make this function universal by using an additional arg to indicate which menu options array to choose from, and storing the subfunction names in arrays
 #    and calling them based on the index of the selected option menu. That will take some thinking, not necessary for this app. It might be better to 
 #    switch to a newer Bash target so I can use associative arrays, but it isn't necessary for this function.
-
-# Main Function:
+#  - make another SIA command like env to bring up a list of arrays so you can edit the whole config
+#    without using the env add command
 
 envCommandListEdit () {
     ## Variables
@@ -350,8 +351,7 @@ envCommandListEdit () {
     local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
 
     ## Function
-    msg_warn "Modifying the behavior of COMPOSE_FILE or SEARXNG_SECRET"
-    msg_normal "may break the tool. You can edit those two in the $envFile file."
+    msg_warn "If you add a SEARXNG_SECRET, you must remove it after."
     log 2 "---------------------------------------------------------------------------"
     PS3=$(selMenu_envListSelOne)
     select arg in "${selector[@]}"; do
@@ -408,7 +408,7 @@ envCommandListEdit () {
     done
 }
 
-## Script environment command function
+## .env handler command Parser
 #  - USAGE:
 #  - ./sia env - view list and choose what to do.
 #  - ./sia env add [optional name WITH CAUTION] [key] [value]
@@ -525,8 +525,11 @@ ensureSecretKey () {
             fi
         fi
         # Append to .env:
-#        echo "$secretKey"
-        editAnyArray envVars "SEARXNG_SECRET=$secretKey" && editEnv "SEARXNG_SECRET=$secretKey"
+        keyPrefix=${secretKey:0:5}
+        msg_info "Secret key beginning with '$keyPrefix' was generated and injected into the .env."
+        msg_warn "The key must not be added to the $appName Environment Handler, otherwise anyone with access to $appName will be able to view the key!"
+
+        editEnv "SEARXNG_SECRET=$secretKey"
         return 0
     fi
 }
@@ -653,7 +656,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     case "$firstArg" in
         start|"")
             # Default
-            msg_normal "$appName Starting and validating configuration..."
+            msg_info "$appName validating configuration..."
             # Check for all dependencies
             checkDeps
             # Start and run setup if needed
