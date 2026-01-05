@@ -1,5 +1,5 @@
 # |----------------------------------------------------------------------------|
-# |                        SIA Management Script                               |
+# |                        SIA Management Tool                                 |
 # |----------------------------------------------------------------------------|
 # |              SPDX-License-Identifier: MIT                                  |
 # |              SPDX-FileCopyrightText: 2025-2026 Joshua Haveman              |
@@ -15,7 +15,8 @@ set -euo pipefail
 searxngBaseURL="https://localhost/"
 webUiURL="http://localhost:3000/"
 envFile=".env" # Change if you want to use a different .env file name.
-fallbackAppVersion="v1.1.0+ (?)"
+fallbackAppVersion="v2.0.0+ (?)"
+verbosity=2
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the appName is automatically made uppercase based on script name).
 if [[ -d .git ]]; then
@@ -26,55 +27,42 @@ fi
 scriptName="./$(basename "$0")"
 appName=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 scriptWorkingDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export siaMainLoaded=true
+
+## SUBSCRIPTS TO SOURCE
+configScript="sia-config.sh"
+configTemplate=".sia-config-template.sh"
+messageScript=".sia-messages.sh"
+
+### If verbosity defined: set it
+case "${1:-}" in
+    --silent|0)
+        verbosity=0
+        shift
+        ;;
+    --quiet|1)
+        verbosity=1
+        shift
+        ;;
+    2)
+        shift
+        ;;
+    --debug|--verbose|3|--loud)
+        verbosity=3
+        shift
+        ;;
+esac
 
 ### Consume first argument to be used for commands and shift so subfunctions can use subsequent arguments.
 firstArg="${1:-start}"
 shift || true
-
-## Arrays
-options=( # Must be ordered like fileNames. Associative arrays are avoided for portability.
-    "CPU Only"
-    "Nvidia GPU"
-    "AMD GPU"
-)
-fileNames=( # Must be ordered like options.
-    ".compose.cpu.yaml"
-    ".compose.nvidia.yaml"
-    ".compose.amd.yaml"
-)
-dependencies=( # Simply add the command to be tested to this array.
-    "docker"
-    "git"
-)
-envVars=( # don't include the secret key or compose file variables, they are handled by other parts of the script. File constructed if necessary.
-    "#   $appName  =  $appVersion"
-    "#  For public access, change:"
-    "#  - SEARXNG_HOSTNAME to your domain name"
-    "#  - SEARXNG_TLS=letsencrypt  (your key)"
-    "#  - Uncomment and set a LETSENCRYPT email in order to create a Let's Encrypt certificate"
-    "#  TO CHANGE:" 
-    "#  - $scriptName will overwrite any changes to the $envFile, except changing the SEARXNG_SECRET or COMPOSE_FILE."
-    "#  - To change defaults, run '$scriptName env'"
-    "# LETSENCRYPT_EMAIL="
-    "SEARXNG_HOSTNAME=localhost"
-    "SEARXNG_TLS=internal"
-    "SEARXNG_BASE_URL=$searxngBaseURL"
-    "WEBUI_URL=$webUiURL"
-    "OLLAMA_BASE_URL=http://ollama:11434"
-    "WEB_SEARCH_ENGINE=searxng"
-    "SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json"
-    "SEARXNG_SECRET"
-    "COMPOSE_FILE"
-    "PREVIOUSLY_RUN"
-    "SETUP_COMPLETE"
-)
 
 # FUNCTIONS
 ## Testing :
 #  - uncomment to block relevant commands during testing
 
 #docker() {
-#  echo "[MOCK] docker $@"
+#    echo "[MOCK] docker $@"
 #}
 #git() {
 #    echo "[MOCK] git $@"
@@ -86,6 +74,39 @@ if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/n
     docker() { if [[ "$1" == "compose" ]]; then shift; command docker-compose "$@"; else command docker "$@"; fi; }
 fi
 
+# VERBOSITY AND SEMANTICS
+# ANSI Color Codes
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+# Default verbosities: 0: Silent, 1: Errors only, 2: Standard (Info), 3: Debug (Trace)
+
+log() {
+    local msg_lvl=$1; shift
+    [[ $verbosity -lt $msg_lvl ]] && return 0
+    
+    if [[ $msg_lvl -eq 1 ]]; then
+        printf "%b\n" "$*" >&2
+    else
+        printf "%b\n" "$*"
+    fi
+}
+
+# SEMANTIC WRAPPERS
+# These call log() internally so you don't have to remember the numbers.
+
+msg_error()   { log 1 "${RED}[ERROR]${NC}   $*"; }
+msg_usage()   { log 2 "${YELLOW}[USAGE]${NC}   $*"; }
+msg_warn()    { log 2 "${YELLOW}[WARN]${NC}    $*"; }
+msg_info()    { log 2 "${BLUE}[INFO]${NC}    $*"; }
+msg_success() { log 2 "${GREEN}[CHECK]${NC}   $*"; } # SUCCESS is longest, so it has 1 space
+msg_debug()   { log 3 "${BOLD}[DEBUG]${NC}   $*"; }
+msg_normal()  { log 2 "          $*"; }           # 10 spaces to match the tags above
+msg_header()  { log 2 "\n${BOLD}== $* ==${NC}"; }
+
 ## Help :
 #  - Accepts one extra argument
 #  - Add help menus for new commands by adding them to the case statement
@@ -94,61 +115,22 @@ printUsage () {
     local arg="${1:-}"
     case "$arg" in
         down|-d|--down)
-            cat << EOF
-Usage: $scriptName -d <command>
-
-Command being run: docker compose down <command>
-
-Commands:
-    (no argument)       None, leaves volumes and app images (default).
-    --volumes | -v      Remove volumes named in the compose file.
-    --remove-orphans    Remove containers for services no longer in the compose (i.e. you modify it).
-    --rmi               Remove images used by services.
-    --help | -h         Show the inbuilt Docker help message (not this one).
-
-Pass additional arguments to pass them to the underlying docker command.
-
-EOF
+            printHelp_down
             ;;
         logs|-l|--logs)
-            cat << EOF
-Usage: $scriptName -l <command>
-
-Command being run: docker compose logs <command>
-
-Commands:
-    (no argument)     "--tail 100" shows last 100 logs by default
-    <container name>  View logs for that container.
-    --timestamps | -t Show timestamps for each file.
-    --no-color        Black and white.
-    --no-log-prefix   Omit service name/container from each log line.
-    help | -h         Show the inbuilt Docker help message (not this one).
-
-Pass additional arguments to pass them to the underlying docker command.
-
-EOF
+            printHelp_logs
+            ;;
+        setup|-s|--setup)
+            printHelp_setup
+            ;;
+        download|-dl|--download)
+            printHelp_download
+            ;;
+        env|environment|-env|--environment)
+            printHelp_env
             ;;
         *)
-            cat << EOF
-Usage: $scriptName <command>
-
-Commands:
-    (no argument)    Start or restart the $appName stack (default)
-    setup | -s       Run or rerun the setup wizard to change the setup
-    down | -d        Stop the $appName stack. Accepts an additional argument. (Docker command)
-    logs | -l        View relevant logs Accepts an additional argument. (Docker command)
-    download | -dl   Download an Ollama model. Requires an additional argument. (Docker command)
-    help | -h        Show this help message
-
-Pass additional arguments to pass them to the underlying docker command.
-
-Examples:
-    $scriptName                 Starts the containers. On first start, runs setup and generates the secret key.
-    $scriptName setup           Runs setup, for changing which setup you're using.
-    $scriptName -d              Stops all $appName containers.
-    $scriptName --help          Shows the help message.
-    $scriptName -l --verbose    Shows the logs and passes the --verbose argument.
-EOF
+            printHelp_general
             ;;
     esac
 }
@@ -181,14 +163,17 @@ errExit () {
             errorDesc="Improper configuration!"
             ;;
         3)
-            errorDesc="Unable to generate a secure secret key. Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $envFile file."
+            errorDesc="No known number generator!"
+            ;;
+        404)
+            errorDesc="Could not curl replacement config template. Check internet/repo!"
             ;;
         *)
             errorDesc="unknown error code"
             errorCode=99
             ;;
     esac
-    echo "Exiting with code $errorCode: $errorDesc!" >&2
+    msg_warn "Exiting with code $errorCode: $errorDesc" >&2
     exit $errorCode
 }
 
@@ -205,7 +190,8 @@ checkArray () {
         dependencies)
             for cmd in "${!arrayRef}"; do
                 if ! command -v "$cmd" >/dev/null 2>&1; then
-                    echo "Error: $cmd not found. Please make sure it is installed and you have permission to use it."
+                    msg_error "$cmd not found!" 
+                    msg_usage "Make sure it's installed and you have permission to use it."
                     errExit 2
                 fi
             done
@@ -235,10 +221,15 @@ checkArray () {
             done
             ;;
         *)
-            echo "ERROR UNKNOWN"
+            msg_error "Invalid Array Name: '$arrayName'"
             errExit 1
         ;;
     esac
+}
+
+checkDeps() {
+    checkArray
+    checkArray envVars
 }
 
 ## Edit Script Arrays
@@ -246,16 +237,17 @@ checkArray () {
 # Usage: editAnyArray "arrayName" "KEY"      (to remove default overrides and normalize .env editing for that KEY)
 # Usage: editAnyArray "arrayName" "KEY"       (to remove)
 # Note: this function was vibecoded, I haven't internalized it, there may be problems. I might have the usage wrong.
-# - The idea is that it mimics the editEnv function but edits the arrays in the script code itself.
+# - The idea is that it mimics the editEnv function but edits the arrays in the config file.
+# - I will refactor into multiple functions eventually so I understand it fully.
 
 editAnyArray() {
     local arrayName="$1"
     local arg="$2"
     local arg2="${3:-}"
-    local scriptFile="$0"
+    local scriptFile="$scriptWorkingDir/sia-config.sh"
     local backupFile="${scriptFile}.bak"
 
-    [[ -z "$arrayName" || -z "$arg" ]] && { echo "Usage: editAnyArray name entry"; return 1; }
+    [[ -z "$arrayName" || -z "$arg" ]] && { msg_usage "editAnyArray [arrayName] [key] [value]"; return 1; }
 
     cp "$scriptFile" "$backupFile" || return 1
 
@@ -277,7 +269,7 @@ editAnyArray() {
     done
 
     [[ $start_idx -lt 0 || $end_idx -lt 0 ]] && { 
-        echo "Array $arrayName not found in $scriptFile"; 
+        msg_error "Array $arrayName not found in $scriptFile"; 
         rm -f "$backupFile"; return 1; 
     }
 
@@ -346,7 +338,7 @@ envCommandListEdit () {
     local PS3
     local arrayName="${1:-arrayNotDefined}"
     if [[ ! "$(declare -p "$arrayName" 2>/dev/null)" =~ "declare -a" ]]; then
-        echo "Internal Error: Array Undefined: $arrayName"
+        msg_error "Internal - Array Undefined: $arrayName"
         errExit 99
     fi
     local placeholder="${arrayName}[@]"
@@ -358,22 +350,12 @@ envCommandListEdit () {
     local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
 
     ## Function
-    echo "WARNING: Modifying the behavior of COMPOSE_FILE or SEARXNG_SECRET"
-    echo "         may break the tool. You can edit those two in the $envFile file."
-    echo "---------------------------------------------------------------------------"
-    PS3=$(cat << EOF
----------------------------------------------------------------------------
-Select a variable to edit or type 'x' to go back:  
-EOF
-    )
+    msg_warn "Modifying the behavior of COMPOSE_FILE or SEARXNG_SECRET"
+    msg_normal "may break the tool. You can edit those two in the $envFile file."
+    log 2 "---------------------------------------------------------------------------"
+    PS3=$(selMenu_envListSelOne)
     select arg in "${selector[@]}"; do
         [[ "$REPLY" == "x" ]] && break
-        local menuOptions=(
-            "Edit default value and make $appName validates it on each restart."
-            "Prevent $appName from overwriting edits to the value of this variable in the $envFile file (like how SEARXNG_SECRET is handled by default)."
-            "Remove from $appName .env validation checks totally."
-            "Exit"
-        )
         if [[ "$arg" == *"="* ]]; then
             # The string contains an equals sign
             local key="${arg%%=*}"
@@ -385,68 +367,89 @@ EOF
             local value
             # Proceed with "exists" or "default" logic
         fi
-        echo "---------------------------------------------------------------------------"
-        PS3=$(cat << EOF
----------------------------------------------------------------------------
-Choose action for $key [current: ${value:-"NOT SET"}] ('x' to go back): 
-EOF
-    )
-        select opt in "${menuOptions[@]}"; do # Will need to change if you want to universalize this function. i.e., "${!input}"
+        log 2 "---------------------------------------------------------------------------"
+        PS3=$(selMenu_envListChooseAction)
+        select opt in "${envCLMenuOptions[@]}"; do # Will need to change if you want to universalize this function. i.e., "${!input}"
             [[ "$REPLY" == "x" ]] && break
             # Check that input is valid
             if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
-                if [[ "$REPLY" -le "${#menuOptions[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
+                if [[ "$REPLY" -le "${#envCLMenuOptions[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
                     case "$REPLY" in
                         1)
                             read -p "Enter value for $key: " userInput
-                            editAnyArray $arrayName "$key=$userInput"
-                            exitScriptGoodWithMessage $exitMessage
+                            editAnyArray $arrayName "$key=$userInput" && editEnv "$key=$userInput"
+                            startCheck
                             ;;
                         2)
-                            editAnyArray $arrayName "$key"
-                            exitScriptGoodWithMessage $exitMessage
+                            editAnyArray $arrayName "$key"  && editEnv "$key"
+                            startCheck
                             ;;
                         3)
-                            editAnyArray $arrayName "$key" "rm"
-                            exitScriptGoodWithMessage $exitMessage
+                            editAnyArray $arrayName "$key" "rm" && checkArray envVars
+                            startCheck
                             ;;
                         4)
                             exitScriptGoodWithMessage "Exiting."
                             ;;
                         *)
-                            echo "Invalid selection" >&2
+                            msg_error "Invalid selection"
                             ;;
                     esac
                 else
-                    echo "Invalid Selection: $REPLY" >&2
-                    echo "Try again. Enter a number between 1 and ${#menuOptions[@]}"
+                    msg_error "Invalid Selection: $REPLY"
+                    msg_usage "Enter a number between 1 and ${#envCLMenuOptions[@]}"
                 fi
             else
-                echo "Invalid Selection: $REPLY" >&2
-                echo "Try again. Enter a number between 1 and ${#menuOptions[@]}"
+                msg_error "Invalid Selection: $REPLY"
+                msg_usage "Enter a number between 1 and ${#envCLMenuOptions[@]}"
             fi
         done
-        PS3=$(cat << EOF
----------------------------------------------------------------------------
-Select a variable to edit or type 'x' to go back:  
-EOF
-    )
+        PS3=$(selMenu_envListSelOne)
     done
 }
 
 ## Script environment command function
+#  - USAGE:
+#  - ./sia env - view list and choose what to do.
+#  - ./sia env add [optional name WITH CAUTION] [key] [value]
+#    - If you define a name, it will edit the values in the array if it exists, 
+#    - for example, 'dependencies' or 'fileNames'. Use caution!
 
 envCommand () {
     local firstArg="${1:-list}"
+    local arrayName="${2:-envVars}"
+    local key="${3:-}"
+    local value="${4:-}"
+    local toCheck=( "key" "value" )
     case $firstArg in
         list|-l|--list)
             envCommandListEdit envVars
             ;;
         add|-a|--add)
-            echo "Shortcut planned"
+            # Make sure chosen array can be edited
+            local validArr=0
+            for arr in "${configArrays[@]}"; do
+                [[ "$arrayName" = "$arr" ]] && validArr=1 && break
+            done
+            if [[ "$validArr" -eq 0 ]]; then
+                msg_error "'$arrayName' is not an editable array."
+                msg_info "Allowed arrays: ${configArrays[*]}"
+                errExit 1
+            fi
+            # Make sure args defined
+            for item in "${toCheck[@]}"; do
+                if [[ -n "$item" ]]; then
+                    msg_error "Please define a $item. Make sure key/value are separate."
+                    msg_usage "$scriptName env add <key> <value>"
+                    errExit 1
+                fi
+            done
+            editAnyArray $arrayName "$key=$value" && editEnv "$key=$value"
+            msg_success "Successfully added/updated '$key=$value' in array '$arrayName'."
+            msg_info "Run $scriptName to apply changes."
             ;;
         rm|-rm|--remove)
-            echo "Shortcut planned"
+            msg_info "Shortcut planned"
             ;;
     esac
 }
@@ -499,7 +502,7 @@ ensureSecretKey () {
     # Check if key exists and generate one if it doesn't
     touch "$envFile"
     if ! grep -q "^SEARXNG_SECRET=" "$envFile" 2>/dev/null; then
-        echo "Generating secret key..."
+        msg_debug "Generating secret key..."
         local secretKey
         # Generate the key
         # Try OpenSSL :
@@ -515,12 +518,15 @@ ensureSecretKey () {
             fi
             # Error out if no easy way to generate a secure key :
             if [[ -z "$secretKey" ]]; then
+                msg_error "Couldn't find a way to generate a truly random number!"
+                msg_debug "$appName tried OpenSSL, od, and python3!"
+                msg_info "Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $envFile file."
                 errExit 3
             fi
         fi
         # Append to .env:
 #        echo "$secretKey"
-        editEnv "SEARXNG_SECRET=$secretKey"
+        editAnyArray envVars "SEARXNG_SECRET=$secretKey" && editEnv "SEARXNG_SECRET=$secretKey"
         return 0
     fi
 }
@@ -534,11 +540,7 @@ ensureSecretKey () {
 setupFunc () {
     local dontRestart="${1:-0}"
 
-    PS3=$(cat << EOF
----------------------------------------------------------------------------
-Select your processor style or type 'x' to exit):  
-EOF
-    )
+    PS3=$(selMenu_processorMenu)
     select opt in "${options[@]}"; do
         [[ "$REPLY" == "x" ]] && exitScriptGoodWithMessage
         # Check that input is valid
@@ -550,36 +552,36 @@ EOF
                         # Check menu choice is associated with a file name
                         if [[ -n "${fileNames[index]}" ]]; then
                             local selectedFile=${fileNames[index]}
-                            echo "Selected: $REPLY: $opt ($selectedFile)"
+                            msg_debug "Selected: $REPLY: $opt ($selectedFile). Making sure it's present..."
                             # Check file is present
                             if [[ ! -f $selectedFile ]]; then
-                                echo "ERROR: Compose file $selectedFile not found" >&2
+                                msg_error "YAML file $selectedFile not found!"
                                 errExit 2
                             fi
-
+                            msg_debug "YAML found!"
                             # Create or Update .env
-                            editEnv "COMPOSE_FILE=$selectedFile"
+                            editAnyArray envVars "COMPOSE_FILE=$selectedFile" && editEnv "COMPOSE_FILE=$selectedFile"
                             ensureSecretKey
-                            editEnv "SETUP_COMPLETE=true"
-                            echo "Configuration saved to "$envFile"."
+                            editAnyArray envVars "SETUP_COMPLETE=true" && editEnv "SETUP_COMPLETE=true"
+                            msg_debug "Configuration saved to "$envFile"."
 
                             # Check if previously run / need to restart
                             if [[ $dontRestart -eq 0 ]] && grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
-                                echo "Previous run detected: automatically restarting..."
+                                msg_debug "Previous run detected: automatically restarting..."
                                 startCheck
                             fi
                             break
                         else
-                            echo "Invalid selection" >&2
+                            msg_error "Invalid selection"
                         fi
                 esac
             else
-                echo "Invalid Selection: $REPLY" >&2
-                echo "Try again. Enter a number between 1 and ${#options[@]}"
+                msg_error "Invalid Selection: $REPLY"
+                msg_usage "Try again. Enter a number between 1 and ${#options[@]}"
             fi
         else
-            echo "Invalid Selection: $REPLY" >&2
-            echo "Try again. Enter a number between 1 and ${#options[@]}"
+            msg_error "Invalid Selection: $REPLY"
+            msg_usage "Try again. Enter a number between 1 and ${#options[@]}"
         fi
     done
 }
@@ -590,119 +592,134 @@ EOF
 # - Checks for previous run for appropriate start/restart messaging.
 
 startCheck () {
-    echo "Checking configuration..."
     # Check if a compose file is defined, if not: setup, else start/restart
     if [[ ! -s "$envFile" ]] || ! grep -q "^SETUP_COMPLETE=true" "$envFile" 2>/dev/null; then
-        echo "First time setup detected (or missing configuration)!" >&2
-        echo "---------------------------------------------------------------------------"
+        startMes_firstStart
         setupFunc 1
     fi
+    # Re-source modified config
+    source "$scriptWorkingDir/$configScript"
     # Validate state
 #    checkArray envVars
     if grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
-        echo "Valid configuration - Restarting!"
+        msg_success "Valid configuration - Restarting!"
     else
-        echo "Valid configuration - Starting for the first time, enjoy!"
+        msg_success "Valid configuration - Starting for the first time, enjoy!"
         # Append to .env:
         if ! grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
-            editEnv "PREVIOUSLY_RUN=true"
+            editAnyArray envVars "PREVIOUSLY_RUN=true" && editEnv "PREVIOUSLY_RUN=true"
         fi
     fi
     docker compose up -d --force-recreate
-    cat << EOF
----------------------------------------------------------------------------
-
-                       $appName Startup Complete!
-                          Version: $appVersion
-
-    Access the AI Chat interface at:      $webUiURL
-
-    Access the SearXNG search engine at:  $searxngBaseURL
-
-    Security Tip: For secure public access, edit the environment variables:
-    - Set SEARXNG_HOSTNAME=yourdomain.com
-    - Set SEARXNG_TLS=letsencrypt  (your key)
-    - You CANNOT change the $envFile file like other apps: $appName validates
-      and overwrites it on each start.
-    - Run "$scriptName env" to view & change environment variables! 
-    - Then run $scriptName to restart, and enjoy!
-
----------------------------------------------------------------------------
-EOF
+    startMes_startDone
     return 0
 }
+
+# SOURCE SUBSCRIPTS
+### Check for or restore local config
+# If config template is missing (e.g. user deleted everything but sia), recover it
+if [[ ! -f "$scriptWorkingDir/$configTemplate" ]]; then
+    msg_warn "sia-config-template.sh missing - recovering from latest version..."
+    curl -fsSL https://raw.githubusercontent.com/joshua-hvmn/SIA/main/${configTemplate} -o "$scriptWorkingDir/$configTemplate" || errExit 404
+    msg_success "$configTemplate recovered!"
+fi
+# If first setup or missing local config, create
+if [[ ! -f "$configScript" ]]; then
+    if [[ -f "$configTemplate" ]]; then
+        msg_debug "Creating local config from template..."
+        cp "$configTemplate" "$configScript"
+        chmod 600 "$configScript"  # protect potential secrets
+    else
+        msg_error "Template $configTemplate not found!"
+        errExit 2
+    fi
+fi
+source "$scriptWorkingDir/$configScript" || errExit 2
+
+### Check for messages subscript
+if [[ ! -f "$scriptWorkingDir/$messageScript" ]]; then
+    msg_warn "'$messageScript' missing - recovering..."
+    curl -fsSL https://raw.githubusercontent.com/joshua-hvmn/SIA/main/$messageScript -o "$scriptWorkingDir/$messageScript" || errExit 404
+    msg_success "$messageScript recovered!"
+fi
+source "$scriptWorkingDir/$messageScript" || errExit 2
 
 # Main
 ## Switch to script directory
 cd "$scriptWorkingDir"
 
-## Check command
-case "$firstArg" in
-    start|"")
-        # Default
-        echo "$appName Starting..."
-        # Check for dependencies
-        checkArray
-        checkArray envVars
-        # Start and run setup if needed
-        startCheck
-        ;;
-    setup|-s|--setup)
-        # Check for dependencies
-        checkArray
-        checkArray envVars
-        # Run setup and then start
-        setupFunc 0
-        exitScriptGoodWithMessage
-        ;;
-    help|-h|--help)
-        printUsage "$@"
-        ;;
-    down|-d|--down)
-        # Check for dependencies
-        checkArray
-        # Stop Stack
-        echo "Stopping $appName..."
-        docker compose down "$@"
-        ;;
-    logs|-l|--logs)
-        # Check for dependencies
-        checkArray
-        # Show logs
-        if [[ $# -eq 0 ]]; then
-            echo "Showing last 100 logs:"
-            docker compose logs --tail 100
-        else
-            echo "Running 'docker compose logs $@'"
-            docker compose logs "$@"
-        fi
-        ;;
-    download|-dl|--download)
-        # Check for dependencies
-        checkArray
-        # Check that the ollama container is running
-        if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
-            echo "ERROR: $appName isn't running. Please run $scriptName without arguments." >&2
-            errExit 2
-        fi
-        # Download a model
-        if [[ $1 ]]; then
-            echo "Running docker exec ollama ollama run $@"
-            docker exec ollama ollama run "$@"
-            exitScriptGoodWithMessage "$1 is ready to use!"
-        else
-            echo "Please enter an Ollama model code to download (i.e. llama3.2:1b)" >&2
-            echo "Example: $scriptName download llama3.2:1b" >&2
+## Make sure launched main script, check command
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    case "$firstArg" in
+        start|"")
+            # Default
+            msg_normal "$appName Starting and validating configuration..."
+            # Check for all dependencies
+            checkDeps
+            # Start and run setup if needed
+            startCheck
+            ;;
+        setup|-s|--setup)
+            # Check for all dependencies
+            checkDeps
+            # Run setup and then start
+            setupFunc 0
+            exitScriptGoodWithMessage
+            ;;
+        help|-h|--help)
+            printUsage "$@"
+            ;;
+        down|-d|--down)
+            # Check for hard dependencies
+            checkArray
+            # Stop Stack
+            msg_header "Stopping $appName..."
+            docker compose down "$@"
+            ;;
+        logs|-l|--logs)
+            # Check for hard dependencies
+            checkArray
+            # Show logs
+            if [[ $# -eq 0 ]]; then
+                msg_info "Showing last 100 logs:"
+                docker compose logs --tail 100
+            else
+                msg_info "Running 'docker compose logs $@'"
+                docker compose logs "$@"
+            fi
+            ;;
+        download|-dl|--download)
+            # Check for hard dependencies 
+            checkArray
+            # Check that the ollama container is running
+            if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
+                msg_error "$appName isn't running. Please run $scriptName without arguments."
+                errExit 2
+            fi
+            # Download a model
+            if [[ $1 ]]; then
+                msg_debug "Running docker exec ollama ollama run $@"
+                docker exec ollama ollama run "$@"
+                exitScriptGoodWithMessage "$1 is ready to use!"
+            else
+                msg_error "Please enter an Ollama model code to download (i.e. llama3.2:1b)"
+                msg_usage "'$scriptName download llama3.2:1b' (or whatever model you want)"
+                errExit 1
+            fi
+            ;;
+        env|environment|-env|--environment)
+            # Check for args
+            envCommand "$@"
+            ;;
+        *)
+            msg_error "Unknown command: $firstArg"
+            printUsage
             errExit 1
-        fi
-        ;;
-    env|environment|-env|--environment)
-        # Check for args
-        envCommand "$@"
-        ;;
-    *)
-        echo "ERROR: Unknown command: $firstArg" >&2
-        printUsage
-        errExit 1
-        ;;
-esac
+            ;;
+    esac
+fi
+# Note: Reserved first arguments for verbosity:
+# - --silent / 0
+# - --quiet / 1
+# - 2 (default)
+# - --debug / --verbose / 3 / --loud

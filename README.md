@@ -1,10 +1,10 @@
 # Synthetic Intelligence App
 
-Take back some sovereignty in just *ten* simple steps. (If that!)
+Take back some sovereignty in just *ten* very simple steps. (If that!)
 
 Here is a simple, all-in-one Docker Compose app that provides *simple, secure, self-hosted* alternatives to ChatGPT and Google, with a foolproof setup process on Linux and Mac. SIA is also compatible with Windows via Docker Desktop and WSL.
 
-SIA uses popular open-source tools; it's extensible; and setup and management are greatly simplified by the included *novel* command line tool (highly portable, permissive license).
+SIA uses popular open-source tools; it's extensible; and setup and management are greatly simplified by the included SIA command line tool (highly portable).
 
 Enjoy!
 
@@ -45,15 +45,16 @@ cd SIA
 
 If you accidentally pick the wrong one or you modify your system (i.e., *upgrade* from an NVIDIA GPU to an AMD GPU), you can run `./sia -s` to change the setup!
 
-The SearXNG secret key will be randomly generated upon first setup, and stored in the .env file if you need it, or want to change it. (Show hidden files in your file explorer to see it, and the YAML files!)
+The SearXNG secret key will be randomly generated upon first setup, and stored in the .env file if you need it. (Show hidden files in your file explorer to see it, and the YAML files!). It is also stored in the `sia-config.sh` file.
 
 If you want to use your own proxy rather than Caddy, Complete [Using Another Proxy](#using-another-proxy-advanced-users) below **before** running the script.
 
 **5. <u>Install an Ollama LLM</u>** from [their search directory](https://ollama.com/search).
 
 ```
-./sia -dl [model of choice, i.e., llama3.2:3b]
+./sia -dl <model-tag>
 ```
+- *e.g., llama3.2:1b*
 
 
 ---------
@@ -62,9 +63,12 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 
 - *For public usage, follow the instructions provided at start (not necessary for local use).* 
 - NOTES FOR CHANGING ENVIRONMENT VARIABLES: 
-   - SIA is unique: you must change the environment variables using the `sia` tool.
-   - The tool will overwrite any changes you make to the .env file (except the SearXNG secret key and COMPOSE_FILE variables, they can be modified manually by default).
-   - You can manage the environment variables easily with the built in `./sia env` command.
+   - SIA is unique: you must change the environment variables using the SIA tool.
+   - The tool will overwrite any changes you make to the .env file, but not new additions.
+   - You can manage the environment variables easily with the built in `./sia env` command. If a key is in the list and it has an equal sign and value, it is tracked by SIA.
+   - It is best to  add new variables with `./sia env add <key> <value>`, so SIA can rebuild the .env if it is lost.
+   - You can edit the variables directly (with caution) in the `sia-config.sh` file.
+   - DO NOT MODIFY the `.sia-config-template.sh` or `.sia-messages.sh` files unless you know what you're doing, SIA needs them. If they're missing totally, SIA will download them.
    - Remember that the .env file is hidden by default.
 - *You can manually edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
    your needs.*
@@ -74,8 +78,8 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 ### III. Post Install
 
 6. Access Open WebUI at [http://localhost:3000](http://localhost:3000) by default.
-7. Create an "admin account" and bookmark the page.
-8. Connect Ollama to Open WebUI if necessary:
+7. Create an "Admin Account" and bookmark the page.
+8. Connect Ollama to Open WebUI if necessary: (SIA should inject the settings, but it might not work)
    - Click name in corner > Admin Panel > Settings > Connections > Ollama API > Manage Ollama API Connections > Configure (gear icon)
    - Make sure Ollama API is enabled, and the API connection is set to `http://ollama:11434`
 9. Connect SearXNG to Open WebUI if necessary:
@@ -84,7 +88,14 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
    - Note: In this version of SIA, web searches are sent over HTTP (unencrypted) between containers to avoid certificate trust issues.
 10. Use SearXNG at [https://localhost:443](https://localhost:443) by default. You will need to accept the security warning for the self-signed certificates.
-   - In Chromium browsers, set the search bar to `https://localhost/search?q=%s`
+
+Set your default search bar in your browser: 
+| Browser       | Search Query                                            |                                     |
+| ----------    | ------------------------------------------------------- | ----------------------------------- |
+| Chromium      | `https://localhost/search?q=%s`                         |                                     |
+| Firefox       | Need additional extensions.                             | (Switch to Ungoogled Chromium *ha*) |
+| Edge.        | `https://localhost/search?q=%s`                         | (Chromium)                          |
+| Safari        | Need an extension Like AnySearch. Easier than Firefox.  | Query URL is the same as Chromium.  |
 
 11. That's pretty much everything, enjoy!
 
@@ -122,7 +133,7 @@ Bring your own reverse proxy
 
 ## Commands
 
-The `./sia` command line tool comes equipped with several subcommands and an ability to pass arguments to the underlying Docker Compose commands. This feature set may well be extended in the future.
+The SIA command line tool comes equipped with several subcommands and an ability to pass arguments to the underlying Docker Compose commands. This feature set may well be extended in the future.
 
 | Command       | Other Names                | Description |
 | ----------    | -------------------------- | ----------- |
@@ -154,7 +165,7 @@ Container Names:
 Or pass any arguments that can be used with `docker compose logs`
 
 #### <u>Start & Stop Containers</u>
-- Start/Restart: `./sia`
+- Start/restart: `./sia`
 - Stop: `./sia -d` (accepts all docker compose down args)
 - Deep restart:
 ```shell
@@ -171,7 +182,7 @@ docker kill $(docker ps -q)
 
 - Additional commands will be added to the SIA tool. (It's simple to extend, if you want to try!)
 - Additional compose files will be added for ARM and possible Intel GPU support.
-- The wiki is in production, it will contain more information.
+- The wiki will begin production soon, it will contain more information.
 
 ------------
 
@@ -187,8 +198,11 @@ This project is multi-licensed to respect the upstream source while providing ma
 
 ### 2. MIT License
 
-- The primary management script (`sia`) in this repository is an *original work* created by [Joshua Haveman](https://github.com/joshua-hvmn).
-- The sia file is licensed under the permissive MIT License.
-- You are free to use, copy, modify, and distribute the sia script (only) with minimal restrictions.
+- The following scripts in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
+   - `sia`
+   - `.sia-config-template.sh`
+   - `.sia-messages.sh`
+- These three files are licensed under the permissive MIT License.
+- You are free to use, copy, modify, and distribute these files specifically with minimal restrictions.
 
 ------------
