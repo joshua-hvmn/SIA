@@ -2,7 +2,7 @@
 
 Take back some sovereignty in just *ten* simple steps, if that!
 
-Here's a simple, all-in-one tool for running a Docker Compose stack which provides *simple, secure, self-hosted* alternatives to ChatGPT and Google, with a foolproof setup process on Linux and Mac. SIA should also be compatible with Windows via Docker Desktop and WSL.
+Here's a simple, all-in-one tool for running a Docker Compose stack which provides *simple, secure, self-hosted* alternatives to ChatGPT and Google — with a foolproof setup process on Linux and Mac, SIA should also be compatible with Windows via Docker Desktop and WSL.
 
 SIA uses popular open-source tools; it's extensible; and setup and management are made dead simple with its robust and portable command line interface.
 
@@ -34,14 +34,14 @@ cd SIA
 ```
 ---------
 ### II. Quick Start
-**3. <u>Run the SIA command line tool</u>** (main script only) : 
+**3. <u>Run the SIA command line tool</u>:** (main script only)
 ```
 ./sia
 ```
 
 *Note: If you receive a 'permission denied' error, you might need to make the sia file executable with* `chmod +x sia`, or the appropriate command for your system.
 
-**4. <u>Select a system architecture</u>**:  The tool will ask how your system is configured. Enter the corresponding number of your choice.
+**4. <u>Select a system architecture</u>:**  The tool will ask how your system is configured. Enter the corresponding number of your choice.
 
 If you accidentally pick the wrong one or you modify your system (i.e., *upgrade* from an NVIDIA GPU to an AMD GPU), you can run `./sia -s` to change the setup!
 
@@ -59,20 +59,15 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 
 ---------
 
-<u>**[Important!]**</u> *Optional / Advanced Usage:*
+*Additional Info:*
 
-- *For public usage, follow the instructions provided at start (not necessary for local use).* 
-- NOTES FOR CHANGING ENVIRONMENT VARIABLES: 
-   - SIA is unique: you must change the environment variables using the SIA tool.
-   - The tool will overwrite any changes you make to the .env file, but not new additions.
-   - You can manage the environment variables easily with the built in `./sia env` command. If a key is in the list and it has an equal sign and value, it is tracked by SIA.
-   - It is best to  add new variables with `./sia env add <key> <value>`, so SIA can rebuild the .env if it is lost.
-   - You can edit the variables directly (with caution) in the `sia-config.sh` file.
-   - DO NOT MODIFY the `.sia-config-template.sh` or `.sia-messages.sh` files unless you know what you're doing, SIA needs them. If they're missing totally, SIA will download them.
-   - Remember that the .env file is hidden by default.
-- *You can manually edit [searxng/settings.yml](https://github.com/joshua-hvmn/SIA/blob/main/searxng/settings.yml) according to
-   your needs.*
-
+FOR CHANGING ENVIRONMENT VARIABLES: 
+- You can't *change* environment variables directly in the .env file.
+- You *must* change them with the SIA Environment Handler: `./sia env`
+- You *may* add new variables to the file directly, and SIA will leave them alone.
+- You can trigger SearXNG secret key *regeneration* by deleting the key in the .env file.
+- You can trigger a full reset of the environment, but not any other data in the stack, by *deleting:* `.env` and `sia-config.sh`.
+- Keep in mind the .env file is a hidden file, click "View hidden files".
 ---------
 
 ### III. Post Install
@@ -87,7 +82,7 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
    - Enable, set to SearXNG
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
    - Note: In this version of SIA, web searches are sent over HTTP (unencrypted) between containers to avoid certificate trust issues.
-10. Use SearXNG at [https://localhost:443](https://localhost:443) by default. You will need to accept the security warning for the self-signed certificates.
+10. Use SearXNG at [https://localhost:443](https://localhost:443) by default. You will need to accept the security warning for the self-signed certificates. You have to configure the Caddy TLS certificate for your system to resolve this issue. It is in fact secure and encrypted, the warning is mostly an annoyance.
 
 Set your default search bar in your browser: 
 | Browser       | Search Query                                            |                                     |
@@ -227,7 +222,7 @@ Consequently:
 In conclusion, I gave SIA control over the environment *primarily* to enable secret key generation, repair, and rotation; and *secondarily* to enable general state validation and repair.
 
 Additional Information:
-- SIA requires additional configuration for public usage.
+- SIA requires additional configuration for public usage. Follow the prompt shown on startup.
 - Due to the way the SIA E.H. works, you can use it to *replace* secret keys in the .env file manually. *Importantly*, as it currently stands, it will store the key in `sia-config.sh` (if you add one with the E.H.), making the key visible to anyone who can run the script, until you manually untrack it. If you want to manually update the SearXNG secret key in this version with the E.H., you must remove it through the E.H. **after** you add them and restart SIA (or manually edit the envVars array in the local config file: remove the SEARXNG_SECRET's value and the = symbol). I intend to add a built in secret key rotator that does not use the E.H. at all.
 
 
