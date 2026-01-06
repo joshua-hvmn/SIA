@@ -19,7 +19,12 @@ fi
 
 # HELP MENUS
 printHelp_general() {
+    msg_blank
+    msg_title ${YELLOW} "== $appName Help Menu =="
+    msg_blank
     msg_usage "$scriptName [verbosity] <command>"
+    msg_blank
+    msg_info "$appName is an all-in-one CLI for managing a Docker Compose stack that includes Ollama, OpenWebUI, SearXNG, Caddy, and Valkey. It should greatly simplify your use, enjoy!"
     msg_blank
     msg_header ${BLUE} "Commands"
     msg_col "(no argument)"    "Start or restart the $appName stack (default)."
@@ -44,31 +49,41 @@ printHelp_general() {
     msg_col "$scriptName --help"          "Shows the help message."
     msg_col "$scriptName -l --verbose"    "Shows the logs and passes the --verbose argument."
     msg_blank
-    msg_normal "You can run '$scriptName' help [command] for more help with a specific command."
+    msg_normal "Run '$scriptName help [command]' for more help with a specific command."
+    msg_blank
     msg_line
 }
 printHelp_down() {
+    msg_blank
+    msg_title ${YELLOW} "== $appName Down Command Help Menu =="
+    msg_blank
     msg_usage "$scriptName down [subcommands]"
     msg_blank
-    msg_info "Wrapper for: docker compose down [subcommands]"
+    msg_normal "${BOLD}[WRAPS]${NC}   docker compose down [subcommands]"
+    msg_blank
+    msg_info "The 'down' command is a wrapper command so you don't have to type the full command to stop or delete parts of the stack. It accepts multiple flags. Use caution."
     msg_blank
     msg_header ${BLUE} "Subcommands"
-    msg_col "(no argument)"       "None, leaves volumes and app images (default)."
+    msg_col "(no argument)"       "None, stops the stack, leaves volumes and app images (default)."
     msg_col "--volumes | -v"      "Remove volumes named in the compose file."
     msg_col "--remove-orphans"    "Remove containers for services no longer in the compose file (i.e. you modify it)."
     msg_col "--rmi"               "Remove images used by services."
     msg_col "--help | -h"         "Show the inbuilt Docker help message (not this one)."
     msg_blank
-    msg_normal "Pass additional arguments to pass them to the underlying docker command."
+    msg_normal "${GREEN}[ALIASES]${NC} -d, --down"
     msg_blank
-    msg_info "Aliases: -d, --down"
     msg_line
 }
 
 printHelp_logs() {
+    msg_blank
+    msg_title ${YELLOW} "== $appName Logs Command Help Menu =="
+    msg_blank
     msg_usage "$scriptName logs [subcommands]"
     msg_blank
-    msg_info "Wrapper for: docker compose logs [subcommands]"
+    msg_normal "${BOLD}[WRAPS]${NC}   docker compose logs [subcommands]"
+    msg_blank
+    msg_info "The 'logs' command is a wrapper command so you don't have to type the full command to see the Docker Compose logs. It accepts multiple flags."
     msg_blank
     msg_header ${BLUE} "Subcommands"
     msg_col "(no argument)"     "--tail 100 shows last 100 logs by default"
@@ -78,40 +93,46 @@ printHelp_logs() {
     msg_col "--no-log-prefix"   "Omit service name/container from each log line."
     msg_col "help | -h"         "Show the inbuilt Docker help message (not this one)."
     msg_blank
-    msg_normal "Pass additional arguments to pass them to the underlying docker command."
+    msg_normal "${GREEN}[ALIASES]${NC} -l, --logs"
     msg_blank
-    msg_info "Aliases: -l, --logs"
     msg_line
 }
 printHelp_env() {
+    msg_blank
+    msg_title ${YELLOW} "== $appName Environment Handler Help Menu =="
+    msg_blank
     msg_usage "$scriptName env [command] [KEY] [VALUE]"
     msg_blank
-    msg_warn "$appName manages the environment variables in the $envFile file and validates or repairs them on each start. You can ADD variables to the file, but you cannot change anything that is controlled by $appName."
+    msg_info "The $appName Environment Handler (E.H.) manages the environment variables in the $envFile file and validates or repairs them on each start. Use the E.H. rather than editing the $envFile file directly."
     msg_blank
-    msg_info "It is best to edit environment variables with the 'env' subcommand of $appName${NC}"
+    msg_warn "You can ADD variables to the $envFile file, but you can't change any that are controlled by the E.H., or they will be overwritten on startup. Use the E.H. to remove them from control if you want to be allowed to write them in the $envFile, it is preferable to change them using the E.H."
     msg_blank
     msg_header ${BLUE} "Subcommands"
     msg_col "(no argument)"    "Show a list of .env variables and view options to manage them."
     msg_col "add"              "Add or modify specific variables directly."
     msg_col "rm"               "WIP. Remove a specific variable from control. (use list for now)"
     msg_blank
-    msg_normal "Pass additional arguments to pass them to the underlying docker command."
+    msg_normal "${GREEN}[ALIASES]${NC} -env, environment, --environment"
     msg_blank
-    msg_info "Aliases: -env, environment, --environment"
-    msg_blank
-    msg_normal "To add specific keys and values directly:"
+    msg_normal "${BOLD}To add specific keys and values directly:${NC}"
     msg_usage "$scriptName env add [KEY] [VALUE]"
     msg_warn "You can use the add command to edit ANY variable in ANY array in the config by defining the array BEFORE the key and value. Use extreme caution."
     msg_blank
     msg_header ${BLUE} "Examples"
     msg_col "$scriptName env"      "Show a list of variables and view options to manage them."
     msg_col "$scriptName env add SEARXNG_SECRET [32 byte hex code]"    "Add a new secret key to the config and $envFile file."
+    msg_blank
     msg_line
 }
 printHelp_download() {
+    msg_blank
+    msg_title ${YELLOW} "== $appName Download Help Menu =="
+    msg_blank
     msg_usage "$scriptName download <model name> [flags]"
     msg_blank
-    msg_info "Wrapper for: docker exec ollama ollama run <model name> [flags]"
+    msg_normal "${BOLD}[WRAPS]${NC}   docker exec ollama ollama run <model name> [flags]"
+    msg_blank
+    msg_info "The 'download' command is a wrapper so you don't have to type the long Docker exec command. Find models to download at https://ollama.com/search. The command will fail if you don't provide a model tag."
     msg_blank
     msg_header ${BLUE} "Arguments"
     msg_col "<model name>"      "Name of the Ollama model you want to download/run."
@@ -124,15 +145,22 @@ printHelp_download() {
     msg_info "You can pass any number of flags to the underlying command."
     msg_warn "The messaging might be inaccurate depending on the flags used."
     msg_blank
-    msg_info "Aliases: -dl, --download"
+    msg_normal "${GREEN}[ALIASES]${NC} -dl, --download"
+    msg_blank
     msg_line
 }
 printHelp_setup() {
+    msg_blank
+    msg_title ${YELLOW} "== $appName Setup Help Menu =="
+    msg_blank
     msg_usage "$scriptName setup"
     msg_blank
-    msg_info "Run to change system architecture for hardware acceleration (i.e., you change from CPU only to NVIDIA GPU)."
+    msg_info "Run to change system architecture for hardware acceleration (e.g., you change from CPU only to NVIDIA GPU). This is important for maximizing the speed of large language models."
     msg_blank
-    msg_info "Aliases: -s, --setup"
+    msg_warn "To take advantage of hardware acceleration, you have to install Docker correctly. Additional dependencies are required."
+    msg_blank
+    msg_normal "${GREEN}[ALIASES]${NC} -s, --setup"
+    msg_blank
     msg_line
 }
 
@@ -165,6 +193,7 @@ startMes_firstStart() {
 
 startMes_startDone() {
     msg_line
+    msg_blank
     msg_title ${YELLOW} "$appName Startup Complete!"
     msg_title "Version: $appVersion"
     msg_blank
@@ -173,14 +202,14 @@ startMes_startDone() {
     msg_col "Access the SearXNG search engine at:"  "$searxngBaseURL"
     msg_blank
     msg_normal "${YELLOW}Security:${NC} For secure public access, edit the environment variables:"
-    msg_normal "- Set SEARXNG_HOSTNAME=yourdomain.com"
-    msg_normal "- Set SEARXNG_TLS=letsencrypt  (your key)"
-    msg_normal "- See https://docs.searxng.org for TLS setup."
-    msg_normal "${YELLOW}Note:${NC}"
-    msg_normal "- You CANNOT change the $envFile file like other apps: $appName validates and overwrites changes on each start, except ones not tracked by $appName."
-    msg_normal "- Run "$scriptName env" to view & change environment variables / $appName control! "
-    msg_normal "- Then run $scriptName to restart, and enjoy!"
-    msg_normal "- '$scriptName help [optional command]' to show the help menus!"
+    msg_col "           -" "Set SEARXNG_HOSTNAME=yourdomain.com"
+    msg_col "           -" "Set SEARXNG_TLS=letsencrypt  (your key)"
+    msg_col "           -" "See https://docs.searxng.org for TLS setup."
+    msg_normal "${YELLOW}Note:${NC}     You CANNOT change the $envFile file like other apps, $appName validates and overwrites changes on each start, except ones not tracked by $appName." 
+#    msg_normal "You CANNOT change the $envFile file like other apps: $appName validates and overwrites changes on each start, except ones not tracked by $appName."
+    msg_col "           -" "Run '$scriptName env' to view & change environment variables / $appName control! "
+    msg_col "           -" "Then run $scriptName to restart, and enjoy!"
+    msg_col "           -" "'$scriptName help [optional command]' to show the help menus!"
     msg_blank
     msg_line
 }

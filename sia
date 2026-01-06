@@ -17,8 +17,8 @@ webUiURL="http://localhost:3000/"
 envFile=".env" # Change if you want to use a different .env file name.
 fallbackAppVersion="v2.0.0+ (?)"
 verbosity=2
-termWidthFallback=80
-termMaxWidth=120
+termWidthFallback=75
+termMaxWidth=85
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the appName is automatically made uppercase based on script name).
 if [[ -d .git ]]; then
@@ -122,21 +122,21 @@ msg_warn()    { log 2 "${YELLOW}[WARN]${NC}    $(wrap_text "$*")"; }
 msg_info()    { log 2 "${BLUE}[INFO]${NC}    $(wrap_text "$*")"; }
 msg_success() { log 2 "${GREEN}[CHECK]${NC}   $(wrap_text "$*")"; }
 msg_debug()   { log 3 "${BOLD}[DEBUG]${NC}   $(wrap_text "$*")"; }
-msg_normal()  { log 2 " $(wrap_text "$*")"; }
+msg_normal()  { log 2 "$(wrap_text "$*")"; }
 # msg_normal()  { log 2 "$(printf "%*s" $((10)) '')$(wrap_text "$*")"; }
 msg_header() {
     # Check if color defined else bold
     if [[ "$1" =~ ^\\033 ]]; then
         local color="$1"
         shift
-        log 2 "\n${color}== $* ==${NC}"
+        log 2 "${color}== $* ==${NC}"
     else
-        log 2 "\n${BOLD}== $* ==${NC}"
+        log 2 "${BOLD}== $* ==${NC}"
     fi
 }
 msg_title() {
     local termWidth=$(tput cols 2>/dev/null || echo $termWidthFallback)
-    [[ "$termWidth" -gt $termMaxWidth ]] && termWidth=$termMaxWidth
+    [[ "$termWidth" -gt $termWidthFallback ]] && termWidth=$termWidthFallback
     local color
     # if color else bold
     if [[ "$1" =~ ^\\033 ]]; then
@@ -159,8 +159,6 @@ msg_blank()  { log 2 ""; }
 msg_line() { # for lines that are terminal width
     local termWidth=$(tput cols 2>/dev/null || echo $termWidthFallback)
     [[ "$termWidth" -gt $termMaxWidth ]] && termWidth=$termMaxWidth
-    # local maxWidth=75 # Your script's standard max width # I have literally no idea what the AI was doing here.
-    # local width=$(( termWidth < maxWidth ? termWidth : maxWidth ))
     local line=$(printf '%*s' "$termWidth" '' | tr ' ' '-')
     log 2 "${NC}$line${NC}"
 }
