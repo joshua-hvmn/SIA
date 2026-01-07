@@ -524,6 +524,70 @@ envCommand () {
     esac
 }
 
+## Key Value File Editor
+#  - Usage: edit_kv [rm] <key> <value (if not rm)> <file to edit>
+#  - inserts update at end or if rm mode, doesn't - deleting it
+#  - example delete: edit_kv rm "KEY" .env
+#  - example update: edit_kv "KEY" "VALUE" .env
+
+edit_kv() {
+    [ $# -eq 3 ] || return 2
+    local dir ekey tmp target value
+    local rm=0
+    case "$1" in
+        rm)
+            rm=1
+            shift
+            ;;
+    esac
+    local key="$1"
+    if [ "$rm" -eq 1 ]; then
+        target="$2"
+    else
+        value="$2"
+        target="$3"
+    fi
+    
+
+    # Checks
+    [ -n "$target" ] || return 1
+    dir=$(dirname -- "$target")
+    [ -d "$dir" ] || return 1
+    [ -w "$dir" ] || return 1
+    # Create file if missing
+    [ -f "$target" ] || touch -- "$target" 2>/dev/null || return 1
+
+    # Convert strings to escape strings
+    ekey=$(printf '%s' "$key" | sed 's/[][\/.^$*]/\\&/g')
+
+    # make temp
+    tmp=$(mktemp -- "$target.XXXXXX") || return 1
+
+    # Filter old key
+    grep -v "^${ekey}=" -- "$target" 2>/dev/null > "$tmp" || :
+
+    # new line
+    if [ -s "$tmp" ]; then
+        if [ -n "$(tail -c 1 "$tmp" 2>/dev/null)" ]; then
+            printf "\n" >> "$tmp"
+        fi
+    fi
+
+    # Upsert new value
+    if [ "$rm" -eq 0 ]; then
+        printf '%s=%s\n' "$key" "$value" >> "$tmp" || {
+            rm -f -- "$tmp"
+            return 1
+        }
+    fi
+
+    # Swap
+    mv -f -- "$tmp" "$target" || {
+        rm -f -- "$tmp"
+        return 1
+    }
+}
+
 ## .env editor
 #  - Pass "KEY=VALUE" to update the VALUE or append if missing.
 #  - Pass "VALUE" to just write it to the .env
