@@ -1,0 +1,3 @@
+CPU=.compose.cpu.yaml
+NVIDIA=.compose.nvidia.yaml
+AMD=.compose.amd.yaml

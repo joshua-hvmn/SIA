@@ -13,7 +13,7 @@
 
 #!/usr/bin/env bash
 
-if [[ "${siaMainLoaded:-}" != "true" ]]; then
+if [[ "${SIA_MAIN_LOADED:-}" != "true" ]]; then
     echo "Error: This script is a component of SIA and cannot be run directly."
     echo "Please run: ./sia"
     exit 1

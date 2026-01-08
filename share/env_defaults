@@ -1,0 +1,17 @@
+#   SIA  =  v2.0.0
+#  For public access, change:
+#  - SEARXNG_HOSTNAME to your domain name
+#  - SEARXNG_TLS=letsencrypt  (your key)
+#  - Uncomment and set a LETSENCRYPT email in order to create a Let's Encrypt certificate
+#  TO CHANGE:
+#  - ./sia will overwrite any changes to the .env, except changing the SEARXNG_SECRET or COMPOSE_FILE.
+#  - To change defaults, run './sia env'
+# LETSENCRYPT_EMAIL=
+SEARXNG_HOSTNAME=localhost
+SEARXNG_TLS=internal
+SEARXNG_BASE_URL=https://localhost/
+WEBUI_URL=http://localhost:3000/
+OLLAMA_BASE_URL=http://ollama:11434
+WEB_SEARCH_ENGINE=searxng
+SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+
