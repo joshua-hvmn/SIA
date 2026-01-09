@@ -44,7 +44,7 @@ wrap_text() {
     wrptxt_wrap_indent="${2:-10}"    # How far in the continued lines should start
 
     # Wrap the text to the available width (total 75 minus prefix space)
-    printf "%s" "$wrptxt_text" | fold -s -w $((75 - wrptxt_prefix_width)) | \
+    printf "%s" "$wrptxt_text" | fold -w "$((75 - wrptxt_prefix_width))" | \
     awk -v pw="$wrptxt_prefix_width" -v iw="$wrptxt_wrap_indent" '
     {
         if (NR == 1) {
