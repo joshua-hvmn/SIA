@@ -8,9 +8,9 @@
 
 
 # Check that main was loaded
-if [[ "${SIA_MAIN_LOADED:-}" != "true" ]]; then
-    echo "Error: This script is a component of SIA and cannot be run directly."
-    echo "Please run: ./sia"
+if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
+    printf '%s' "Error: This script is a component of SIA and cannot be run directly."
+    printf '%s' "Please run: ./sia"
     exit 1
 fi
 
@@ -25,10 +25,11 @@ NC='\033[0m' # No Color
 
 # Log func to filter outputs based on global verbosity
 log() {
-    local msg_lvl=$1; shift
-    [[ $verbosity -lt $msg_lvl ]] && return 0
+    log_lvl=$1; shift
+
+    [ ${verbosity:-2} -lt $log_lvl ] && return 0
     
-    if [[ $msg_lvl -eq 1 ]]; then
+    if [ $log_lvl -eq 1 ]; then
         printf "%b\n" "$*" >&2
     else
         printf "%b\n" "$*"
@@ -38,13 +39,13 @@ log() {
 # SEMANTIC WRAPPERS
 # These call log() internally so you don't have to remember the numbers.
 wrap_text() {
-    local text="$1"
-    local prefix_width=0  # Extra space reserved for the prefix (e.g., "[INFO]    ")
-    local wrap_indent="${2:-10}"    # How far in the continued lines should start
+    wrptxt_text="$1"
+    wrptxt_prefix_width=0  # Extra space reserved for the prefix (e.g., "[INFO]    ")
+    wrptxt_wrap_indent="${2:-10}"    # How far in the continued lines should start
 
     # Wrap the text to the available width (total 75 minus prefix space)
-    printf "%s" "$text" | fold -s -w $((75 - prefix_width)) | \
-    awk -v pw="$prefix_width" -v iw="$wrap_indent" '
+    printf "%s" "$wrptxt_text" | fold -s -w $((75 - wrptxt_prefix_width)) | \
+    awk -v pw="$wrptxt_prefix_width" -v iw="$wrptxt_wrap_indent" '
     {
         if (NR == 1) {
             printf "%*s%s\n", pw, "", $0
@@ -63,56 +64,52 @@ msg_debug()   { log 3 "${BOLD}[DEBUG]${NC}   $(wrap_text "$*")"; }
 msg_normal()  { log 2 "$(wrap_text "$*")"; }
 # msg_normal()  { log 2 "$(printf "%*s" $((10)) '')$(wrap_text "$*")"; }
 msg_header() {
-    # Check if color defined else bold
-    if [[ "$1" =~ ^\\033 ]]; then
-        local color="$1"
-        shift
-        log 2 "${color}== $* ==${NC}"
-    else
-        log 2 "${BOLD}== $* ==${NC}"
-    fi
+    msghdr_color="$BOLD"
+    # POSIX way to check for ANSI prefix
+    case "$1" in
+        \\033*) msghdr_color="$1"; shift ;;
+    esac
+    log 2 "${msghdr_color}== $* ==${NC}"
 }
 msg_title() {
-    local term_width=$(tput cols 2>/dev/null || echo $term_width_fallback)
-    [[ "$term_width" -gt $term_width_fallback ]] && term_width=$term_width_fallback
-    local color
-    # if color else bold
-    if [[ "$1" =~ ^\\033 ]]; then
-        local color="$1"
-        shift
-    else
-        color=$BOLD
-    fi
-    local text="$*"
+    msgttl_term_width=$(tput cols 2>/dev/null || printf '%s' $term_width_fallback)
+    [ "$msgttl_term_width" -gt $term_width_fallback ] && msgttl_term_width=$term_width_fallback
+    
+    msgttl_color="$BOLD"
+    case "$1" in
+        \\033*) msgttl_color="$1"; shift ;;
+    esac
+    
+    msgttl_text="$*"
     # Calc visible chars
-    local visible_text=$(echo -e "$text" | sed 's/\x1b\[[0-9;]*m//g')
-    local text_length=${#visible_text}
-    # Math
-    local padding=$(( (term_width - text_length) / 2 ))
-    [[ "$padding" -lt 0 ]] && padding=0
+    msgttl_visible_text=$(printf "%b" "$msgttl_text" | sed 's/\x1b\[[0-9;]*m//g')
+    msgttl_text_length=${#msgttl_visible_text}
+    
+    msgttl_padding=$(( (msgttl_term_width - msgttl_text_length) / 2 ))
+    [ "$msgttl_padding" -lt 0 ] && msgttl_padding=0
 
-    log 2 "$(printf '%*s%b%b%b' "$padding" '' "$color" "$text" "$NC")"
+    log 2 "$(printf '%*s%b%b%b' "$msgttl_padding" '' "$msgttl_color" "$msgttl_text" "$NC")"
 }
 msg_blank()  { log 2 ""; }
 msg_line() { # for lines that are terminal width
-    local term_width=$(tput cols 2>/dev/null || echo $term_width_fallback)
-    [[ "$term_width" -gt $term_max_width ]] && term_width=$term_max_width
-    local line=$(printf '%*s' "$term_width" '' | tr ' ' '-')
-    log 2 "${NC}$line${NC}"
+    msgline_term_width=$(tput cols 2>/dev/null || printf '%s' $term_width_fallback)
+    [ "$msgline_term_width" -gt $term_max_width ] && msgline_term_width=$term_max_width
+    msgline_line=$(printf '%*s' "$msgline_term_width" '' | tr ' ' '-')
+    log 2 "${NC}$msgline_line${NC}"
 }
 msg_col() {
-    local left="   $1"
-    local right="$2"
-    local padding=18
+    msgcol_left="   $1"
+    msgcol_right="$2"
+    msgcol_padding=18
 
-    local leftLength=${#left}
-    local diff="$((padding - leftLength))"
+    msgcol_leftLength=${#msgcol_left}
+    msgcol_diff="$((msgcol_padding - msgcol_leftLength))"
 
-    [[ $diff -lt 1 ]] && diff=1
+    [ "$msgcol_diff" -lt 1 ] && msgcol_diff=1
 
-    local spacer="$(printf '%*s' "$diff" "")"
+    msgcol_spacer="$(printf '%*s' "$msgcol_diff" "")"
     
-    log 2 "$(wrap_text "${left}${spacer}${right}" "$padding")"
+    log 2 "$(wrap_text "${msgcol_left}${msgcol_spacer}${msgcol_right}" "$msgcol_padding")"
 }
 
 # Messages
@@ -202,9 +199,9 @@ printHelp_env() {
     msg_blank
     msg_usage "$script_name env [command] [KEY] [VALUE]"
     msg_blank
-    msg_info "The $app_name Environment Handler (E.H.) manages the environment variables in the $envFile file and validates or repairs them on each start. Use the E.H. rather than editing the $envFile file directly."
+    msg_info "The $app_name Environment Handler (E.H.) manages the environment variables in the $env_file file and validates or repairs them on each start. Use the E.H. rather than editing the $env_file file directly."
     msg_blank
-    msg_warn "You can ADD variables to the $envFile file, but you can't change any that are controlled by the E.H., or they will be overwritten on startup. Use the E.H. to remove them from control if you want to be allowed to write them in the $envFile, it is preferable to change them using the E.H."
+    msg_warn "You can ADD variables to the $env_file file, but you can't change any that are controlled by the E.H., or they will be overwritten on startup. Use the E.H. to remove them from control if you want to be allowed to write them in the $env_file, it is preferable to change them using the E.H."
     msg_blank
     msg_header ${BLUE} "Subcommands"
     msg_col "(no argument)"    "Show a list of .env variables and view options to manage them."
@@ -219,7 +216,7 @@ printHelp_env() {
     msg_blank
     msg_header ${BLUE} "Examples"
     msg_col "$script_name env"      "Show a list of variables and view options to manage them."
-    msg_col "$script_name env add SEARXNG_SECRET [32 byte hex code]"    "Add a new secret key to the config and $envFile file."
+    msg_col "$script_name env add SEARXNG_SECRET [32 byte hex code]"    "Add a new secret key to the config and $env_file file."
     msg_blank
     msg_line
 }
@@ -294,18 +291,18 @@ startMes_startDone() {
     msg_line
     msg_blank
     msg_title ${YELLOW} "$app_name Startup Complete!"
-    msg_title "Version: $appVersion"
+    msg_title "Version: $app_version"
     msg_blank
-    msg_col "Access the AI Chat interface at:"      "$webUiURL"
+    msg_col "Access the AI Chat interface at:"      "$open_webui_url"
     msg_blank 
-    msg_col "Access the SearXNG search engine at:"  "$searxngBaseURL"
+    msg_col "Access the SearXNG search engine at:"  "$searxng_base_url"
     msg_blank
     msg_normal "${YELLOW}Security:${NC} For secure public access, edit the environment variables:"
     msg_col "           -" "Set SEARXNG_HOSTNAME=yourdomain.com"
     msg_col "           -" "Set SEARXNG_TLS=letsencrypt  (your key)"
     msg_col "           -" "See https://docs.searxng.org for TLS setup."
-    msg_normal "${YELLOW}Note:${NC}     You CANNOT change the $envFile file like other apps, $app_name validates and overwrites changes on each start, except ones not tracked by $app_name." 
-#    msg_normal "You CANNOT change the $envFile file like other apps: $app_name validates and overwrites changes on each start, except ones not tracked by $app_name."
+    msg_normal "${YELLOW}Note:${NC}     You CANNOT change the $env_file file like other apps, $app_name validates and overwrites changes on each start, except ones not tracked by $app_name." 
+#    msg_normal "You CANNOT change the $env_file file like other apps: $app_name validates and overwrites changes on each start, except ones not tracked by $app_name."
     msg_col "           -" "Run '$script_name env' to view & change environment variables / $app_name control! "
     msg_col "           -" "Then run $script_name to restart, and enjoy!"
     msg_col "           -" "'$script_name help [optional command]' to show the help menus!"

@@ -6,15 +6,15 @@
 # |  This tool is released under the MIT License: modify & distribute freely.  |
 # |----------------------------------------------------------------------------|
 
-#!/usr/bin/env bash
+#!/bin/sh
 
-set -euo pipefail
+set -eu
 
 # VARIABLES
 ## Standards (change to change across script and .env file)
-searxngBaseURL="https://localhost/"
-webUiURL="http://localhost:3000/"
-envFile=".env" # Change if you want to use a different .env file name.
+searxng_base_url="https://localhost/"
+open_webui_url="http://localhost:3000/"
+env_file=".env" # Change if you want to use a different .env file name.
 fallback_app_version="v2.1.0+ (?)"
 verbosity=2
 term_width_fallback=75
@@ -23,8 +23,8 @@ script_name="./$(basename "$0")"
 app_name=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the app_name is automatically made uppercase based on script name).
-if [[ -d .git ]]; then
-    app_version="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "$fallback_app_version")"
+if [ -d .git ]; then
+    app_version="$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || printf '%s' "$fallback_app_version")"
 else
     app_version="$fallback_app_version"
 fi
@@ -39,11 +39,6 @@ SIA_HOME_DIR=$(dirname "$script_path")
 export SIA_MAIN_LOADED=true
 
 export SIA_HOME_DIR
-
-# ## SUBSCRIPTS TO SOURCE 
-# configScript="sia-config.sh"
-# configTemplate=".sia-config-template.sh"
-# messageScript=".sia-messages.sh"
 
 ### If verbosity defined: set it
 case "${1:-}" in
@@ -65,60 +60,29 @@ case "${1:-}" in
 esac
 
 ### Consume first argument to be used for commands and shift so subfunctions can use subsequent arguments.
-firstArg="${1:-start}"
+first_arg="${1:-start}"
 shift || true
 
-# MOCK FUNCTIONS
-## Testing :
+# MOCK FUNCTIONS FOR TESTING
 #  - uncomment to block relevant commands during testing
 
 #docker() {
-#    echo "[MOCK] docker $@"
+#    printf '%s' "[MOCK] docker $@"
 #}
 #git() {
-#    echo "[MOCK] git $@"
+#    printf '%s' "[MOCK] git $@"
 #}
 
 ## Detect outdated Docker Compose and change commands if necessary
 
 if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
-    docker() { if [[ "$1" == "compose" ]]; then shift; command docker-compose "$@"; else command docker "$@"; fi; }
+    docker() { if [ "$1" = "compose" ]; then shift; command docker-compose "$@"; else command docker "$@"; fi; }
 fi
-
-
-# SOURCE SUBSCRIPTS
-### Check for or restore local config
-# - If config template is missing (e.g. user deleted everything but sia), recover it
-# if [[ ! -f "$SIA_HOME_DIR/$configTemplate" ]]; then
-#     msg_warn "sia-config-template.sh missing - recovering from latest version..."
-#     curl -fsSL https://raw.githubusercontent.com/joshua-hvmn/SIA/main/${configTemplate} -o "$SIA_HOME_DIR/$configTemplate" || errExit 404
-#     msg_success "$configTemplate recovered!"
-# fi
-# # If first setup or missing local config, create
-# if [[ ! -f "$configScript" ]]; then
-#     if [[ -f "$configTemplate" ]]; then
-#         msg_debug "Creating local config from template..."
-#         cp "$configTemplate" "$configScript"
-#         chmod 600 "$configScript"  # protect potential secrets
-#     else
-#         msg_error "Template $configTemplate not found!"
-#         errExit 2
-#     fi
-# fi
-# source "$SIA_HOME_DIR/$configScript" || errExit 2
-# 
-# ### Check for messages subscript
-# if [[ ! -f "$SIA_HOME_DIR/$messageScript" ]]; then
-#     msg_warn "'$messageScript' missing - recovering..."
-#     curl -fsSL https://raw.githubusercontent.com/joshua-hvmn/SIA/main/$messageScript -o "$SIA_HOME_DIR/$messageScript" || errExit 404
-#     msg_success "$messageScript recovered!"
-# fi
-# source "$SIA_HOME_DIR/$messageScript" || errExit 2
 
 # Relative Paths
 DEFAULTS="$SIA_HOME_DIR/share/env_defaults"
 DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
-PROVIDERS="$SIA_HOME_DIR/share/providers"
+# PROVIDERS="$SIA_HOME_DIR/share/providers"
 
 # Source subscripts
 . "$SIA_HOME_DIR/lib/ui.sh"
@@ -129,76 +93,77 @@ PROVIDERS="$SIA_HOME_DIR/share/providers"
 ## Switch to script directory
 cd "$SIA_HOME_DIR"
 
+## Make sure env exists
+create_env_from_template
+
 ## Make sure launched main script, check command
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    case "$firstArg" in
-        start|"")
-            # Default
-            msg_info "$app_name validating configuration..."
-            # Check for all dependencies
-            checkDeps
-            # Start and run setup if needed
-            startCheck
-            ;;
-        setup|-s|--setup)
-            # Check for all dependencies
-            checkDeps
-            # Run setup and then start
-            setupFunc 0
-            exitScriptGoodWithMessage
-            ;;
-        help|-h|--help)
-            printUsage "$@"
-            ;;
-        down|-d|--down)
-            # Check for hard dependencies
-            checkArray
-            # Stop Stack
-            msg_header "Stopping $app_name..."
-            docker compose down "$@"
-            ;;
-        logs|-l|--logs)
-            # Check for hard dependencies
-            checkArray
-            # Show logs
-            if [[ $# -eq 0 ]]; then
-                msg_info "Showing last 100 logs:"
-                docker compose logs --tail 100
-            else
-                msg_info "Running 'docker compose logs $@'"
-                docker compose logs "$@"
-            fi
-            ;;
-        download|-dl|--download)
-            # Check for hard dependencies 
-            checkArray
-            # Check that the ollama container is running
-            if [[ -z "$(docker compose ps -q ollama 2>/dev/null)" ]]; then
-                msg_error "$app_name isn't running. Please run $scriptName without arguments."
-                errExit 2
-            fi
-            # Download a model
-            if [[ $1 ]]; then
-                msg_debug "Running docker exec ollama ollama run $@"
-                docker exec ollama ollama run "$@"
-                exitScriptGoodWithMessage "$1 is ready to use!"
-            else
-                msg_error "Please enter an Ollama model code to download (i.e. llama3.2:1b)"
-                msg_usage "'$scriptName download llama3.2:1b' (or whatever model you want)"
-                errExit 1
-            fi
-            ;;
-        env|environment|-env|--environment)
-            # Check for args
-            envCommand "$@"
-            ;;
-        *)
-            msg_error "Unknown command: $firstArg"
-            printUsage
+case "$first_arg" in
+    start|"")
+        # Default
+        msg_info "$app_name validating configuration..."
+        # Check for all dependencies
+        checkDeps
+        # Start and run setup if needed
+        startCheck
+        ;;
+    setup|-s|--setup)
+        # Check for all dependencies
+        checkDeps
+        # Run setup and then start
+        change_setup 1
+        exitScriptGoodWithMessage
+        ;;
+    help|-h|--help)
+        printUsage "$@"
+        ;;
+    down|-d|--down)
+        # Check for hard dependencies
+        checkArray
+        # Stop Stack
+        msg_header "Stopping $app_name..."
+        docker compose down "$@"
+        ;;
+    logs|-l|--logs)
+        # Check for hard dependencies
+        checkArray
+        # Show logs
+        if [ $# -eq 0 ]; then
+            msg_info "Showing last 100 logs:"
+            docker compose logs --tail 100
+        else
+            msg_info "Running 'docker compose logs $@'"
+            docker compose logs "$@"
+        fi
+        ;;
+    download|-dl|--download)
+        # Check for hard dependencies 
+        checkArray
+        # Check that the ollama container is running
+        if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
+            msg_error "$app_name isn't running. Please run $script_name without arguments."
+            errExit 2
+        fi
+        # Download a model
+        if [ $1 ]; then
+            msg_debug "Running docker exec ollama ollama run $@"
+            docker exec ollama ollama run "$@"
+            exitScriptGoodWithMessage "$1 is ready to use!"
+        else
+            msg_error "Please enter an Ollama model code to download (i.e. llama3.2:1b)"
+            msg_usage "'$script_name download llama3.2:1b' (or whatever model you want)"
             errExit 1
-            ;;
-    esac
-fi
+        fi
+        ;;
+    env|environment|-env|--environment)
+        # Check for args
+        envCommand "$@"
+        ;;
+    *)
+        msg_error "Unknown command: $first_arg"
+        printUsage
+        errExit 1
+        ;;
+esac
 # Note: Reserved first arguments for verbosity:
 # - --silent / 0
 # - --quiet / 1

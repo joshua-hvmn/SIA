@@ -7,22 +7,23 @@
 # |----------------------------------------------------------------------------|
 
 
-if [[ "${SIA_MAIN_LOADED:-}" != "true" ]]; then
-    echo "Error: This script is a component of SIA and cannot be run directly."
-    echo "Please run: ./sia"
-    exit 1
+if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
+    msg_error "Error: This script is a component of SIA and cannot be run directly."
+    msg_usage "Please run: ./sia"
+    errExit 1
 fi
-
-### Instead of 'for cmd in "${dependencies[@]}"; do..'
-# while IFS= read -r cmd || [ -n "$cmd" ]; do
-#     if ! command -v "$cmd" >/dev/null 2>&1; then
-#         msg_error "$cmd not found"
-#     fi
-# done < "$SHARE_DIR/dependencies"
 
 ## Help :
 #  - Accepts one extra argument
 #  - Add help menus for new commands by adding them to the case statement
+
+checkDeps() { # update for new architecture
+    while IFS= read -r cmd || [ -n "$cmd" ]; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            msg_error "$cmd not found"
+        fi
+    done < "$DEPENDENCIES"
+}
 
 printUsage () {
     local arg="${1:-}"
@@ -53,8 +54,8 @@ printUsage () {
 
 exitScriptGoodWithMessage() { 
     local message="${*:-}"
-    if [[ -n "$message" ]]; then
-        echo "$message" >&2
+    if [ -n "$message" ]; then
+        printf '%s' "$message" >&2
         exit 0
     else
         exit 0
@@ -89,237 +90,6 @@ errExit () {
     msg_warn "Exiting with code $errorCode: $errorDesc" >&2
     exit $errorCode
 }
-
-## Check Arrays
-#  - Add more dependencies in the dependencies array.
-#  - Add more environment variables in the envVars array.
-#  - Add additional cases to handle new arrays.
-#  - Pass the name of the array you want to check.
-
-#checkArray () {
-#    local arrayName="${1:-dependencies}"
-#    local arrayRef="${arrayName}[@]"
-#    case $arrayName in
-#        dependencies)
-#            for cmd in "${!arrayRef}"; do
-#                if ! command -v "$cmd" >/dev/null 2>&1; then
-#                    msg_error "$cmd not found!" 
-#                    msg_usage "Make sure it's installed and you have permission to use it."
-#                    errExit 2
-#                fi
-#            done
-#            ;;
-#        envVars)
-#            for entry in "${!arrayRef}"; do
-#                if [[ "$entry" =~ ^# ]]; then
-#                    if ! grep -qF "$entry" "$envFile" 2>/dev/null; then
-#                        [[ -s "$envFile" && -n "$(tail -c 1 "$envFile" 2>/dev/null)" ]] && echo "" >> "$envFile"
-#                        echo "$entry" >> "$envFile"
-#                    fi
-#                else
-#                    local key="${entry%%=*}"
-#                    
-#                    # Logic: If it's a bare key in the list, check if it's "System Protected"
-#                    if [[ "$entry" != *"="* ]]; then
-#                        case "$key" in
-#                            # These are handled by setupFunc and ensureSecretKey
-#                            # We 'continue' so they stay out of .env until those functions run
-#                            SEARXNG_SECRET|COMPOSE_FILE|SETUP_COMPLETE|PREVIOUSLY_RUN) continue ;;
-#                        esac
-#                    fi
-#
-#                    # All other variables (like SEARXNG_HOSTNAME=localhost) get processed
-#                    editEnv "$entry"
-#                fi
-#            done
-#            ;;
-#        *)
-#            msg_error "Invalid Array Name: '$arrayName'"
-#            errExit 1
-#        ;;
-#    esac
-#}
-#
-
-checkDeps() { # update for new architecture
-    :
-}
-
-## Edit Script Arrays
-# Usage: editAnyArray "arrayName" "KEY=VALUE" (to add/update)
-# Usage: editAnyArray "arrayName" "KEY"      (to remove default overrides and normalize .env editing for that KEY)
-# Usage: editAnyArray "arrayName" "KEY"       (to remove)
-# Note: this function was vibecoded, I haven't internalized it, there may be problems. I might have the usage wrong.
-# - The idea is that it mimics the editEnv function but edits the arrays in the config file.
-# - I will refactor into multiple functions eventually so I understand it fully.
-
-# editAnyArray() {
-#     local arrayName="$1"
-#     local arg="$2"
-#     local arg2="${3:-}"
-#     local scriptFile="$SIA_HOME_DIR/sia-config.sh"
-#     local backupFile="${scriptFile}.bak"
-# 
-#     [[ -z "$arrayName" || -z "$arg" ]] && { msg_usage "editAnyArray [arrayName] [key] [value]"; return 1; }
-# 
-#     cp "$scriptFile" "$backupFile" || return 1
-# 
-#     local lines=()
-#     while IFS= read -r line || [[ -n "$line" ]]; do
-#         lines[${#lines[@]}]="$line"
-#     done < "$scriptFile"
-# 
-#     local start_idx=-1 end_idx=-1
-#     local i
-#     for i in "${!lines[@]}"; do
-#         # Dynamically match the array name passed as $1
-#         if [[ "${lines[i]}" =~ ^[[:space:]]*${arrayName}=\( ]]; then
-#             start_idx=$i
-#         elif [[ $start_idx -ge 0 && "${lines[i]}" =~ ^[[:space:]]*\) ]]; then
-#             end_idx=$i
-#             break
-#         fi
-#     done
-# 
-#     [[ $start_idx -lt 0 || $end_idx -lt 0 ]] && { 
-#         msg_error "Array $arrayName not found in $scriptFile"; 
-#         rm -f "$backupFile"; return 1; 
-#     }
-# 
-#     local base_indent="${lines[start_idx]%%[![:space:]]*}"
-#     local indent="${base_indent}    "
-#     local remove_mode=0
-#     local key entry
-# 
-#     if [[ "$arg2" == "rm" ]]; then
-#         entry="$arg"
-#         key="${entry%%=*}"
-#         remove_mode=1
-#     else
-#         entry="$arg"
-#         key="${entry%%=*}"
-#         remove_mode=0
-#     fi
-# 
-#     local match_idx=-1
-#     local j
-#     local regex="^[[:space:]]*\"?${key}(=[^\"]*)?\"?[[:space:]]*(#.*)?$"
-# 
-#     for ((j = start_idx + 1; j < end_idx; j++)); do
-#         if [[ "${lines[j]}" =~ $regex ]]; then
-#             match_idx=$j
-#             break
-#         fi
-#     done
-# 
-#     if [[ $remove_mode -eq 1 ]]; then
-#         if [[ $match_idx -ne -1 ]]; then
-#             local before=("${lines[@]:0:match_idx}")
-#             local after=("${lines[@]:match_idx+1}")
-#             lines=("${before[@]}" "${after[@]}")
-#         fi
-#     else
-#         if [[ $match_idx -ne -1 ]]; then
-#             local current_indent="${lines[match_idx]%%[![:space:]]*}"
-#             lines[match_idx]="${current_indent}\"${entry}\""
-#         else
-#             local before=("${lines[@]:0:end_idx}")
-#             local after=("${lines[@]:$end_idx}")
-#             lines=("${before[@]}" "${indent}\"${entry}\"" "${after[@]}")
-#         fi
-#     fi
-# 
-#     printf "%s\n" "${lines[@]}" > "$scriptFile"
-# 
-#     if ! bash -n "$scriptFile" >/dev/null 2>&1; then
-#         mv "$backupFile" "$scriptFile"
-#         return 1
-#     fi
-#     rm -f "$backupFile"
-# }
-
-## envCommand List
-#  - pass the name of the array to see a list of options to edit it. Currently this
-#    list function only supports the envVars array.
-#  - can make this function universal by using an additional arg to indicate which menu options array to choose from, and storing the subfunction names in arrays
-#    and calling them based on the index of the selected option menu. That will take some thinking, not necessary for this app. It might be better to 
-#    switch to a newer Bash target so I can use associative arrays, but it isn't necessary for this function.
-#  - make another SIA command like env to bring up a list of arrays so you can edit the whole config
-#    without using the env add command
-#
-#envCommandListEdit () {
-#    ## Variables
-#    local PS3
-#    local arrayName="${1:-arrayNotDefined}"
-#    if [[ ! "$(declare -p "$arrayName" 2>/dev/null)" =~ "declare -a" ]]; then
-#        msg_error "Internal - Array Undefined: $arrayName"
-#        errExit 99
-#    fi
-#    local placeholder="${arrayName}[@]"
-#    local selector=()
-#    for item in "${!placeholder}"; do
-#        [[ "$item" =~ ^# ]] && continue # Skip comments
-#        selector+=("$item")
-#    done
-#    local exitMessage="Configuration changed successfully! Run $scriptName to finalize. Exiting."
-#
-#    ## Function
-#    msg_warn "If you add a SEARXNG_SECRET, you must remove it after."
-#    log 2 "---------------------------------------------------------------------------"
-#    PS3=$(selMenu_envListSelOne)
-#    select arg in "${selector[@]}"; do
-#        [[ "$REPLY" == "x" ]] && break
-#        if [[ "$arg" == *"="* ]]; then
-#            # The string contains an equals sign
-#            local key="${arg%%=*}"
-#            local value="${arg#*=}"
-#            # Proceed with overwrite/update logic
-#        else
-#            # The string is just a bare key
-#            local key="$arg"
-#            local value
-#            # Proceed with "exists" or "default" logic
-#        fi
-#        log 2 "---------------------------------------------------------------------------"
-#        PS3=$(selMenu_envListChooseAction)
-#        select opt in "${envCLMenuOptions[@]}"; do # Will need to change if you want to universalize this function. i.e., "${!input}"
-#            [[ "$REPLY" == "x" ]] && break
-#            # Check that input is valid
-#            if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
-#                if [[ "$REPLY" -le "${#envCLMenuOptions[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
-#                    case "$REPLY" in
-#                        1)
-#                            read -p "Enter value for $key: " userInput
-#                            edit_kv "$key" "$userInput" .env
-#                            startCheck
-#                            ;;
-#                        2)
-#                            edit_kv "$key" "" .env
-#                            startCheck
-#                            ;;
-#                        3)
-#                            edit_kv rm "$key" .env && checkArray envVars
-#                            startCheck
-#                            ;;
-#                        4)
-#                            exitScriptGoodWithMessage "Exiting."
-#                            ;;
-#                        *)
-#                            msg_error "Invalid selection"
-#                            ;;
-#                    esac
-#                else
-#                    msg_error "Invalid Selection: $REPLY"
-#                    msg_usage "Enter a number between 1 and ${#envCLMenuOptions[@]}"
-#                fi
-#            else
-#                msg_error "Invalid Selection: $REPLY"
-#                msg_usage "Enter a number between 1 and ${#envCLMenuOptions[@]}"
-#            fi
-#        done
-#        PS3=$(selMenu_envListSelOne)
-#    done
-#}
 
 does_file_exist() {
     [ $# -eq 1 ] || { msg_error "does_file_exist: exactly one argument required"; errExit 1; }
@@ -390,159 +160,7 @@ list_from_file() {
     is_file_readable "$lff_file"
     is_file_empty "$lff_file"
     
-    sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$lff_file" | nl -s ') ' -w 1
-}
-
-env_command_list_all() {
-    envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$envFile" | wc -l)
-    [ "$envcl_vars_count" -eq 0 ] && { msg_error "No variables found after filtering."; errExit 1; }
-
-    msg_header ${YELLOW} "Environment Variables"
-    list_from_file "$envFile"
-    envcl_choice=$(read_menu_choice "Choose a variable (1-$envcl_vars_count or x to exit): " 1 "$envcl_vars_count")
-
-    msg_header ${YELLOW} "Select an action"
-    msg_col "1)" "Edit value"
-    msg_col "2)" "Edit key"
-    msg_col "3)" "Edit key AND value"
-    msg_col "4)" "Remove"
-    envcl_action=$(read_menu_choice "Action (1-4 or x to exit): " 1 4)
-
-    if [ "$envcl_choice" = 'x' ] || [ "$envcl_action" = 'x' ]; then
-        msg_info "Exiting"
-        exit 0
-    fi
-
-    envcl_key=$(
-        sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$envFile" |
-        sed -n "${envcl_choice}p" |
-        sed 's/=.*//'
-    )
-    envcl_value=$(
-        sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$envFile" |
-        sed -n "${envcl_choice}p" |
-        sed 's/^[^=]*=//'
-    )
-
-    case "$envcl_action" in
-        1)
-            msg_normal "Enter a new value: "
-            read -r envcl_new_value
-            edit_kv "$envcl_key" "$envcl_new_value" "$envFile"
-            ;;
-        2)
-            msg_normal "Enter a new key: "
-            read -r envcl_new_key
-            edit_kv "$envcl_new_key" "$envcl_value" "$envFile"
-            ;;
-        3)
-            msg_normal "Enter a new key: "
-            read -r envcl_new_key
-            msg_normal "Enter a new value: "
-            read -r envcl_new_value
-            edit_kv "$envcl_new_key" "$envcl_new_value" "$envFile"
-            ;;
-        4)
-            msg_warn "Are you sure you want to remove the $envcl_key from the environment? [y/N]"
-            read -r envcl_confirm
-            case "$envcl_confirm" in
-                [yY]|[yY][eE][sS])
-                    edit_kv rm "$envcl_key" "$envFile"
-                    msg_info "$envcl_key is deleted from the $envFile file."
-                    ;;
-                *)
-                    msg_info "Okay, leaving $envcl_key as it is."
-                    return 0
-                    ;;
-            esac
-            ;;
-    esac
-}
-
-env_command_add() {
-    envca_key="${1:-}"
-    envca_val="${2:-}"
-
-    # Normalize keys (error if bad)
-    case "$envca_key" in
-        *[!a-zA-Z0-9_]*)
-            msg_error "Key contains invalid characters. Use only alphanumeric characters and underscores."
-            errExit 1
-            ;;
-        "")
-            msg_error "Key cannot be empty."
-            errExit 1
-            ;;
-    esac
-
-    # Check VALUE defined
-    if [ -z "$envca_val" ]; then
-        msg_error "You must define both key and value to add to the environment variables, please try again."
-        msg_usage "$scriptName env add <key> <value>"
-        errExit 1
-    fi
-
-    # Edit the .env
-    edit_kv "$envca_key" "$envca_val" "$envFile"
-    msg_success "Added $envca_key=$envca_val to the $envFile file!"
-    msg_info "Run $scriptName to restart."
-}
-
-## .env handler command Parser
-#  - USAGE:
-#  - ./sia env - view list and choose what to do.
-#  - ./sia env add [optional name WITH CAUTION] [key] [value]
-#    - If you define a name, it will edit the values in the array if it exists, 
-#    - for example, 'dependencies' or 'fileNames'. Use caution!
-
-envCommand () {
-    envcm_cmd="${1:-list}"
-    envcm_key="${2:-}"
-    envcm_val="${3:-}"
-    case $envcm_cmd in
-        list|-l|--list)
-            # envCommandListEdit envVars
-            env_command_list_all
-            ;;
-        add|-a|--add)
-            # Make sure args defined
-            if [ -z "$envcm_key" ] || [ -z "$envcm_val" ]; then
-                msg_error "Both key and value are required."
-                msg_usage "$scriptName env add <key> <value>"
-                errExit 1
-            fi
-
-            # Edit the .env
-            edit_kv "$envcm_key" "$envcm_val" "$envFile"
-            msg_success "Added $envcm_key=$envcm_val to the $envFile file!"
-            msg_info "Run $scriptName to restart."
-            ;;
-        rm|-rm|--remove)
-            # Make sure args defined
-            if [ -z "$envcm_key" ]; then
-                msg_error "Did not define key to delete."
-                msg_usage "$scriptName env rm <key>"
-                errExit 1
-            fi
-            if [ "${verbosity:-0}" -gt 0 ]; then
-                msg_warn "Remove $envcm_key=$envcm_val from the environment? [y/N]"
-                read -r envcm_confirm
-            else
-                envcm_confirm="y"
-            fi
-            case "$envcm_confirm" in
-                [yY]|[yY][eE][sS])
-                    edit_kv rm "$envcm_key" "$envFile"
-                    msg_success "Removed $envcm_key=$envcm_val from the $envFile file!"
-                    msg_info "Run $scriptName to restart."
-                    ;;
-                *)
-                    msg_info "Okay, leaving $envcm_key as it is."
-                    return 0
-                    ;;
-            esac
-            ;;
-    esac
+    sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$lff_file" | nl -s ') ' -w 1
 }
 
 ## Make temp file
@@ -671,82 +289,55 @@ edit_kv() {
     }
 }
 
-## .env editor
-#  - Pass "KEY=VALUE" to update the VALUE or append if missing.
-#  - Pass "VALUE" to just write it to the .env
-#  - Ensures new line and creates an .env if necessary
-#  - DEV NOTE: my gut says this function might be a little too simple with the addition of the other env editor functions.
-
-#editEnv () {
-#    local entry="$1"
-#    local key="${entry%%=*}" # Extracts everything before the '='
-#    local value="${entry#*=}"
-#    local envFileLocal="$envFile"
-#
-#    local mode="bare"
-#    [[ "$entry" == *"="* ]] && mode="enforce"
-#
-#    # Create .env if it doesn't exist
-#    touch "$envFileLocal"
-#
-#    # Check if "KEY=VALUE" exists and create or edit it
-#    if grep -q "^${key}=" "$envFileLocal" 2>/dev/null; then
-#        if [[ "$mode" == "enforce" ]]; then
-#            # Update if "KEY=VALUE" exists
-##            echo "$key exists in the "$envFileLocal" file. Modifying..."
-#            grep -v "^${key}=" "$envFileLocal" > "${envFileLocal}.tmp"
-#            echo "$key=$value" >> "${envFileLocal}.tmp"
-#            mv "${envFileLocal}.tmp" "$envFileLocal"
-#        fi
-#        return 0
-#    else
-#        # Append "KEY=VALUE" if it is missing
-#        [[ -s "$envFileLocal" && -n "$(tail -c 1 "$envFileLocal" 2>/dev/null)" ]] && echo "" >> "$envFileLocal"
-#        if [[ "$mode" == "enforce" ]]; then
-#            echo "$key=$value" >> "$envFileLocal"
-#        else
-#            echo "$key=" >> "$envFileLocal"
-#        fi
-#    fi
-#}
-
 ## Secret Key
 # - Checks if a secret key exists and randomly generate one if it doesn't
 # - Tries in this order: openssl, od, python3, cksum
 # - Nested conditional make this annoying to extend, but it shouldn't need to be extended.
 
 ensureSecretKey () {
+    # Check if force regenerate
+    ensuresk_mode="${1:-no}"
+    case "$ensuresk_mode" in
+        "update")
+            ensuresk_mode="update"
+            ;;
+        *)
+            :
+            ;;
+    esac
+
     # Check if key exists and generate one if it doesn't
-    [ "$1" = "update" ] && local mode="$1"
-    touch "$envFile"
-    if ! grep -q "^SEARXNG_SECRET=" "$envFile" 2>/dev/null || "$mode" = "update" ; then
+    touch "$env_file"
+    if ! grep -q "^SEARXNG_SECRET=" "$env_file" 2>/dev/null || [ "$ensuresk_mode" = "update" ] ; then
         msg_debug "Generating secret key..."
-        local secretKey
+        ensuresk_secret_key=
+        ensuresk_method=
         # Generate the key
         # Try OpenSSL :
         if command -v openssl >/dev/null 2>&1; then
-            secretKey=$(openssl rand -hex 32)
-        # Try od (POSIX) :
-        elif command -v od >/dev/null 2>&1; then
-            secretKey=$(od -An -N32 -tx1 < /dev/urandom | tr -d '[:space:]')
-        else
+            ensuresk_secret_key=$(openssl rand -hex 32)
+            ensuresk_method="OpenSSL (32 byte hexadecimal)"
             # Try Python :
-            if command -v python3 >/dev/null 2>&1; then
-                secretKey=$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || true)
+        elif command -v python3 >/dev/null 2>&1; then
+            ensuresk_secret_key=$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || true)
+            ensuresk_method="Python Secrets (32 byte hexadecimal)"
+        else
+            # Try od (POSIX) :
+            if command -v od >/dev/null 2>&1; then
+                ensuresk_secret_key=$(od -An -N32 -tx1 < /dev/urandom | tr -d '[:space:]')
+                ensuresk_method="Octal dump (32 byte hexadecimal)"
             fi
             # Error out if no easy way to generate a secure key :
-            if [[ -z "$secretKey" ]]; then
+            if [ -z "$ensuresk_secret_key" ]; then
                 msg_error "Couldn't find a way to generate a truly random number!"
-                msg_debug "$appName tried OpenSSL, od, and python3!"
-                msg_info "Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $envFile file."
+                msg_debug "$app_name tried OpenSSL, od, and python3!"
+                msg_info "Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $env_file file."
                 errExit 3
             fi
         fi
         # Append to .env:
-        keyPrefix=${secretKey:0:5}
-        msg_info "Secret key beginning with '$keyPrefix' was generated and injected into the .env."
-
-        edit_kv "SEARXNG_SECRET" "$secretKey" .env
+        edit_kv "SEARXNG_SECRET" "$ensuresk_secret_key" .env
+        msg_info "Secret key was generated with $ensuresk_method, and injected into the .env."
         return 0
     fi
 }
@@ -757,53 +348,60 @@ ensureSecretKey () {
 # - Checks for or generates secret key with ensureSecretKey
 # - Stack will restart automatically when you select or change a setup.
 
-setupFunc () {
-    local dontRestart="${1:-0}"
+change_setup() {
+    chngst_cmd_started="${1:-0}"
+    chngst_sel_yaml=".compose.cpu.yaml"
+    chngst_upper_bound="3"
 
-    PS3=$(selMenu_processorMenu)
-    select opt in "${options[@]}"; do
-        [[ "$REPLY" == "x" ]] && exitScriptGoodWithMessage
-        # Check that input is valid
-        if [[ "$REPLY" =~ ^[0-9]+$ ]]; then
-            if [[ "$REPLY" -le "${#options[@]}" ]] && [[ "$REPLY" -ge 1 ]]; then
-                case "$opt" in # Only leaving this in case I want to add options not related to fileNames like the old exit option.
-                    *)
-                        local index="$((REPLY-1))"
-                        # Check menu choice is associated with a file name
-                        if [[ -n "${fileNames[index]}" ]]; then
-                            local selectedFile=${fileNames[index]}
-                            msg_debug "Selected: $REPLY: $opt ($selectedFile). Making sure it's present..."
-                            # Check file is present
-                            if [[ ! -f $selectedFile ]]; then
-                                msg_error "YAML file $selectedFile not found!"
-                                errExit 2
-                            fi
-                            msg_debug "YAML found!"
-                            # Create or Update .env
-                            edit_kv "COMPOSE_FILE" "$selectedFile" .env
-                            ensureSecretKey
-                            edit_kv "SETUP_COMPLETE" "true" .env
-                            msg_debug "Configuration saved to "$envFile"."
+    # Detect current config if there is one
+    if grep -q "^COMPOSE_FILE=" "$env_file" 2>/dev/null; then
+        chngst_sel_yaml=$(sed -n 's/^[[:space:]]*COMPOSE_FILE[[:space:]]*=[[:space:]]*//p' "$env_file")
+    fi
 
-                            # Check if previously run / need to restart
-                            if [[ $dontRestart -eq 0 ]] && grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
-                                msg_debug "Previous run detected: automatically restarting..."
-                                startCheck
-                            fi
-                            break
-                        else
-                            msg_error "Invalid selection"
-                        fi
-                esac
-            else
-                msg_error "Invalid Selection: $REPLY"
-                msg_usage "Try again. Enter a number between 1 and ${#options[@]}"
-            fi
-        else
-            msg_error "Invalid Selection: $REPLY"
-            msg_usage "Try again. Enter a number between 1 and ${#options[@]}"
-        fi
-    done
+    msg_header ${YELLOW} "Select a processor"
+    msg_col "1)" "CPU only (no discete GPU)"
+    msg_col "2)" "NVIDIA GPU"
+    msg_col "3)" "AMD GPU"
+    msg_col "4)" "Keep current: $chngst_sel_yaml"
+
+    # Read choice
+    chngst_choice=$(read_menu_choice "Processor (1-3 or x to exit): " 1 4)
+    
+    if [ "$chngst_choice" = 'x' ]; then
+        msg_info "Exiting"
+        exit 0
+    fi
+
+    case "$chngst_choice" in
+        1)
+            chngst_sel_yaml=".compose.cpu.yaml"
+            ;;
+        2)
+            chngst_sel_yaml=".compose.nvidia.yaml"
+            ;;
+        3)
+            chngst_sel_yaml=".compose.amd.yaml"
+            ;;
+        4)
+            msg_info "Keeping current setup."
+            ;;
+    esac
+
+    # Validate
+    if [ ! -f "$chngst_sel_yaml" ]; then
+        msg_error "YAML file $chngst_sel_yaml not found!"
+        errExit 2
+    fi
+
+    # Edit env
+    edit_kv "COMPOSE_FILE" "$chngst_sel_yaml" "$env_file"
+    ensureSecretKey
+    edit_kv "SETUP_COMPLETE" "true" "$env_file"
+
+    # Restart
+    if [ "$chngst_cmd_started" -eq 1 ]; then
+     startCheck
+    fi
 }
 
 ## Start :
@@ -813,17 +411,17 @@ setupFunc () {
 
 startCheck () {
     # Check if a compose file is defined, if not: setup, else start/restart
-    if [ ! -s "$envFile" ] || [ ! grep -q "^SETUP_COMPLETE=true" "$envFile" 2>/dev/null]; then
+    if [ ! -s "$env_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_file" 2>/dev/null; then
         startMes_firstStart
-        setupFunc 1
+        change_setup 0
     fi
 
-    if grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
+    if grep -q "^PREVIOUSLY_RUN=true" "$env_file" 2>/dev/null; then
         msg_success "Valid configuration - Restarting!"
     else
         msg_success "Valid configuration - Starting for the first time, enjoy!"
         # Append to .env:
-        if ! grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
+        if ! grep -q "^PREVIOUSLY_RUN=true" "$env_file" 2>/dev/null; then
             edit_kv "PREVIOUSLY_RUN" "true" .env
         fi
     fi
