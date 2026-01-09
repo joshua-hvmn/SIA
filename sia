@@ -32,7 +32,9 @@ fi
 ## Where the main script lives
 #  - Note: will have to change SIA_HOME_DIR if you move the main script into bin/
 # SIA_HOME_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-script_path=$(readlink -f "$0")
+script_path=$(
+    CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd -P
+)/$(basename -- "$0")
 SIA_HOME_DIR=$(dirname "$script_path")
 
 # To make sure only main script loaded
@@ -117,15 +119,14 @@ case "$first_arg" in
         printUsage "$@"
         ;;
     down|-d|--down)
-        # Check for hard dependencies
-        checkArray
+        checkDeps
         # Stop Stack
         msg_header "Stopping $app_name..."
         docker compose down "$@"
         ;;
     logs|-l|--logs)
         # Check for hard dependencies
-        checkArray
+        checkDeps
         # Show logs
         if [ $# -eq 0 ]; then
             msg_info "Showing last 100 logs:"
@@ -136,8 +137,9 @@ case "$first_arg" in
         fi
         ;;
     download|-dl|--download)
+        # NOTE: command injection risk, fix by assigning model=$1, and shift, then args as $@
         # Check for hard dependencies 
-        checkArray
+        checkDeps
         # Check that the ollama container is running
         if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
             msg_error "$app_name isn't running. Please run $script_name without arguments."

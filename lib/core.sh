@@ -26,7 +26,7 @@ checkDeps() { # update for new architecture
 }
 
 printUsage () {
-    local arg="${1:-}"
+    prnthlp_arg="${1:-}"
     case "$arg" in
         down|-d|--down)
             printHelp_down
@@ -53,7 +53,7 @@ printUsage () {
 #  - Pass the message to be displayed or do not pass one to automatically display "Exiting"
 
 exitScriptGoodWithMessage() { 
-    local message="${*:-}"
+    exitgood_message="${*:-}"
     if [ -n "$message" ]; then
         printf '%s' "$message" >&2
         exit 0
@@ -67,28 +67,28 @@ exitScriptGoodWithMessage() {
 #  - Extend by adding to the case statement
 
 errExit () {
-    local errorCode="${1:-99}"
-    local errorDesc
-    case $errorCode in # Don't use code 99
+    errex_errex_code="${1:-99}"
+    errex_errex_desc=""
+    case $errex_code in # Don't use code 99
         1)
-            errorDesc="Improper usage!"
+            errex_desc="Improper usage!"
             ;;
         2)
-            errorDesc="Improper configuration!"
+            errex_desc="Improper configuration!"
             ;;
         3)
-            errorDesc="No known number generator!"
+            errex_desc="No known number generator!"
             ;;
         404)
-            errorDesc="Could not curl replacement config template. Check internet/repo!"
+            errex_desc="Could not curl replacement config template. Check internet/repo!"
             ;;
         *)
-            errorDesc="unknown error code"
-            errorCode=99
+            errex_desc="unknown error code"
+            errex_code=99
             ;;
     esac
-    msg_warn "Exiting with code $errorCode: $errorDesc" >&2
-    exit $errorCode
+    msg_warn "Exiting with code $errex_code: $errex_desc" >&2
+    exit $errex_code
 }
 
 does_file_exist() {
@@ -160,7 +160,7 @@ list_from_file() {
     is_file_readable "$lff_file"
     is_file_empty "$lff_file"
     
-    sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$lff_file" | nl -s ') ' -w 1
+    sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$lff_file" | awk '{ printf "%d) %s\n", NR, $0 }'
 }
 
 ## Make temp file
@@ -278,10 +278,11 @@ edit_kv() {
     fi
 
     # Swap
-    if [ ! -f "$ekv_target" ]; then
-        chmod 600 "$ekv_tmp"
+    if [ -f "$ekv_target" ]; then
+        perms=$(stat -c %a "$ekv_target" 2>/dev/null || stat -f %Lp "$ekv_target" 2>/dev/null || printf '600')
+        chmod "$perms" "$ekv_tmp"
     else
-        chmod --reference="$ekv_target" "$ekv_tmp" 2>/dev/null || chmod 600 "$ekv_tmp"
+        chmod 600 "$ekv_tmp"
     fi
     mv -f -- "$ekv_tmp" "$ekv_target" || {
         rm -f -- "$ekv_tmp"
