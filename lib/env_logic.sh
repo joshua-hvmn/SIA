@@ -84,11 +84,8 @@ env_command_list_all() {
 }
 
 env_command_add() {
-    envca_key="${1:-}"
-    envca_val="${2:-}"
-
     # Normalize keys (error if bad)
-    case "$envca_key" in
+    case "$envcm_key" in
         *[!a-zA-Z0-9_]*)
             msg_error "Key contains invalid characters. Use only alphanumeric characters and underscores."
             errExit 1
@@ -100,17 +97,63 @@ env_command_add() {
     esac
 
     # Check VALUE defined
-    if [ -z "$envca_val" ]; then
+    if [ -z "$envcm_val" ]; then
         msg_error "You must define both key and value to add to the environment variables, please try again."
         msg_usage "$script_name env add <key> <value>"
         errExit 1
     fi
 
     # Edit the .env
-    edit_kv "$envca_key" "$envca_val" "$env_file"
-    msg_success "Added $envca_key=$envca_val to the $env_file file!"
+    edit_kv "$envcm_key" "$envcm_val" "$env_file"
+    msg_success "Added $envcm_key=$envcm_val to the $env_file file!"
     msg_info "Run $script_name to restart."
 }
+
+env_command_rm() {
+    # Make sure args defined
+    if [ -z "$envcm_key" ]; then
+        msg_error "Did not define key to delete."
+        msg_usage "$script_name env rm <key>"
+        errExit 1
+    fi
+    
+    if [ "${verbosity:-0}" -gt 0 ]; then
+        msg_warn "Remove $envcm_key=$envcm_val from the environment? [y/N]"
+        read -r envcm_rm_confirm
+    else
+        envcm_rm_confirm="y"
+    fi
+    case "$envcm_rm_confirm" in
+        [yY]|[yY][eE][sS])
+            edit_kv rm "$envcm_key" "$env_file"
+            msg_success "Removed $envcm_key=$envcm_val from the $env_file file!"
+            msg_info "Run $script_name to restart."
+            ;;
+        *)
+            msg_info "Okay, leaving $envcm_key as it is."
+            return 0
+            ;;
+    esac
+}
+
+env_rotate_key_hlpr() {
+    if [ "${verbosity:-0}" -gt 0 ]; then
+        msg_warn "Rotate (regenerate) the SEARXNG_SECRET? [y/N]"
+        read -r envcm_rk_confirm
+    else
+        envcm_rk_confirm="y"
+    fi
+    case "$envcm_rk_confirm" in
+        [yY]|[yY][eE][sS])
+            check_seckey_main rotate
+            ;;
+        *)
+            msg_info "Okay, leaving it as it is."
+            return 0
+            ;;
+    esac
+}
+
 
 ## .env handler command Parser
 #  - USAGE:
@@ -130,41 +173,13 @@ envCommand () {
             ;;
         add|-a|--add)
             # Make sure args defined
-            if [ -z "$envcm_key" ] || [ -z "$envcm_val" ]; then
-                msg_error "Both key and value are required."
-                msg_usage "$script_name env add <key> <value>"
-                errExit 1
-            fi
-
-            # Edit the .env
-            edit_kv "$envcm_key" "$envcm_val" "$env_file"
-            msg_success "Added $envcm_key=$envcm_val to the $env_file file!"
-            msg_info "Run $script_name to restart."
+            env_command_add
             ;;
         rm|-rm|--remove)
-            # Make sure args defined
-            if [ -z "$envcm_key" ]; then
-                msg_error "Did not define key to delete."
-                msg_usage "$script_name env rm <key>"
-                errExit 1
-            fi
-            if [ "${verbosity:-0}" -gt 0 ]; then
-                msg_warn "Remove $envcm_key=$envcm_val from the environment? [y/N]"
-                read -r envcm_confirm
-            else
-                envcm_confirm="y"
-            fi
-            case "$envcm_confirm" in
-                [yY]|[yY][eE][sS])
-                    edit_kv rm "$envcm_key" "$env_file"
-                    msg_success "Removed $envcm_key=$envcm_val from the $env_file file!"
-                    msg_info "Run $script_name to restart."
-                    ;;
-                *)
-                    msg_info "Okay, leaving $envcm_key as it is."
-                    return 0
-                    ;;
-            esac
+            env_command_rm
+            ;;
+        rotate|rk|-rk|--rotate)
+            env_rotate_key_hlpr
             ;;
     esac
 }
