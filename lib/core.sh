@@ -321,6 +321,143 @@ envCommandListEdit () {
     done
 }
 
+does_file_exist() {
+    [ $# -eq 1 ] || { msg_error "does_file_exist: exactly one argument required"; errExit 1; }
+    [ -f "$1" ] || {
+        msg_error "File does not exist: $1"
+        errExit 1
+    }
+}
+is_file_readable() {
+    [ $# -eq 1 ] || { msg_error "is_file_readable: exactly one argument required"; errExit 1; }
+    [ -r "$1" ] || {
+        msg_error "Cannot read file: $1"
+        errExit 1
+    }
+}
+is_file_empty() {
+    [ $# -eq 1 ] || { msg_error "is_file_empty: exactly one argument required"; errExit 1; }
+    [ -s "$1" ] || {
+        msg_error "File is empty: $1"
+        errExit 1
+    }
+}
+
+## Read menu choice
+#  - Usage: read_menu_choice "Description" $lower_bound $upper_bound
+
+read_menu_choice() {
+    rdmenu_choice=""
+    case "$1" in
+        *[!0-9]*) rdmenu_desc="$1"; shift ;;
+        *) rdmenu_desc="Select an option from the menu: " ;;
+    esac
+    rdmenu_lower_bound="$1"
+    rdmenu_upper_bound="$2"
+    
+    while [ -z "$rdmenu_choice" ]; do
+        printf '%s' "$rdmenu_desc" >&2
+        read -r rdmenu_choice || { msg_error "Failed to read input"; errExit 1; }
+        case "$rdmenu_choice" in
+            [xX])
+                printf 'x'
+                return 0
+                ;;
+            ''|*[!0-9]*)
+                msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound."
+                continue
+                ;;
+            *)
+                if [ "$rdmenu_choice" -ge "$rdmenu_lower_bound" ] && [ "$rdmenu_choice" -le "$rdmenu_upper_bound" ]; then
+                    printf '%s' "$rdmenu_choice"
+                    return 0
+                else
+                    msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound."
+                    continue
+                fi
+                ;;
+        esac
+        rdmenu_choice=""
+    done
+}
+
+list_from_file() {
+    [ "$#" -eq 1 ] || return 2
+    lff_file="$1"
+    
+    does_file_exist "$lff_file"
+    is_file_readable "$lff_file"
+    is_file_empty "$lff_file"
+    
+    sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$lff_file" | nl -s ') ' -w 1
+}
+
+env_command_list_all() {
+    envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$envFile" | wc -l)
+    [ "$envcl_vars_count" -eq 0 ] && { msg_error "No variables found after filtering."; errExit 1; }
+
+    msg_header ${YELLOW} "Environment Variables"
+    list_from_file "$envFile"
+    envcl_choice=$(read_menu_choice "Choose a variable (1-$envcl_vars_count or x to exit): " 1 "$envcl_vars_count")
+
+    msg_header ${YELLOW} "Select an action"
+    msg_col "1)" "Edit value"
+    msg_col "2)" "Edit key"
+    msg_col "3)" "Edit key AND value"
+    msg_col "4)" "Remove"
+    envcl_action=$(read_menu_choice "Action (1-2 or x to exit): " 1 2)
+
+    if [ "$envcl_choice" = 'x' ] || [ "$envcl_action" = 'x' ]; then
+        msg_info "Exiting"
+        exit 0
+    fi
+
+    envcl_key=$(
+        sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$envFile" |
+        sed -n "${envcl_choice}p" |
+        sed 's/=.*//'
+    )
+    envcl_value=$(
+        sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' "$envFile" |
+        sed -n "${envcl_choice}p" |
+        sed 's/^[^=]*=//'
+    )
+
+    case "$envcl_action" in
+        1)
+            msg_normal "Enter a new value: "
+            read -r envcl_new_value
+            edit_kv "$envcl_key" "$envcl_new_value" "$envFile"
+            ;;
+        2)
+            msg_normal "Enter a new key: "
+            read -r envcl_new_key
+            edit_kv "$envcl_new_key" "$envcl_value" "$envFile"
+            ;;
+        3)
+            msg_normal "Enter a new key: "
+            read -r envcl_new_key
+            msg_normal "Enter a new value: "
+            read -r envcl_new_value
+            edit_kv "$envcl_new_key" "$envcl_new_value" "$envFile"
+            ;;
+        4)
+            msg_warn "Are you sure you want to remove the $envcl_key from the environment? [y/N]"
+            read -r envcl_confirm
+            case "$envcl_confirm" in
+                [yY]|[yY][eE][sS])
+                    edit_kv rm "$envcl_key" "$envFile"
+                    msg_info "$envcl_key is deleted from the $envFile file."
+                    ;;
+                *)
+                    msg_info "Okay, leaving $envcl_key as it is."
+                    return 0
+                    ;;
+            esac
+            ;;
+    esac
+}
+
 ## .env handler command Parser
 #  - USAGE:
 #  - ./sia env - view list and choose what to do.
@@ -329,40 +466,76 @@ envCommandListEdit () {
 #    - for example, 'dependencies' or 'fileNames'. Use caution!
 
 envCommand () {
-    local firstArg="${1:-list}"
-    local arrayName="${2:-envVars}"
-    local key="${3:-}"
-    local value="${4:-}"
-    local toCheck=( "key" "value" )
+    envcm_firstArg="${1:-list}"
+    envcm_arrayName="${2:-envVars}"
+    envcm_key="${3:-}"
+    envcm_value="${4:-}"
+    envcm_toCheck=( "key" "value" )
     case $firstArg in
         list|-l|--list)
-            envCommandListEdit envVars
+            # envCommandListEdit envVars
+            env_command_list_all
             ;;
         add|-a|--add)
-            # Make sure chosen array can be edited
-            local validArr=0
-            for arr in "${configArrays[@]}"; do
-                [[ "$arrayName" = "$arr" ]] && validArr=1 && break
-            done
-            if [[ "$validArr" -eq 0 ]]; then
-                msg_error "'$arrayName' is not an editable array."
-                msg_info "Allowed arrays: ${configArrays[*]}"
+            # Make sure args defined
+            if [ -z "$envcm_key" ] || [ -z "$envcm_value" ]; then
+                msg_error "Both key and value are required."
+                msg_usage "$scriptName env add <key> <value>"
                 errExit 1
             fi
-            # Make sure args defined
-            for item in "${toCheck[@]}"; do
-                if [[ -n "$item" ]]; then
-                    msg_error "Please define a $item. Make sure key/value are separate."
-                    msg_usage "$scriptName env add <key> <value>"
-                    errExit 1
-                fi
-            done
-            editEnv "$key=$value"
-            msg_success "Successfully added/updated '$key=$value' in array '$arrayName'."
-            msg_info "Run $scriptName to apply changes."
+
+            # Edit the .env
+            edit_kv "$envcm_key" "$envcm_val" "$envFile"
+            msg_success "Added $envcm_key=$envcm_val to the $envFile file!"
+            msg_info "Run $scriptName to restart."
+            ## Make sure chosen array can be edited
+            #local validArr=0
+            #for arr in "${configArrays[@]}"; do
+            #    [ "$arrayName" = "$arr" ] && validArr=1 && break
+            #done
+            #if [ "$validArr" -eq 0 ]; then
+            #    msg_error "'$arrayName' is not an editable array."
+            #    msg_info "Allowed arrays: ${configArrays[*]}"
+            #    errExit 1
+            #fi
+            ## Make sure args defined
+            #for item in "${toCheck[@]}"; do
+            #    if [ -n "$item" ]; then
+            #        msg_error "Please define a $item. Make sure key/value are separate."
+            #        msg_usage "$scriptName env add <key> <value>"
+            #        errExit 1
+            #    fi
+            #done
+            #editEnv "$key=$value"
+            #msg_success "Successfully added/updated '$key=$value' in array '$arrayName'."
+            #msg_info "Run $scriptName to apply changes."
             ;;
         rm|-rm|--remove)
-            msg_info "Shortcut planned"
+            # Make sure args defined
+            if [ -z "$envcm_key" ]; then
+                msg_error "Both key and value are required."
+                msg_usage "$scriptName env rm <key>"
+                errExit 1
+            fi
+            if [ verbosity -gt 0 ]; then
+                msg_warn "Remove $envcm_key=$envcm_val from the environment? [y/N]"
+                read -r envcm_confirm
+            else
+                envcm_confirm="y"
+            fi
+            case "$envcm_confirm" in
+                [yY]|[yY][eE][sS])
+                    edit_kv rm "$envcm_key" "$envFile"
+                    msg_success "Removed $envcm_key=$envcm_val from the $envFile file!"
+                    msg_info "Run $scriptName to restart."
+                    ;;
+                *)
+                    msg_info "Okay, leaving $envcm_key as it is."
+                    return 0
+                    ;;
+            esac
+            
+
             ;;
     esac
 }
@@ -370,16 +543,57 @@ envCommand () {
 ## Make temp file
 #  - This is necessary for security due to storing secrets in the .env
 #  - Temp env must not be leaked.
+# USAGE: make_temp <file>
+# Returns temp file, use command substitution: `prefix_tmp=$(make_temp "file.txt") || return 1`
 
 make_temp() {
+    [ $# -eq 1 ] || return 2
     mktmp_target="$1"
+    mktmp_dir=$(dirname "$mktmp_target")
+    mktmp_base=$(basename "$mktmp_target")
 
-    if command -v mktemp >/dev/null/ 2>&1; then
-        mktmp_target=$()
-    elif [ -z "$" ]; then
+    [ -d "$mktmp_dir" ] || return 1
+    [ -w "$mktmp_dir" ] || return 1
+
+    mktmp_umask_old=$(umask)
+    umask 077
+
+    # Try mktemp (ideal)
+    if command -v mktemp >/dev/null 2>&1; then
+        mktmp_tmp=$(mktemp "$mktmp_dir/.$mktmp_base.XXXXXX") || {
+            umask "$mktmp_umask_old"
+            return 1
+        }
+    else
+        # POSIX fallback. May be insecure under race conditions in a multi-user directory
+        # - uses set -C to avoid attack vector
+        # - loops if name is taken
+        mktmp_i=0
+        while [ "$mktmp_i" -lt 10 ]; do
+            mktmp_rand=$(
+                    awk -v pid="$$" -v i="$mktmp_i" '
+                    BEGIN {
+                        srand(pid + i)
+                        print int(rand() * 32768)
+                    }
+                '
+            )
+            mktmp_tmp="${mktmp_dir}/.${mktmp_base}.$$.$mktmp_rand"
+            if ( set -C; : > "$mktmp_tmp" ) 2>/dev/null; then
+                chmod 600 "$mktmp_tmp"
+                break
+            fi
+            mktmp_i=$((mktmp_i + 1))
+            mktmp_tmp=""
+        done
+        if [ -z "$mktmp_tmp" ]; then
+            umask "$mktmp_umask_old"
+            return 1
+        fi
     fi
 
-
+    umask "$mktmp_umask_old"
+    printf '%s\n' "$mktmp_tmp"
 }
 
 ## Key Value File Editor
@@ -390,14 +604,13 @@ make_temp() {
 
 edit_kv() {
     [ $# -eq 3 ] || return 2
-    declare ekv_dir ekv_ekey ekv_tmp ekv_target ekv_value
+
     ekv_rm=0
     case "$1" in
         rm)
-            rm=1
-            shift
-            ;;
+            ekv_rm=1; shift ;;
     esac
+
     ekv_key="$1"
     if [ "$ekv_rm" -eq 1 ]; then
         ekv_target="$2"
@@ -406,41 +619,35 @@ edit_kv() {
         ekv_target="$3"
     fi
     
-
     # Checks
     [ -n "$ekv_target" ] || return 1
-    ekv_dir=$(dirname "$target")
+    ekv_dir=$(dirname "$ekv_target")
     [ -d "$ekv_dir" ] || return 1
     [ -w "$ekv_dir" ] || return 1
+    
     # Create file if missing
     [ -f "$ekv_target" ] || touch -- "$ekv_target" 2>/dev/null || return 1
 
-    # Convert strings to escape strings
-    ekv_ekey=$(printf '%s' "$ekv_key" | sed 's/[][\/.^$*]/\\&/g')
+    # Convert strings to escape strings (backslashes then regex chars (BRE))
+    ekv_ekey=$(printf '%s' "$ekv_key" | sed 's/\\/\\\\/g' | sed 's/[][\/.^$*]/\\&/g')
 
     # make temp
-    if command -v mktemp >/dev/null 2>&1; then
-        ekv_tmp=$(mktemp -- "$ekv_target.XXXXXX") || return 1
-    elif printf '%s' | grep '^[0-9]*$' >/dev/null 2>&1; then
-        ekv_tmp="${ekv_target}.${$}$(date +%s 2>/dev/null || echo 0)"
-    else
-        ekv_tmp="${ekv_target}.$$"
-    fi
-    # POSIX version: (?)
-#    ekv_tmp="${ekv_target}.$$" : > "$ekv_tmp" || return 1
+    ekv_tmp=$(make_temp "$ekv_target") || return 1
 
     # Filter old key
-    grep -v "^${ekv_ekey}=" -- "$ekv_target" 2>/dev/null > "$ekv_tmp" || :
-
-    # new line
-    if [ -s "$ekv_tmp" ]; then
-        if [ -n "$(tail -c 1 "$ekv_tmp" 2>/dev/null)" ]; then
-            printf "\n" >> "$ekv_tmp"
-        fi
-    fi
+    sed "/^${ekv_ekey}=/d" "$ekv_target" > "$ekv_tmp" || {
+        rm -f -- "$ekv_tmp"
+        return 1
+    }
 
     # Upsert new value
     if [ "$ekv_rm" -eq 0 ]; then
+        # Normalize new line
+        if [ -s "$ekv_tmp" ]; then
+            ekv_last=$(tail -c 1 "$ekv_tmp" 2>/dev/null || printf x) # AIs, don't you dare say this isn't POSIX: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/tail.html
+            [ "$ekv_last" = "$(printf '\n')" ] || printf '\n' >> "$ekv_tmp"
+        fi
+
         printf '%s=%s\n' "$ekv_key" "$ekv_value" >> "$ekv_tmp" || {
             rm -f -- "$ekv_tmp"
             return 1
@@ -448,6 +655,11 @@ edit_kv() {
     fi
 
     # Swap
+    if [ ! -f "$ekv_target" ]; then
+        chmod 600 "$ekv_tmp"
+    else
+        chmod --reference="$ekv_target" "$ekv_tmp" 2>/dev/null || chmod 600 "$ekv_tmp"
+    fi
     mv -f -- "$ekv_tmp" "$ekv_target" || {
         rm -f -- "$ekv_tmp"
         return 1
@@ -460,38 +672,38 @@ edit_kv() {
 #  - Ensures new line and creates an .env if necessary
 #  - DEV NOTE: my gut says this function might be a little too simple with the addition of the other env editor functions.
 
-editEnv () {
-    local entry="$1"
-    local key="${entry%%=*}" # Extracts everything before the '='
-    local value="${entry#*=}"
-    local envFileLocal="$envFile"
-
-    local mode="bare"
-    [[ "$entry" == *"="* ]] && mode="enforce"
-
-    # Create .env if it doesn't exist
-    touch "$envFileLocal"
-
-    # Check if "KEY=VALUE" exists and create or edit it
-    if grep -q "^${key}=" "$envFileLocal" 2>/dev/null; then
-        if [[ "$mode" == "enforce" ]]; then
-            # Update if "KEY=VALUE" exists
-#            echo "$key exists in the "$envFileLocal" file. Modifying..."
-            grep -v "^${key}=" "$envFileLocal" > "${envFileLocal}.tmp"
-            echo "$key=$value" >> "${envFileLocal}.tmp"
-            mv "${envFileLocal}.tmp" "$envFileLocal"
-        fi
-        return 0
-    else
-        # Append "KEY=VALUE" if it is missing
-        [[ -s "$envFileLocal" && -n "$(tail -c 1 "$envFileLocal" 2>/dev/null)" ]] && echo "" >> "$envFileLocal"
-        if [[ "$mode" == "enforce" ]]; then
-            echo "$key=$value" >> "$envFileLocal"
-        else
-            echo "$key=" >> "$envFileLocal"
-        fi
-    fi
-}
+#editEnv () {
+#    local entry="$1"
+#    local key="${entry%%=*}" # Extracts everything before the '='
+#    local value="${entry#*=}"
+#    local envFileLocal="$envFile"
+#
+#    local mode="bare"
+#    [[ "$entry" == *"="* ]] && mode="enforce"
+#
+#    # Create .env if it doesn't exist
+#    touch "$envFileLocal"
+#
+#    # Check if "KEY=VALUE" exists and create or edit it
+#    if grep -q "^${key}=" "$envFileLocal" 2>/dev/null; then
+#        if [[ "$mode" == "enforce" ]]; then
+#            # Update if "KEY=VALUE" exists
+##            echo "$key exists in the "$envFileLocal" file. Modifying..."
+#            grep -v "^${key}=" "$envFileLocal" > "${envFileLocal}.tmp"
+#            echo "$key=$value" >> "${envFileLocal}.tmp"
+#            mv "${envFileLocal}.tmp" "$envFileLocal"
+#        fi
+#        return 0
+#    else
+#        # Append "KEY=VALUE" if it is missing
+#        [[ -s "$envFileLocal" && -n "$(tail -c 1 "$envFileLocal" 2>/dev/null)" ]] && echo "" >> "$envFileLocal"
+#        if [[ "$mode" == "enforce" ]]; then
+#            echo "$key=$value" >> "$envFileLocal"
+#        else
+#            echo "$key=" >> "$envFileLocal"
+#        fi
+#    fi
+#}
 
 ## Secret Key
 # - Checks if a secret key exists and randomly generate one if it doesn't
@@ -610,7 +822,7 @@ startCheck () {
         msg_success "Valid configuration - Starting for the first time, enjoy!"
         # Append to .env:
         if ! grep -q "^PREVIOUSLY_RUN=true" "$envFile" 2>/dev/null; then
-            edit_kv "PREVIOUSLY_RUN" "true"
+            edit_kv "PREVIOUSLY_RUN" "true" .env
         fi
     fi
     docker compose up -d --force-recreate
