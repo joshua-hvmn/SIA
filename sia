@@ -95,22 +95,18 @@ DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
 ## Switch to script directory
 cd "$SIA_HOME_DIR"
 
-## Make sure env exists
-create_env_from_template
-
 ## Make sure launched main script, check command
 case "$first_arg" in
     start|"")
-        # Default
+        # Default option
         msg_info "$app_name validating configuration..."
-        # Check for all dependencies
-        checkDeps
+        pre_start_checks
         # Start and run setup if needed
         startCheck
         ;;
     setup|-s|--setup)
-        # Check for all dependencies
-        checkDeps
+        # Check environment and dependencies
+        pre_start_checks
         # Run setup and then start
         change_setup 1
         exitScriptGoodWithMessage
@@ -119,13 +115,14 @@ case "$first_arg" in
         printUsage "$@"
         ;;
     down|-d|--down)
+        # Check dependencies only
         checkDeps
         # Stop Stack
         msg_header "Stopping $app_name..."
         docker compose down "$@"
         ;;
     logs|-l|--logs)
-        # Check for hard dependencies
+        # Check dependencies only
         checkDeps
         # Show logs
         if [ $# -eq 0 ]; then
@@ -138,7 +135,7 @@ case "$first_arg" in
         ;;
     download|-dl|--download)
         # NOTE: command injection risk, fix by assigning model=$1, and shift, then args as $@
-        # Check for hard dependencies 
+        # Check dependencies only 
         checkDeps
         # Check that the ollama container is running
         if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
@@ -157,7 +154,8 @@ case "$first_arg" in
         fi
         ;;
     env|environment|-env|--environment)
-        # Check for args
+        # Check environment and dependencies
+        pre_start_checks
         envCommand "$@"
         ;;
     *)
