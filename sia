@@ -62,7 +62,7 @@ case "${1:-}" in
 esac
 
 ### Consume first argument to be used for commands and shift so subfunctions can use subsequent arguments.
-first_arg="${1:-start}"
+first_arg="${1:-menu}"
 shift || true
 
 # MOCK FUNCTIONS FOR TESTING
@@ -75,95 +75,34 @@ shift || true
 #    printf '%s' "[MOCK] git $@"
 #}
 
+# Main
 ## Detect outdated Docker Compose and change commands if necessary
 
 if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
     docker() { if [ "$1" = "compose" ]; then shift; command docker-compose "$@"; else command docker "$@"; fi; }
 fi
 
-# Relative Paths
+## Relative Paths
 DEFAULTS="$SIA_HOME_DIR/share/env_defaults"
 DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
 # PROVIDERS="$SIA_HOME_DIR/share/providers"
 
-# Source subscripts
+## Source subscripts
 . "$SIA_HOME_DIR/lib/ui.sh"
 . "$SIA_HOME_DIR/lib/core.sh"
 . "$SIA_HOME_DIR/lib/env_logic.sh"
 
-# Main
 ## Switch to script directory
 cd "$SIA_HOME_DIR"
 
 ## Make sure launched main script, check command
-case "$first_arg" in
-    start|"")
-        # Default option
-        msg_info "$app_name validating configuration..."
-        pre_start_checks
-        # Start and run setup if needed
-        startCheck
-        ;;
-    setup|-s|--setup)
-        # Check environment and dependencies
-        pre_start_checks
-        # Run setup and then start
-        change_setup 1
-        exitScriptGoodWithMessage
-        ;;
-    help|-h|--help)
-        printUsage "$@"
-        ;;
-    down|-d|--down)
-        # Check dependencies only
-        checkDeps
-        # Stop Stack
-        msg_header "Stopping $app_name..."
-        docker compose down "$@"
-        ;;
-    logs|-l|--logs)
-        # Check dependencies only
-        checkDeps
-        # Show logs
-        if [ $# -eq 0 ]; then
-            msg_info "Showing last 100 logs:"
-            docker compose logs --tail 100
-        else
-            msg_info "Running 'docker compose logs $@'"
-            docker compose logs "$@"
-        fi
-        ;;
-    download|-dl|--download)
-        # NOTE: command injection risk, fix by assigning model=$1, and shift, then args as $@
-        # Check dependencies only 
-        checkDeps
-        # Check that the ollama container is running
-        if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
-            msg_error "$app_name isn't running. Please run $script_name without arguments."
-            errExit 2
-        fi
-        # Download a model
-        if [ $1 ]; then
-            msg_debug "Running docker exec ollama ollama run $@"
-            docker exec ollama ollama run "$@"
-            exitScriptGoodWithMessage "$1 is ready to use!"
-        else
-            msg_error "Please enter an Ollama model code to download (i.e. llama3.2:1b)"
-            msg_usage "'$script_name download llama3.2:1b' (or whatever model you want)"
-            errExit 1
-        fi
-        ;;
-    env|environment|-env|--environment)
-        # Check environment and dependencies
-        pre_start_checks
-        envCommand "$@"
-        ;;
-    *)
-        msg_error "Unknown command: $first_arg"
-        printUsage
-        errExit 1
-        ;;
-esac
+
+if [ "$first_arg" = "menu" ]; then
+    main_menu
+else
+    process_commands
+fi
+
 # Note: Reserved first arguments for verbosity:
 # - --silent / 0
 # - --quiet / 1

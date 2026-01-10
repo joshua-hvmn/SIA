@@ -27,7 +27,7 @@ checkDeps() { # update for new architecture
 
 printUsage () {
     prnthlp_arg="${1:-}"
-    case "$arg" in
+    case "$prnthlp_arg" in
         down|-d|--down)
             printHelp_down
             ;;
@@ -53,9 +53,9 @@ printUsage () {
 #  - Pass the message to be displayed or do not pass one to automatically display "Exiting"
 
 exitScriptGoodWithMessage() { 
-    exitgood_message="${*:-}"
-    if [ -n "$message" ]; then
-        printf '%s' "$message" >&2
+    exitgood_message="${*:-"Exiting"}"
+    if [ -n "$exitgood_message" ]; then
+        printf '%s' "$exitgood_message" >&2
         exit 0
     else
         exit 0
@@ -129,8 +129,12 @@ read_menu_choice() {
         printf '%s' "$rdmenu_desc" >&2
         read -r rdmenu_choice || { msg_error "Failed to read input"; errExit 1; }
         case "$rdmenu_choice" in
+            [bB])
+                printf b
+                return 0
+                ;;
             [xX])
-                printf 'x'
+                printf x
                 return 0
                 ;;
             ''|*[!0-9]*)
@@ -387,61 +391,73 @@ check_seckey_main() {
     return 0
 }
 
-## Secret Key
-# - Checks if a secret key exists and randomly generate one if it doesn't
-# - Tries in this order: openssl, od, python3, cksum
-# - Nested conditional make this annoying to extend, but it shouldn't need to be extended.
+download_helper() {
+    dlhlpr_model="${1:-}"
+    if [ $# -gt 1 ]; then
+        shift
+        dlhlpr_args="$*"
+    else
+        dlhlpr_args=""
+    fi
+    while true; do
+        # NOTE: command injection risk, fix by assigning model=$1, and shift, then args as $@
+        
+        # Check dependencies only 
+        checkDeps
+        
+        # Check that the ollama container is running
+        if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
+            msg_error "$app_name isn't running. Please run $script_name up."
+            errExit 2
+        fi
 
-# ensureSecretKey () {
-#     # Check if force regenerate
-#     ensuresk_mode="${1:-no}"
-#     case "$ensuresk_mode" in
-#         "update")
-#             ensuresk_mode="update"
-#             ;;
-#         *)
-#             :
-#             ;;
-#     esac
-# 
-#     # Check if key exists and generate one if it doesn't
-#     touch "$env_file"
-#     if ! grep -q "^SEARXNG_SECRET=" "$env_file" 2>/dev/null || [ "$ensuresk_mode" = "update" ] ; then
-#         msg_debug "Generating secret key..."
-#         ensuresk_secret_key=
-#         ensuresk_method=
-#         # Generate the key
-#         # Try OpenSSL :
-#         if command -v openssl >/dev/null 2>&1; then
-#             ensuresk_secret_key=$(openssl rand -hex 32)
-#             ensuresk_method="OpenSSL (32 byte hexadecimal)"
-#             # Try Python :
-#         elif command -v python3 >/dev/null 2>&1; then
-#             ensuresk_secret_key=$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || true)
-#             ensuresk_method="Python Secrets (32 byte hexadecimal)"
-#         else
-#             # Try od (POSIX) :
-#             if command -v od >/dev/null 2>&1; then
-#                 ensuresk_secret_key=$(od -An -N32 -tx1 < /dev/urandom | tr -d '[:space:]')
-#                 ensuresk_method="Octal dump (32 byte hexadecimal)"
-#             fi
-#             # Error out if no easy way to generate a secure key :
-#             if [ -z "$ensuresk_secret_key" ]; then
-#                 msg_error "Couldn't find a way to generate a truly random number!"
-#                 msg_debug "$app_name tried OpenSSL, od, and python3!"
-#                 msg_info "Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $env_file file."
-#                 errExit 3
-#             fi
-#         fi
-#         # Append to .env:
-#         edit_kv "SEARXNG_SECRET" "$ensuresk_secret_key" .env
-#         msg_info "Secret key was generated with $ensuresk_method, and injected into the .env."
-#         return 0
-#     fi
-# }
+        if [ -z "$dlhlpr_model" ]; then
+            msg_info "Enter an Ollama model code (e.g., llama3.2:1b)"
+            printf '%s' "Model name (or 'b' to go back): " >&2
+            read -r dlhlpr_input || { msg_error "Input failed"; errExit 1; }
+
+            case "$dlhlpr_input" in
+                b|back|x|q|exit) return 0 ;;
+                "") continue ;;
+                *) dlhlpr_model="$dlhlpr_input" ;;
+            esac
+        fi
+
+        # Execute
+        msg_info "Downloading and running $dlhlpr_model..."
+        if docker exec ollama ollama run "$dlhlpr_model" $dlhlpr_args; then
+            msg_success "Model $dlhlpr_model is ready!"
+            return 0
+        else
+            msg_error "Failed to download $dlhlpr_model"
+            dlhlpr_model=""
+        fi
+    done
+}
+
+down_helper() {
+    # Check dependencies only
+    checkDeps
+    # Stop Stack
+    msg_header "Stopping $app_name..."
+    docker compose down "$@"
+}
+
+logs_helper() {
+    # Check dependencies only
+    checkDeps
+    # Show logs
+    if [ $# -eq 0 ]; then
+        msg_info "Showing last 100 logs:"
+        docker compose logs --tail 100
+    else
+        msg_info "Running 'docker compose logs $@'"
+        docker compose logs "$@"
+    fi
+}
 
 ## Setup :
-# - Pass 1 after calling to prevent inbuilt auto-restart
+# - Pass 1 after calling to force inbuilt auto-restart
 # - Asks user to select which compose file to use.
 # - Stack will restart automatically when you select or change a setup.
 
@@ -449,38 +465,47 @@ change_setup() {
     chngst_cmd_started="${1:-0}"
     chngst_sel_yaml=".compose.cpu.yaml"
     chngst_upper_bound="3"
+    chngst_sel_changed=0
 
     # Detect current config if there is one
     if grep -q "^COMPOSE_FILE=" "$env_file" 2>/dev/null; then
         chngst_sel_yaml=$(sed -n 's/^[[:space:]]*COMPOSE_FILE[[:space:]]*=[[:space:]]*//p' "$env_file")
     fi
 
+    msg_line
     msg_header ${YELLOW} "Select a processor"
-    msg_col "1)" "CPU only (no discete GPU)"
-    msg_col "2)" "NVIDIA GPU"
-    msg_col "3)" "AMD GPU"
-    msg_col "4)" "Keep current: $chngst_sel_yaml"
+    msg_normal "1) CPU only (no discete GPU)"
+    msg_normal "2) NVIDIA GPU"
+    msg_normal "3) AMD GPU"
+    msg_normal "4) Keep current: $chngst_sel_yaml"
+    msg_normal "b) Back"
+    msg_normal "x) Exit"
+    msg_line
 
     # Read choice
-    chngst_choice=$(read_menu_choice "Processor (1-3 or x to exit): " 1 4)
-    
-    if [ "$chngst_choice" = 'x' ]; then
-        msg_info "Exiting"
-        exit 0
-    fi
+    chngst_choice=$(read_menu_choice "Processor: " 1 4)
 
     case "$chngst_choice" in
         1)
             chngst_sel_yaml=".compose.cpu.yaml"
+            chngst_sel_changed=1
             ;;
         2)
             chngst_sel_yaml=".compose.nvidia.yaml"
+            chngst_sel_changed=1
             ;;
         3)
             chngst_sel_yaml=".compose.amd.yaml"
+            chngst_sel_changed=1
             ;;
         4)
             msg_info "Keeping current setup."
+            ;;
+        b)
+            return 0
+            ;;
+        x)
+            exitScriptGoodWithMessage "Exiting"
             ;;
     esac
 
@@ -495,8 +520,8 @@ change_setup() {
     edit_kv "SETUP_COMPLETE" "true" "$env_file"
 
     # Restart
-    if [ "$chngst_cmd_started" -eq 1 ]; then
-     startCheck
+    if [ "$chngst_cmd_started" -eq 1 ] && [ "$chngst_sel_changed" -eq 1 ]; then
+     start_up
     fi
 }
 
@@ -505,7 +530,7 @@ change_setup() {
 # - Repairs broken/missing .env files.
 # - Checks for previous run for appropriate start/restart messaging.
 
-startCheck () {
+start_up () {
     # Check if a compose file is defined, if not: setup, else start/restart
     if [ ! -s "$env_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_file" 2>/dev/null; then
         startMes_firstStart
@@ -538,5 +563,108 @@ pre_start_checks() {
 }
 
 main_menu() {
-    :
+    mainmenu_restart=0
+    while true; do
+        msg_line
+        msg_header ${YELLOW} "$app_name Main Menu"
+        msg_normal "1) Start $app_name"
+        msg_normal "2) Change Setup"
+        msg_normal "3) Edit Environment Variables"
+        msg_normal "4) Download an Ollama large language model"
+        msg_normal "5) Stop $app_name"
+        msg_normal "6) View the docker logs"
+        msg_normal "7) View the help menus"
+        msg_normal "b/x) Exit"
+        msg_line
+        
+        mainmenu_opt=$(read_menu_choice "Selection: " 1 7)
+        
+        case "$mainmenu_opt" in
+            1)
+                msg_info "$app_name validating configuration..."
+                # Check environment and dependencies
+                pre_start_checks
+                # Start and run setup if needed
+                start_up
+                return 0
+                ;;
+            2)
+                # Check environment and dependencies
+                pre_start_checks
+                # Run setup and then start
+                change_setup 0
+                mainmenu_restart=1
+                ;;
+            3)
+                env_menu
+                ;;
+            4)
+                download_helper
+                ;;
+            5)
+                down_helper
+                ;;
+            6)
+                logs_helper
+                ;;
+            7)
+                :
+                ;;
+            b)
+                if [ "$mainmenu_restart" -eq 1 ]; then
+                    msg_info "Exiting and restarting $app_name."
+                    start_up
+                    exit 0
+                else
+                    exitScriptGoodWithMessage "Exiting." 
+                fi
+                ;;
+            x)
+                exitScriptGoodWithMessage "Exiting"
+                ;;
+            *) 
+                msg_error "Invalid selection" ;;
+        esac
+    done
+}
+
+process_commands() {
+    case "$first_arg" in
+        start|up|--start|-st)
+            msg_info "$app_name validating configuration..."
+            # Check environment and dependencies
+            pre_start_checks
+            # Start and run setup if needed
+            start_up
+            ;;
+        setup|-su|--setup)
+            # Check environment and dependencies
+            pre_start_checks
+            # Run setup and then start
+            change_setup 1
+            exitScriptGoodWithMessage
+            ;;
+        help|-h|--help)
+            printUsage "$@"
+            ;;
+        down|-d|--down)
+            down_helper
+            ;;
+        logs|-l|--logs)
+            logs_helper
+            ;;
+        download|-dl|--download)
+            download_helper
+            ;;
+        env|environment|-env|--environment)
+            # Check environment and dependencies
+            pre_start_checks
+            envCommand "$@"
+            ;;
+        *)
+            msg_error "Unknown command: $first_arg"
+            printUsage
+            errExit 1
+            ;;
+    esac
 }
