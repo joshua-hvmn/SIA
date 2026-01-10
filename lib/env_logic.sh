@@ -14,28 +14,36 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
 fi
 
 env_command_list_all() {
+while true; do
     envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" | wc -l)
     [ "$envcl_vars_count" -eq 0 ] && { msg_error "No variables found after filtering."; errExit 1; }
 
+    msg_line
     msg_header ${YELLOW} "Environment Variables"
     list_from_file "$env_file"
-    envcl_choice=$(read_menu_choice "Choose a variable (1-$envcl_vars_count or x to exit): " 1 "$envcl_vars_count")
-    if [ "$envcl_choice" = 'x' ]; then
-        msg_info "Exiting"
-        exit 0
+    msg_normal "b) Back"
+    msg_normal "x) Exit"
+    msg_line
+    envcl_choice=$(read_menu_choice "Choose a variable (1-$envcl_vars_count): " 1 "$envcl_vars_count")
+    case "$envcl_choice" in
+        [bB]) return 0 ;;
+        [xX]) exitScriptGoodWithMessage "Exiting" ;;
+    esac
+    
+    if [ "$envcl_choice" = 'b' ]; then
+        return 0
     fi
 
+    msg_line
     msg_header ${YELLOW} "Select an action"
-    msg_col "1)" "Edit value"
-    msg_col "2)" "Edit key"
-    msg_col "3)" "Edit key AND value"
-    msg_col "4)" "Remove"
-    envcl_action=$(read_menu_choice "Action (1-4 or x to exit): " 1 4)
-
-    if [ "$envcl_action" = 'x' ]; then
-        msg_info "Exiting"
-        exit 0
-    fi
+    msg_normal "1) Edit value"
+    msg_normal "2) Edit key"
+    msg_normal "3) Edit key AND value"
+    msg_normal "4) Remove"
+    msg_normal "b) Back"
+    msg_normal "x) Exit"
+    msg_line
+    envcl_action=$(read_menu_choice "Action (1-4): " 1 4)
 
     envcl_key=$(
         sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" |
@@ -80,7 +88,11 @@ env_command_list_all() {
                     ;;
             esac
             ;;
+        b)
+            return 0
+            ;;
     esac
+done
 }
 
 env_command_add() {
@@ -154,6 +166,17 @@ env_rotate_key_hlpr() {
     esac
 }
 
+create_env_from_template() {
+    if [ -f "$DEFAULTS" ]; then
+        if [ ! -s "$env_file" ]; then
+            cp "$DEFAULTS" "$env_file"
+            chmod 600 "$env_file"
+        fi
+    else
+        msg_error "$DEFAULTS not found, cannot restore."
+        errExit 2
+    fi
+}
 
 ## .env handler command Parser
 #  - USAGE:
@@ -184,14 +207,80 @@ envCommand () {
     esac
 }
 
-create_env_from_template() {
-    if [ -f "$DEFAULTS" ]; then
-        if [ ! -s "$env_file" ]; then
-            cp "$DEFAULTS" "$env_file"
-            chmod 600 "$env_file"
-        fi
-    else
-        msg_error "$DEFAULTS not found, cannot restore."
-        errExit 2
-    fi
+env_list_menu() {
+    while true; do
+        msg_line
+        msg_header ${YELLOW} "$app_name Environment Menu"
+        msg_normal "1) List variables to edit"
+        msg_normal "2) Add a variable by name"
+        msg_normal "3) Remove a variable by name"
+        msg_normal "b) Back"
+        msg_normal "x) Exit"
+        msg_line
+        
+        
+        envlsmenu_opt=$(read_menu_choice "Selection: " 1 3)
+        
+        case "$envlsmenu_opt" in
+            1)
+                env_command_list_all
+                ;;
+            2)
+                msg_normal "Enter a new key: "
+                read -r envclmenu_new_key
+                msg_normal "Enter a new value: "
+                read -r envclmenu_new_value
+                envCommand add "$envclmenu_new_key" "$envclmenu_new_value"
+                ;;
+            3)
+                msg_normal "Enter the key you want to remove: "
+                read -r envclmenu_rm_key
+                envCommand rm "$envclmenu_rm_key"
+                ;;
+            b)
+                return 0
+                ;;
+            x)
+                exitScriptGoodWithMessage "Exiting"
+                ;;
+            *) 
+                msg_error "Invalid selection: $envlsmenu_opt" ;;
+        esac
+    done
+}
+
+env_menu() {
+    while true; do
+        msg_line
+        msg_header ${YELLOW} "$app_name Environment Menu"
+        msg_normal "1) Edit Variables"
+        msg_normal "2) Rotate SearXNG secret key (security)"
+        msg_normal "3) Restore Defaults (Reset)"
+        msg_normal "b) Back"
+        msg_normal "x) Exit"
+        msg_line
+        
+        
+        envmenu_opt=$(read_menu_choice "Selection: " 1 3)
+        
+        case "$envmenu_opt" in
+            1)
+                env_list_menu
+                ;;
+            2)
+                env_rotate_key_hlpr
+                ;;
+            3)
+                msg_error "Work in progress."
+                ;;
+            b)
+                return 0
+                ;;
+            x)
+                exitScriptGoodWithMessage "Exiting"
+                ;;
+            *) 
+                msg_error "Invalid selection: $envmenu_opt" ;;
+        esac
+    done
 }
