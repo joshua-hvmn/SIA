@@ -44,7 +44,7 @@ wrap_text() {
     wrptxt_wrap_indent="${2:-10}"    # How far in the continued lines should start
 
     # Wrap the text to the available width (total 75 minus prefix space)
-    printf "%s" "$wrptxt_text" | fold -w "$((75 - wrptxt_prefix_width))" | \
+    printf "%s" "$wrptxt_text" | fold -w "$((term_max_width - wrptxt_prefix_width))" | \
     awk -v pw="$wrptxt_prefix_width" -v iw="$wrptxt_wrap_indent" '
     {
         if (NR == 1) {
@@ -114,18 +114,19 @@ msg_col() {
 
 # Messages
 # HELP MENUS
-printHelp_general() {
+print_help_general() {
     msg_blank
-    msg_title ${YELLOW} "== $app_name Help Menu =="
+    msg_header ${YELLOW} "$app_name General Help Menu"
     msg_blank
-    msg_usage "$script_name [verbosity] <command>"
+    msg_usage "$script_name [verbosity] <command> [flags]"
     msg_blank
     msg_info "$app_name is an all-in-one CLI for managing a Docker Compose stack that includes Ollama, OpenWebUI, SearXNG, Caddy, and Valkey. It should greatly simplify your use, enjoy!"
     msg_blank
     msg_header ${BLUE} "Commands"
-    msg_col "(no argument)"    "Start or restart the $app_name stack (default)."
+    msg_col "(no argument)"    "Show the $app_name main menu (default)."
+    msg_col "up / start"       "Start or restart $app_name."
     msg_col "setup"            "Run or rerun the setup wizard to change the setup."
-    msg_col "env"              "View or modify environment variables and $app_name's handling of them."
+    msg_col "env"              "View or modify environment variables, or rotate the SearXNG secret key."
     msg_col "down"             "Stop the $app_name stack. Accepts additional arguments."
     msg_col "logs"             "View relevant logs. Accepts additional arguments."
     msg_col "download"         "Download an Ollama model. Requires a model tag."
@@ -145,13 +146,13 @@ printHelp_general() {
     msg_col "$script_name --help"          "Shows the help message."
     msg_col "$script_name -l --verbose"    "Shows the logs and passes the --verbose argument."
     msg_blank
-    msg_normal "Run '$script_name help [command]' for more help with a specific command."
+    msg_normal "Run '$script_name help [command]' for more help with a specific command, you can pass their alias names."
     msg_blank
-    msg_line
+    help_menu_backopt || msg_line
 }
-printHelp_down() {
+print_help_down() {
     msg_blank
-    msg_title ${YELLOW} "== $app_name Down Command Help Menu =="
+    msg_header ${YELLOW} "$app_name Down Command Help Menu"
     msg_blank
     msg_usage "$script_name down [subcommands]"
     msg_blank
@@ -168,12 +169,12 @@ printHelp_down() {
     msg_blank
     msg_normal "${GREEN}[ALIASES]${NC} -d, --down"
     msg_blank
-    msg_line
+    help_menu_backopt || msg_line
 }
 
-printHelp_logs() {
+print_help_logs() {
     msg_blank
-    msg_title ${YELLOW} "== $app_name Logs Command Help Menu =="
+    msg_header ${YELLOW} "$app_name Logs Command Help Menu"
     msg_blank
     msg_usage "$script_name logs [subcommands]"
     msg_blank
@@ -191,38 +192,50 @@ printHelp_logs() {
     msg_blank
     msg_normal "${GREEN}[ALIASES]${NC} -l, --logs"
     msg_blank
-    msg_line
+    help_menu_backopt || msg_line
 }
-printHelp_env() {
+print_help_env() {
     msg_blank
-    msg_title ${YELLOW} "== $app_name Environment Handler Help Menu =="
+    msg_header ${YELLOW} "$app_name Environment Handler Help Menu"
     msg_blank
     msg_usage "$script_name env [command] [KEY] [VALUE]"
     msg_blank
-    msg_info "The $app_name Environment Handler (E.H.) manages the environment variables in the $env_file file and validates or repairs them on each start. Use the E.H. rather than editing the $env_file file directly."
+    msg_info "The $app_name Environment Handler (E.H.) manages the environment variables in the $env_file file. It will automatically replace the SearXNG secret key if it is not 64 digit hexadecimal."
     msg_blank
-    msg_warn "You can ADD variables to the $env_file file, but you can't change any that are controlled by the E.H., or they will be overwritten on startup. Use the E.H. to remove them from control if you want to be allowed to write them in the $env_file, it is preferable to change them using the E.H."
+    msg_info "As of app version 3.0, you can edit the $env_file file directly, or use the E.H."
     msg_blank
     msg_header ${BLUE} "Subcommands"
-    msg_col "(no argument)"    "Show a list of .env variables and view options to manage them."
+    msg_col "(no argument)"    "Show the E.H. menu."
+    msg_col "list"             "Show a list of $env_file variables and view options to manage them (obscures SearXNG secret)."
     msg_col "add"              "Add or modify specific variables directly."
-    msg_col "rm"               "WIP. Remove a specific variable from control. (use list for now)"
+    msg_col "rm"               "Remove a specific variable from the environment."
+    msg_col "rotate"           "Automatically rotate the SearXNG secret key."
     msg_blank
     msg_normal "${GREEN}[ALIASES]${NC} -env, environment, --environment"
     msg_blank
-    msg_normal "${BOLD}To add specific keys and values directly:${NC}"
+    msg_normal "${BOLD}To add specific variables by name:${NC}"
     msg_usage "$script_name env add [KEY] [VALUE]"
-    msg_warn "You can use the add command to edit ANY variable in ANY array in the config by defining the array BEFORE the key and value. Use extreme caution."
+    msg_blank
+    msg_normal "${BOLD}To remove specific variables by name:${NC}"
+    msg_usage "$script_name env rm [KEY]"
+    msg_normal "${GREEN}'Remove' Aliases:${NC} rm, -rm, --remove, remove"
+    msg_info "Use --silent (0) mode to skip validation."
+    msg_blank
+    msg_normal "${BOLD}To rotate secret keys:${NC}"
+    msg_usage "$script_name env rotate [KEY]"
+    msg_normal "${GREEN}'Rotate' Aliases:${NC} rk, -rk, --rotate, rotate"
+    msg_info "Use --silent (0) mode to skip validation."
     msg_blank
     msg_header ${BLUE} "Examples"
-    msg_col "$script_name env"      "Show a list of variables and view options to manage them."
-    msg_col "$script_name env add SEARXNG_SECRET [32 byte hex code]"    "Add a new secret key to the config and $env_file file."
+    msg_col "$script_name env list"      "Show a list of variables and view options to manage them."
+    msg_col "$script_name env add test variable"  "Inserts 'test=variable' into the $env_file file."
+    msg_col "$script_name --silent env -rk"  "Silences validation and all outputs and rotates secret key (for automation)."
     msg_blank
-    msg_line
+    help_menu_backopt || msg_line
 }
-printHelp_download() {
+print_help_dl() {
     msg_blank
-    msg_title ${YELLOW} "== $app_name Download Help Menu =="
+    msg_header ${YELLOW} "$app_name Download Help Menu"
     msg_blank
     msg_usage "$script_name download <model name> [flags]"
     msg_blank
@@ -243,11 +256,11 @@ printHelp_download() {
     msg_blank
     msg_normal "${GREEN}[ALIASES]${NC} -dl, --download"
     msg_blank
-    msg_line
+    help_menu_backopt || msg_line
 }
-printHelp_setup() {
+print_help_setup() {
     msg_blank
-    msg_title ${YELLOW} "== $app_name Setup Help Menu =="
+    msg_header ${YELLOW} "$app_name Setup Help Menu"
     msg_blank
     msg_usage "$script_name setup"
     msg_blank
@@ -257,37 +270,15 @@ printHelp_setup() {
     msg_blank
     msg_normal "${GREEN}[ALIASES]${NC} -s, --setup"
     msg_blank
-    msg_line
-}
-
-# SELECT PS3s
-
-selMenu_envListSelOne() {
-    cat << EOF
----------------------------------------------------------------------------
-Select a variable to edit or type 'x' to go back:  
-EOF
-}
-selMenu_envListChooseAction() {
-    cat << EOF
----------------------------------------------------------------------------
-Choose action for $key [current: ${value:-"NOT SET"}] ('x' to go back): 
-EOF
-}
-selMenu_processorMenu() {
-    cat << EOF
----------------------------------------------------------------------------
-Select your processor style or type 'x' to exit):  
-EOF
+    help_menu_backopt || msg_line
 }
 
 # Start Messages
-startMes_firstStart() {
+stmes_first_start() {
     msg_info "First time setup detected (or missing configuration)!"
-    msg_line
 }
 
-startMes_startDone() {
+stmes_start_done() {
     msg_line
     msg_blank
     msg_title ${YELLOW} "$app_name Startup Complete!"
@@ -301,9 +292,8 @@ startMes_startDone() {
     msg_col "           -" "Set SEARXNG_HOSTNAME=yourdomain.com"
     msg_col "           -" "Set SEARXNG_TLS=letsencrypt  (your key)"
     msg_col "           -" "See https://docs.searxng.org for TLS setup."
-    msg_normal "${YELLOW}Note:${NC}     You CANNOT change the $env_file file like other apps, $app_name validates and overwrites changes on each start, except ones not tracked by $app_name." 
-#    msg_normal "You CANNOT change the $env_file file like other apps: $app_name validates and overwrites changes on each start, except ones not tracked by $app_name."
-    msg_col "           -" "Run '$script_name env' to view & change environment variables / $app_name control! "
+    msg_normal "${YELLOW}Note:${NC}    Change environment variables easily with the environment handler!" 
+    msg_col "           -" "Run '$script_name env' to open the E.H. or rotate secret keys! "
     msg_col "           -" "Then run $script_name to restart, and enjoy!"
     msg_col "           -" "'$script_name help [optional command]' to show the help menus!"
     msg_blank
