@@ -11,18 +11,23 @@
 set -eu
 
 # VARIABLES
-## Standards (change to change across script and .env file)
+# Testing mode
+# - set to 1 to mock docker and git commands
+mock_test_mode=0
+
+## Global Standards (change to change across script and .env file)
 searxng_base_url="https://localhost/"
 open_webui_url="http://localhost:3000/"
 env_file=".env" # Change if you want to use a different .env file name.
-fallback_app_version="v2.1.0+ (?)"
+fallback_app_version="v3.0.0"
 verbosity=2
 term_width_fallback=90
 term_max_width=95
 script_name="./$(basename "$0")"
 app_name=$(basename "$0" | tr '[:lower:]' '[:upper:]')
 
-chngst_sel_changed=0 # placed here for cleanliness
+# Setup changed and need restart:
+chngst_sel_changed=0
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the app_name is automatically made uppercase based on script name).
 if [ -d .git ]; then
@@ -68,14 +73,17 @@ first_arg="${1:-menu}"
 shift || true
 
 # MOCK FUNCTIONS FOR TESTING
-#  - uncomment to block relevant commands during testing
+#  - set the variable to 1 at the top (or here if you deleted it) to prevent
+#    sensitive commands from running during testing
 
-#docker() {
-#    printf '%s\n' "[MOCK] docker $*"
-#}
-#git() {
-#    printf '%s\n' "[MOCK] git $*"
-#}
+if [ "${mock_test_mode:-0}" -eq 1 ]; then
+    docker() {
+        printf '%s\n' "[MOCK] docker $*"
+    }
+    git() {
+        printf '%s\n' "[MOCK] git $*"
+    }
+fi
 
 # Main
 ## Detect outdated Docker Compose and change commands if necessary

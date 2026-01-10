@@ -35,7 +35,7 @@ while true; do
     fi
 
     msg_line
-    msg_header ${YELLOW} "Select an action"
+    msg_header ${RED} "Select an action"
     msg_normal "1) Edit value"
     msg_normal "2) Edit key"
     msg_normal "3) Edit key AND value"
@@ -214,7 +214,7 @@ envCommand () {
 env_list_menu() {
     while true; do
         msg_line
-        msg_header ${YELLOW} "$app_name Environment Menu"
+        msg_header ${RED} "Edit $app_name Environment"
         msg_normal "1) List variables to edit"
         msg_normal "2) Add a variable by name"
         msg_normal "3) Remove a variable by name"
