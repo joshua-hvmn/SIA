@@ -17,10 +17,12 @@ open_webui_url="http://localhost:3000/"
 env_file=".env" # Change if you want to use a different .env file name.
 fallback_app_version="v2.1.0+ (?)"
 verbosity=2
-term_width_fallback=75
-term_max_width=85
+term_width_fallback=90
+term_max_width=95
 script_name="./$(basename "$0")"
 app_name=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+
+chngst_sel_changed=0 # placed here for cleanliness
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the app_name is automatically made uppercase based on script name).
 if [ -d .git ]; then
@@ -69,10 +71,10 @@ shift || true
 #  - uncomment to block relevant commands during testing
 
 #docker() {
-#    printf '%s' "[MOCK] docker $@"
+#    printf '%s\n' "[MOCK] docker $*"
 #}
 #git() {
-#    printf '%s' "[MOCK] git $@"
+#    printf '%s\n' "[MOCK] git $*"
 #}
 
 # Main
@@ -100,7 +102,7 @@ cd "$SIA_HOME_DIR"
 if [ "$first_arg" = "menu" ]; then
     main_menu
 else
-    process_commands
+    process_commands "$@"
 fi
 
 # Note: Reserved first arguments for verbosity:

@@ -10,13 +10,13 @@
 if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     msg_error "Error: This script is a component of SIA and cannot be run directly."
     msg_usage "Please run: ./sia"
-    errExit 1
+    error_exit 1
 fi
 
 env_command_list_all() {
 while true; do
     envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" | wc -l)
-    [ "$envcl_vars_count" -eq 0 ] && { msg_error "No variables found after filtering."; errExit 1; }
+    [ "$envcl_vars_count" -eq 0 ] && { msg_error "No variables found after filtering."; error_exit 1; }
 
     msg_line
     msg_header ${YELLOW} "Environment Variables"
@@ -27,7 +27,7 @@ while true; do
     envcl_choice=$(read_menu_choice "Choose a variable (1-$envcl_vars_count): " 1 "$envcl_vars_count")
     case "$envcl_choice" in
         [bB]) return 0 ;;
-        [xX]) exitScriptGoodWithMessage "Exiting" ;;
+        [xX]) good_exit "Exiting" ;;
     esac
     
     if [ "$envcl_choice" = 'b' ]; then
@@ -100,11 +100,11 @@ env_command_add() {
     case "$envcm_key" in
         *[!a-zA-Z0-9_]*)
             msg_error "Key contains invalid characters. Use only alphanumeric characters and underscores."
-            errExit 1
+            error_exit 1
             ;;
         "")
             msg_error "Key cannot be empty."
-            errExit 1
+            error_exit 1
             ;;
     esac
 
@@ -112,7 +112,7 @@ env_command_add() {
     if [ -z "$envcm_val" ]; then
         msg_error "You must define both key and value to add to the environment variables, please try again."
         msg_usage "$script_name env add <key> <value>"
-        errExit 1
+        error_exit 1
     fi
 
     # Edit the .env
@@ -126,7 +126,7 @@ env_command_rm() {
     if [ -z "$envcm_key" ]; then
         msg_error "Did not define key to delete."
         msg_usage "$script_name env rm <key>"
-        errExit 1
+        error_exit 1
     fi
     
     if [ "${verbosity:-0}" -gt 0 ]; then
@@ -151,6 +151,7 @@ env_command_rm() {
 env_rotate_key_hlpr() {
     if [ "${verbosity:-0}" -gt 0 ]; then
         msg_warn "Rotate (regenerate) the SEARXNG_SECRET? [y/N]"
+        printf '%s' "Selection: " >&2
         read -r envcm_rk_confirm
     else
         envcm_rk_confirm="y"
@@ -174,7 +175,7 @@ create_env_from_template() {
         fi
     else
         msg_error "$DEFAULTS not found, cannot restore."
-        errExit 2
+        error_exit 2
     fi
 }
 
@@ -182,14 +183,17 @@ create_env_from_template() {
 #  - USAGE:
 #  - ./sia env - view list and choose what to do.
 #  - ./sia env add [optional name WITH CAUTION] [key] [value]
-#    - If you define a name, it will edit the values in the array if it exists, 
-#    - for example, 'dependencies' or 'fileNames'. Use caution!
+#  - ./sia env rotate: to rotate key
+#  - ./sia --silent env rotate: rotate key and skip confirmation
 
 envCommand () {
-    envcm_cmd="${1:-list}"
+    envcm_cmd="${1:-menu}"
     envcm_key="${2:-}"
     envcm_val="${3:-}"
     case $envcm_cmd in
+        menu|-m|--menu)
+            env_menu
+            ;;
         list|-l|--list)
             # envCommandListEdit envVars
             env_command_list_all
@@ -198,10 +202,10 @@ envCommand () {
             # Make sure args defined
             env_command_add
             ;;
-        rm|-rm|--remove)
+        rm|-rm|--remove|remove)
             env_command_rm
             ;;
-        rotate|rk|-rk|--rotate)
+        rk|-rk|--rotate|rotate)
             env_rotate_key_hlpr
             ;;
     esac
@@ -241,7 +245,7 @@ env_list_menu() {
                 return 0
                 ;;
             x)
-                exitScriptGoodWithMessage "Exiting"
+                good_exit "Exiting"
                 ;;
             *) 
                 msg_error "Invalid selection: $envlsmenu_opt" ;;
@@ -277,7 +281,7 @@ env_menu() {
                 return 0
                 ;;
             x)
-                exitScriptGoodWithMessage "Exiting"
+                good_exit "Exiting"
                 ;;
             *) 
                 msg_error "Invalid selection: $envmenu_opt" ;;

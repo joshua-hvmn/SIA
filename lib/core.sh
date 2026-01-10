@@ -10,14 +10,14 @@
 if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     msg_error "Error: This script is a component of SIA and cannot be run directly."
     msg_usage "Please run: ./sia"
-    errExit 1
+    error_exit 1
 fi
 
-## Help :
-#  - Accepts one extra argument
-#  - Add help menus for new commands by adding them to the case statement
+## Check dependencies
+#  - this function represents a clean alternative to arrays and for loops
+#  - adapt if you want true mapping files
 
-checkDeps() { # update for new architecture
+check_deps() { # update for new architecture
     while IFS= read -r cmd || [ -n "$cmd" ]; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             msg_error "$cmd not found"
@@ -25,26 +25,101 @@ checkDeps() { # update for new architecture
     done < "$DEPENDENCIES"
 }
 
-printUsage () {
-    prnthlp_arg="${1:-}"
+
+## Help :
+#  - Accepts one extra argument
+#  - Add help menus for new commands by adding them to the case statement
+
+# command processor
+print_usage () {
+    prnthlp_arg="${1:-general}"
+    helpmenu_run=0
     case "$prnthlp_arg" in
         down|-d|--down)
-            printHelp_down
+            print_help_down
             ;;
         logs|-l|--logs)
-            printHelp_logs
+            print_help_logs
             ;;
-        setup|-s|--setup)
-            printHelp_setup
+        setup|-su|--setup)
+            print_help_setup
             ;;
         download|-dl|--download)
-            printHelp_download
+            print_help_dl
             ;;
         env|environment|-env|--environment)
-            printHelp_env
+            print_help_env
             ;;
-        *)
-            printHelp_general
+        general)
+            print_help_general
+            ;;
+    esac
+}
+
+## HELP CLI MENU
+help_menu_dispatcher() {
+    helpmenu_run=1
+    while true; do
+        msg_line
+        msg_header ${RED} "$app_name Help Menu"
+        msg_normal "1) General Usage"
+        msg_normal "2) Setup and Hardware Acceleration"
+        msg_normal "3) Environment and Secret Keys"
+        msg_normal "4) Downloading LLMs"
+        msg_normal "5) Stop Command"
+        msg_normal "6) Viewing Logs"
+        msg_normal "b) Back"
+        msg_normal "x) Exit"
+        msg_line
+        
+        helpmenu_opt=$(read_menu_choice "Selection: " 1 6)
+        
+        case "$helpmenu_opt" in
+            1)
+                print_help_general
+                ;;
+            2)
+                print_help_setup
+                ;;
+            3)
+                print_help_env
+                ;;
+            4)
+                print_help_dl
+                ;;
+            5)
+                print_help_down
+                ;;
+            6)
+                print_help_logs
+                ;;
+            b)
+                return 0
+                ;;
+            x)
+                good_exit "Exiting"
+                ;;
+            *) 
+                msg_error "Invalid selection" ;;
+        esac
+    done
+}
+
+help_menu_backopt() {
+    [ "$helpmenu_run" -eq 0 ] && return 0
+    msg_line
+    msg_normal "b) Back"
+    msg_normal "x) Exit"
+    msg_line
+
+    backmenu_choice=$(read_menu_choice "Selection: " 0 0)
+
+    case "$backmenu_choice" in
+        b)
+            return 0
+            ;;
+        x)
+            good_exit "Exiting"
             ;;
     esac
 }
@@ -52,7 +127,7 @@ printUsage () {
 ## Good Exit With Message
 #  - Pass the message to be displayed or do not pass one to automatically display "Exiting"
 
-exitScriptGoodWithMessage() { 
+good_exit() { 
     exitgood_message="${*:-"Exiting"}"
     if [ -n "$exitgood_message" ]; then
         printf '%s' "$exitgood_message" >&2
@@ -66,7 +141,7 @@ exitScriptGoodWithMessage() {
 #  - Call with the number of the error code in place of "exit #"
 #  - Extend by adding to the case statement
 
-errExit () {
+error_exit () {
     errex_errex_code="${1:-99}"
     errex_errex_desc=""
     case $errex_code in # Don't use code 99
@@ -92,24 +167,24 @@ errExit () {
 }
 
 does_file_exist() {
-    [ $# -eq 1 ] || { msg_error "does_file_exist: exactly one argument required"; errExit 1; }
+    [ $# -eq 1 ] || { msg_error "does_file_exist: exactly one argument required"; error_exit 1; }
     [ -f "$1" ] || {
         msg_error "File does not exist: $1"
-        errExit 1
+        error_exit 1
     }
 }
 is_file_readable() {
-    [ $# -eq 1 ] || { msg_error "is_file_readable: exactly one argument required"; errExit 1; }
+    [ $# -eq 1 ] || { msg_error "is_file_readable: exactly one argument required"; error_exit 1; }
     [ -r "$1" ] || {
         msg_error "Cannot read file: $1"
-        errExit 1
+        error_exit 1
     }
 }
 is_file_empty() {
-    [ $# -eq 1 ] || { msg_error "is_file_empty: exactly one argument required"; errExit 1; }
+    [ $# -eq 1 ] || { msg_error "is_file_empty: exactly one argument required"; error_exit 1; }
     [ -s "$1" ] || {
         msg_error "File is empty: $1"
-        errExit 1
+        error_exit 1
     }
 }
 
@@ -127,7 +202,7 @@ read_menu_choice() {
     
     while [ -z "$rdmenu_choice" ]; do
         printf '%s' "$rdmenu_desc" >&2
-        read -r rdmenu_choice || { msg_error "Failed to read input"; errExit 1; }
+        read -r rdmenu_choice || { msg_error "Failed to read input"; error_exit 1; }
         case "$rdmenu_choice" in
             [bB])
                 printf b
@@ -138,7 +213,7 @@ read_menu_choice() {
                 return 0
                 ;;
             ''|*[!0-9]*)
-                msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound."
+                msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound." >&2
                 rdmenu_choice=""
                 continue
                 ;;
@@ -147,7 +222,7 @@ read_menu_choice() {
                     printf '%s' "$rdmenu_choice"
                     return 0
                 else
-                    msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound."
+                    msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound." >&2
                     rdmenu_choice=""
                     continue
                 fi
@@ -318,7 +393,7 @@ generate_secret_key() {
             msg_error "Couldn't find a way to generate a truly random number!"
             msg_debug "$app_name tried OpenSSL, od, and python3!"
             msg_info "Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $env_file file."
-            errExit 3
+            error_exit 3
         fi
     fi
     # Append to .env:
@@ -403,18 +478,18 @@ download_helper() {
         # NOTE: command injection risk, fix by assigning model=$1, and shift, then args as $@
         
         # Check dependencies only 
-        checkDeps
+        check_deps
         
         # Check that the ollama container is running
         if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
             msg_error "$app_name isn't running. Please run $script_name up."
-            errExit 2
+            error_exit 2
         fi
 
         if [ -z "$dlhlpr_model" ]; then
             msg_info "Enter an Ollama model code (e.g., llama3.2:1b)"
             printf '%s' "Model name (or 'b' to go back): " >&2
-            read -r dlhlpr_input || { msg_error "Input failed"; errExit 1; }
+            read -r dlhlpr_input || { msg_error "Input failed"; error_exit 1; }
 
             case "$dlhlpr_input" in
                 b|back|x|q|exit) return 0 ;;
@@ -437,15 +512,15 @@ download_helper() {
 
 down_helper() {
     # Check dependencies only
-    checkDeps
+    check_deps
     # Stop Stack
-    msg_header "Stopping $app_name..."
+    msg_header ${RED} "Stopping $app_name..."
     docker compose down "$@"
 }
 
 logs_helper() {
     # Check dependencies only
-    checkDeps
+    check_deps
     # Show logs
     if [ $# -eq 0 ]; then
         msg_info "Showing last 100 logs:"
@@ -465,7 +540,6 @@ change_setup() {
     chngst_cmd_started="${1:-0}"
     chngst_sel_yaml=".compose.cpu.yaml"
     chngst_upper_bound="3"
-    chngst_sel_changed=0
 
     # Detect current config if there is one
     if grep -q "^COMPOSE_FILE=" "$env_file" 2>/dev/null; then
@@ -473,7 +547,7 @@ change_setup() {
     fi
 
     msg_line
-    msg_header ${YELLOW} "Select a processor"
+    msg_header ${GREEN} "Select a processor"
     msg_normal "1) CPU only (no discete GPU)"
     msg_normal "2) NVIDIA GPU"
     msg_normal "3) AMD GPU"
@@ -505,14 +579,14 @@ change_setup() {
             return 0
             ;;
         x)
-            exitScriptGoodWithMessage "Exiting"
+            good_exit "Exiting"
             ;;
     esac
 
     # Validate
     if [ ! -f "$chngst_sel_yaml" ]; then
         msg_error "YAML file $chngst_sel_yaml not found!"
-        errExit 2
+        error_exit 2
     fi
 
     # Edit env
@@ -523,6 +597,7 @@ change_setup() {
     if [ "$chngst_cmd_started" -eq 1 ] && [ "$chngst_sel_changed" -eq 1 ]; then
      start_up
     fi
+    return 0
 }
 
 ## Start :
@@ -533,7 +608,7 @@ change_setup() {
 start_up () {
     # Check if a compose file is defined, if not: setup, else start/restart
     if [ ! -s "$env_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_file" 2>/dev/null; then
-        startMes_firstStart
+        stmes_first_start
         change_setup 0
     fi
 
@@ -547,7 +622,7 @@ start_up () {
         fi
     fi
     docker compose up -d --force-recreate
-    startMes_startDone
+    stmes_start_done
     return 0
 }
 
@@ -559,11 +634,10 @@ pre_start_checks() {
     check_seckey_main
     
     # Check for all dependencies
-    checkDeps
+    check_deps
 }
 
 main_menu() {
-    mainmenu_restart=0
     while true; do
         msg_line
         msg_header ${YELLOW} "$app_name Main Menu"
@@ -574,7 +648,7 @@ main_menu() {
         msg_normal "5) Stop $app_name"
         msg_normal "6) View the docker logs"
         msg_normal "7) View the help menus"
-        msg_normal "b/x) Exit"
+        msg_normal "x) Exit (or 'b')"
         msg_line
         
         mainmenu_opt=$(read_menu_choice "Selection: " 1 7)
@@ -593,7 +667,6 @@ main_menu() {
                 pre_start_checks
                 # Run setup and then start
                 change_setup 0
-                mainmenu_restart=1
                 ;;
             3)
                 env_menu
@@ -608,19 +681,16 @@ main_menu() {
                 logs_helper
                 ;;
             7)
-                :
+                help_menu_dispatcher
                 ;;
-            b)
-                if [ "$mainmenu_restart" -eq 1 ]; then
+            b|x)
+                if [ "$chngst_sel_changed" -eq 1 ]; then
                     msg_info "Exiting and restarting $app_name."
                     start_up
                     exit 0
                 else
-                    exitScriptGoodWithMessage "Exiting." 
+                    good_exit "Exiting." 
                 fi
-                ;;
-            x)
-                exitScriptGoodWithMessage "Exiting"
                 ;;
             *) 
                 msg_error "Invalid selection" ;;
@@ -642,10 +712,10 @@ process_commands() {
             pre_start_checks
             # Run setup and then start
             change_setup 1
-            exitScriptGoodWithMessage
+            good_exit
             ;;
         help|-h|--help)
-            printUsage "$@"
+            print_usage "$@"
             ;;
         down|-d|--down)
             down_helper
@@ -663,8 +733,8 @@ process_commands() {
             ;;
         *)
             msg_error "Unknown command: $first_arg"
-            printUsage
-            errExit 1
+            print_usage
+            error_exit 1
             ;;
     esac
 }
