@@ -56,7 +56,7 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 
 **<u>Additional Information</u>**
 
-Almost all functionality is accessible through carefully designed menus! To use them, run:
+Extra functionality is accessible through the carefully designed menus! To use them, run:
 ```
 ./sia
 ```
