@@ -4,9 +4,9 @@ Take back some sovereignty in just *ten* simple steps, if that!
 
 Here's a simple, all-in-one tool for running a Docker Compose stack which provides *simple, secure, self-hosted* alternatives to ChatGPT and Google — with a foolproof setup process on Linux and Mac, SIA should also be compatible with Windows via Docker Desktop and WSL.
 
-SIA uses popular open-source tools; it's extensible; and setup and management are made dead simple with its robust and portable command line interface.
+SIA features a thoughtfully designed command line interface, you should never have to type long commands or search for hidden files to manage something so simple. Moreover, the CLI is extremely portable — designed to be POSIX sh compliant — so it should work without issue on most Unix-like systems! And best of all, the CLI source code is *yours* to keep, copy, and use — licensed under the permissive MIT license!
 
-Enjoy!
+SIA builds on popular open-source tools, it's extensible, and it's secure by default. Enjoy!
 
 
 ## What is included?
@@ -23,7 +23,7 @@ Enjoy!
 
 
 ### I. Install
-**1. [Install docker](https://docs.docker.com/install/)**
+**1. [Install docker](https://docs.docker.com/install/)** (make sure you install it correctly for your GPU if you have one)
 
 **2. <u>Get SIA</u>**
 
@@ -34,16 +34,14 @@ cd SIA
 ```
 ---------
 ### II. Quick Start
-**3. <u>Run the SIA command line tool</u>:** (main script only)
+**3. <u>Run the SIA command line tool</u>:**
 ```
-./sia
+chmod +x sia && ./sia up
 ```
-
-*Note: If you receive a 'permission denied' error, you might need to make the sia file executable with* `chmod +x sia`, or the appropriate command for your system.
 
 **4. <u>Select a system architecture</u>:**  The tool will ask how your system is configured. Enter the corresponding number of your choice.
 
-If you accidentally pick the wrong one or you modify your system (i.e., *upgrade* from an NVIDIA GPU to an AMD GPU), you can run `./sia -s` to change the setup!
+If you accidentally pick the wrong one or you modify your system (i.e., *upgrade* from an NVIDIA GPU to an AMD GPU), you can run `./sia setup` to change the setup!
 
 The SearXNG secret key will be randomly generated upon first setup, and stored in the .env file if you need it. (Show hidden files in your file explorer to see it, and the YAML files!).
 
@@ -56,18 +54,21 @@ If you want to use your own proxy rather than Caddy, Complete [Using Another Pro
 ```
 - *e.g., llama3.2:1b*
 
+**<u>Additional Information</u>**
 
----------
+Extra functionality is accessible through the carefully designed menus! To use them, run:
+```
+./sia
+```
 
-*Additional Info:*
+On Environment Variables: 
+- You can edit the `.env` file manually, or better yet, use the built in Environment Handler (E.H.): `./sia env`
+- You can also access the E.H. through the menus!
+- You can rotate SearXNG secret keys easily with: `./sia env rotate`
+- You can trigger a full reset of the environment, but not any other data in the stack, by *deleting* the `.env` file. It will create a new one from the template `env_defaults`.
 
-FOR CHANGING ENVIRONMENT VARIABLES: 
-- You can't *change* environment variables directly in the .env file.
-- You *must* change them with the SIA Environment Handler: `./sia env`
-- You *may* add new variables to the file directly, and SIA will leave them alone.
-- You can trigger SearXNG secret key *regeneration* by deleting the key in the .env file.
-- You can trigger a full reset of the environment, but not any other data in the stack, by *deleting:* `.env` and `sia-config.sh`.
-- Keep in mind the .env file is a hidden file, click "View hidden files".
+*Run `./sia help [command]` for help!*
+
 ---------
 
 ### III. Post Install
@@ -101,7 +102,7 @@ When you restart your computer, you have to restart the containers:
 
 <u>Restart:</u>
 ```shell
-./sia
+./sia up
 ```
 If it fails to restart, you can use the following command to check what is active on the busy port:
 
@@ -109,9 +110,9 @@ If it fails to restart, you can use the following command to check what is activ
 
 - ports used are: 443, 11434, 3000, 8888, and 8080
 
-Stop whatever is running: `sudo systemctl stop [container name, i.e., ollama]`
+Stop whatever is running by force: `sudo systemctl stop [container name, i.e., ollama]`
 
-Restart the containers again: `./sia`
+Restart the containers again: `./sia up`
 
 ------------
 
@@ -128,17 +129,18 @@ Bring your own reverse proxy
 
 ## Commands
 
-The SIA command line tool comes equipped with several subcommands and an ability to pass arguments to the underlying Docker Compose commands. This feature set may well be extended in the future.
+The SIA tool comes with many commands. More features are planned, for example, an Ollama model handler.
 
 | Command       | Other Names                | Description |
 | ----------    | -------------------------- | ----------- |
-| (no command)  | n/a                        | Runs start/restart subcommand. Automatically runs setup on first start. |
-| setup         | -s, --setup                | Runs the setup wizard. Run if you change between CPU/Nvidia/AMD. |
-| down          | -d, --down                 | Stop the SIA stack. Accepts additional arguments. (Docker Compose command) |
-| logs          | -l, --logs                 | View relevant logs Accepts additional arguments. (Docker Compose command) |
-| download      | -dl, --download            | Download an Ollama model. Requires an additional argument. (Ollama command) |
-| help          | -h, --help                 | Show a useful help message. Can pass "down" or "logs" commands for extra help. |
-| environment   | env, -env, --environment   | Shows the list of controlled environment variables and gives options to modify/release. Subcommands planned. |
+| (no command)  | menu                       | Opens the CLI menu system. |
+| up            | -st, start, --start        | Start/restart. Automatically runs setup on first start. |
+| setup         | -su, --setup               | Runs the setup wizard. Run if you change between CPU/Nvidia/AMD. |
+| down          | -d, --down                 | Stop the SIA stack. Accepts additional arguments. (Docker Compose wrapper) |
+| logs          | -l, --logs                 | View relevant logs Accepts additional arguments. (Docker Compose wrapper) |
+| download      | -dl, --download            | Download an Ollama model. Requires an additional argument. (Ollama wrapper) |
+| help          | -h, --help                 | Show useful help messages. Add another command at the end for that command's help menu! |
+| environment   | env, -env, --environment   | Open the Environment Handler. Has subcommands, check help (or just use the menus). |
 
 -----------
 
@@ -160,7 +162,7 @@ Container Names:
 Or pass any arguments that can be used with `docker compose logs`
 
 #### <u>Start & Stop Containers</u>
-- Start/restart: `./sia`
+- Start/restart: `./sia up`
 - Stop: `./sia -d` (accepts all docker compose down args)
 - Deep restart:
 ```shell
@@ -174,63 +176,68 @@ docker kill $(docker ps -q)
 ------------
 
 ## Design Philosophy
-You may wonder why I've built a whole CLI for a Docker Compose stack.
+You may wonder why I've built a whole CLI for a simple Docker Compose stack.
 
 These are the **Core Principles** of my design:
-- **Beginner Friendly:** This project was motivated by my own struggles to get this stack to run correctly (and trust it). Offload some struggling, it's mostly done.
-- **Automation Friendly:** Users should not have to open a file to manage the environment. Use the CLI yourself or via other tools with the `--silent` tag at the start.
-- **Explicit & Stateful:** Dependencies and the .env file are validated (or repaired) on each start.
+- **Beginner Friendly:** This project was motivated by my own struggles to get this stack to run correctly (and trust it). I wanted to make it easy for others.
+- **Automation Friendly:** Users should not have to open a file to manage the environment variables. Use the CLI yourself or via other tools with the `--silent` tag at the start.
+- **Explicit & Stateful:** Dependencies and the environment are validated (or repaired) on each start.
 - **Idempotent:** Run the same commands repeatedly without risk.
 - **Very Portable:** Broad hardware support and a focus on Bash 3.2 compatibility.
-- **Secure:** Greatly simplified security concerns for the user.
+- **Secure:** Greatly simplified security concerns for the user. It won't start if the SearXNG secret key isn't 64 hexadecimal characters, and you lack the three tools it attempts to use to generate a safe one.
 
-Under this philosophy I have done three things: one, include optimized YAML files for various processors; two, build a CLI; and three, eliminate the normal way to manage a Docker Compose stack: by the editing of the .env file — in favor of storing them in a local copy of the `sia-config-template.sh` file.
+To accomplish these goals, I set out to build the most portable and secure CLI that I could, with little prior knowledge.
 
-This has made SIA:
+How have I made SIA:
 
-1. Beginner friendly:
+1. Beginner friendly?
    - User do not have to worry about configuring the `compose.yaml` file, they just select their processor type and the tooling handles the rest.
    - Users can change to a different processor type in the config with the `./sia setup` command.
    - Users can view, edit, and understand environment variables without the high-context abstractions of Docker Compose. 
 
-2. Stateful:
-   - Give SIA something to validate the .env file against.
-   - Give SIA the ability to edit the .env file.
-   - Give SIA the ability to create a valid .env file if one is missing, or repair it if it's damaged.
-   - Users can *manually* trigger a reset of the state by *deleting* the .env and *local* `sia-config.sh` files totally.
+2. Stateful?
+   - SIA stores state data in the .env file, like whether it has been run before.
+   - SIA can edit the .env file, or possibly other data files.
+   - SIA creates a valid .env file if one is missing, or repair parts if they're damaged.
+   - Users can trigger a reset of the state by *deleting* the .env file totally.
 
-3. Automation friendly, secure, and portable:
-   - The tooling runs perfectly with `set -euo pipefail`.
-   - My careful design of the included scripts involves a strict focus on supporting Bash 3.2 at the latest, with a long term goal for even more portability by switching to a fully POSIX standard design. I am *explicitly* avoiding newer standards, despite exclusively using Pop!_OS 24.04 myself.
+3. Automation friendly, secure, and portable?
+   - The tooling ran with `set -euo pipefail` when it was Bash.
+   - The tool was redesigned to be POSIX sh compliant, nearly maximizing theoretical portability, despite exclusively using Pop!_OS 24.04 myself.
 
-As a result of my efforts, I've built a command line interface that has *complete* control over Docker Compose environment variables in the SIA stack. This makes automatic secret key rotation easy to implement (which it is not yet). Best of all, the tool should work out of the box on the majority of systems.
+As a result of my efforts, I've built a command line interface that has *complete* control over Docker Compose environment variables in the SIA stack, and the tool should work out of the box on the majority of systems.
 
 ## Security
-Security is a primary focus of this project. SIA is meant to enforce better security than what most users will do on their own.
+Security is a primary focus of this project. SIA is meant to enforce a stricter security policy than most users will on their own.
 
-Assumptions:
+Core assumptions:
 
 1. Most users are not technically literate to the same degree as tech enthusiasts or developers.
-2. Most users are mostly ignorant of crypto security.
-3. **ALL** users **will** break things and configure them incorrectly in some way if they have the ability.
+2. Most users are ignorant of cryptography.
+3. **ALL** users **will** break things and configure them incorrectly in some way if they can — especially power users.
 
-Consequently:
+So, by design:
 
-- The SearXNG secret key is automatically generated on first start, and injected into the .env file without SIA storing the key long-term. There are robust fallbacks in case the user is missing OpenSSL, and it will error out if it can't find a way to generate a *safe* 32 byte hex code. The secret key is only stored in the .env file unless the user manually updates it by adding one with the SIA Environment Handler (E.H.).
-- SIA will automatically generate a new secret key if it is missing. Meaning the *easiest* way to rotate keys is by simply *deleting* the secret key in the .env file.
+- The SearXNG secret key is automatically generated on first start, and injected into the .env file without SIA storing the key long-term. There are robust fallbacks in case the user is missing OpenSSL, and it will error out if it can't find a way to generate a *safe* 32 byte hex code. The secret key is only stored in the .env file, and the SIA tool can't show the key.
+- SIA will automatically generate a new secret key if it's missing, ***or*** if it isn't 64 digits of hexadecimal characters (i.e., it's damaged by the user).
+- You can rotate secret keys with one command. By running in --silent mode, you can skip the validation checks, meaning you can automate key rotation with another tool if needed.
 
-In conclusion, I gave SIA control over the environment *primarily* to enable secret key generation, repair, and rotation; and *secondarily* to enable general state validation and repair.
+In conclusion, I gave SIA control over the environment variables *primarily* to enable secret key generation, repair, and rotation; and *secondarily* for statefulness and ease of use — secret key automation was my ultimate goal. In old versions of SIA, there were no scripts at all; it was a simple guide only six weeks before writing this section. I worried that someone might skip the steps in the guide to generate a safe secret key, and that they might accidentally leak what they do have. I've been working diligently to put those worries to rest.
 
-Additional Information:
-- SIA requires additional configuration for public usage. Follow the prompt shown on startup.
-- Due to the way the SIA E.H. works, you can use it to *replace* secret keys in the .env file manually. *Importantly*, as it currently stands, it will store the key in `sia-config.sh` (if you add one with the E.H.), making the key visible to anyone who can run the script, until you manually untrack it. If you want to manually update the SearXNG secret key in this version with the E.H., you must remove it through the E.H. **after** you add them and restart SIA (or manually edit the envVars array in the local config file: remove the SEARXNG_SECRET's value and the = symbol). I intend to add a built in secret key rotator that does not use the E.H. at all.
+Additional Security Information:
+- SIA requires additional configuration for public usage. Follow the prompt shown on startup or in the .env file, or check the SearXNG and Open WebUI documentation.
+- The SIA E.H. **cannot** display the SearXNG secret key. To view it, you *must* open the .env file.
+- Whenever SIA edits the .env file (or any file by using the edit_kv function), it uses a sophisticated temp file creation system:
+   - It tries mktemp, and if that isn't available, it uses a hardened and randomized PID approach to minimize the attack surface.
+   - It checks that the given name is not taken, and it will fail if it cannot create an original temp file name after 10 attempts, if mktemp isn't available.
+   - It copies the permissions of the original to the new version, or defaults to chmod 600.
 
 
 ## Roadmap
 
 - Additional commands will be added to the SIA tool. (It's simple to extend, if you want to try!)
 - Additional compose files will be added for ARM and possible Intel GPU support.
-- The wiki will begin production soon, it will contain more information.
+- The wiki will begin production soon, it will contain additional information.
 
 ------------
 
@@ -246,11 +253,17 @@ This project is multi-licensed to respect the upstream source while providing ma
 
 ### 2. MIT License
 
-- The following scripts in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
-   - `sia`
-   - `.sia-config-template.sh`
-   - `.sia-messages.sh`
-- These three files are licensed under the permissive MIT License.
+- The following files in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
+   - The `sia` script in the main directory
+   - All **three** files in the `lib/` directory:
+      - `lib/core.sh`
+      - `lib/env_logic.sh`
+      - `lib/ui.sh`
+   - All **three** files in the `share/` directory:
+      - `share/dependencies`
+      - `share/env_defaults`
+      - `share/providers` (this file isn't in use in this version of SIA)
+- These seven files are licensed under the permissive MIT License.
 - You are free to use, copy, modify, and distribute these files specifically with minimal restrictions.
 
 ------------
