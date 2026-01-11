@@ -645,6 +645,7 @@ start_up () {
     fi
     docker compose up -d --force-recreate
     stmes_start_done
+    chngst_sel_changed=0
     return 0
 }
 
@@ -709,6 +710,7 @@ main_menu() {
             b|x)
                 if [ "$chngst_sel_changed" -eq 1 ]; then
                     msg_info "Exiting and restarting $app_name."
+                    pre_start_checks
                     start_up
                     exit 0
                 else

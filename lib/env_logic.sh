@@ -179,6 +179,36 @@ create_env_from_template() {
     fi
 }
 
+reset_env() {
+    if [ "${verbosity:-0}" -gt 0 ]; then
+        msg_warn "Reset environment (delete and regen $env_file file)? [y/N]"
+        printf '%s' "Selection: " >&2
+        read -r resetenv_confirm
+    else
+        resetenv_confirm="y"
+    fi
+    case "$resetenv_confirm" in
+        [yY]|[yY][eE][sS])
+            :
+            ;;
+        *)
+            msg_info "Okay, leaving it as it is."
+            return 0
+            ;;
+    esac
+    if [ -f "$DEFAULTS" ]; then
+        [ -f "$env_file" ] && rm "$env_file"
+    else
+        msg_error "Cannot find $script_name template, exiting function."
+        return 1
+    fi
+    create_env_from_template
+    pre_start_checks
+    msg_success "Environment reset!"
+    chngst_sel_changed=1
+    return 0
+}
+
 ## .env handler command Parser
 #  - USAGE:
 #  - ./sia env - view list and choose what to do.
@@ -275,12 +305,13 @@ env_menu() {
                 env_rotate_key_hlpr
                 ;;
             3)
-                msg_error "Work in progress."
+                reset_env
                 ;;
             b)
                 return 0
                 ;;
             x)
+                [ "$chngst_sel_changed" -eq 1 ] && pre_start_checks && start_up
                 good_exit "Exiting"
                 ;;
             *) 
