@@ -29,6 +29,10 @@ check_deps() { # update for new architecture
 ## Help :
 #  - Accepts one extra argument
 #  - Add help menus for new commands by adding them to the case statement
+# TO EXTEND:
+#  - Add new function in ui.sh for help description
+#  - Add the case statement to the command processor below
+#  - Follow the extension instructions above the help menu dispatcher
 
 # command processor
 print_usage () {
@@ -53,10 +57,22 @@ print_usage () {
         general)
             print_help_general
             ;;
+        start|up|--start|-st)
+            print_help_start
+            ;;
     esac
 }
 
 ## HELP CLI MENU
+#  - Should stop being lazy and use a mapping file, e.g., '1|"General Usage"|print_help_general'
+#  - Current works but it makes it hard to extend.
+# TO EXTEND:
+#  - Add new function in ui.sh for help description (if you haven't)
+#  - Manually map the menu choice to the function
+#  1. Add a new line to the messages
+#  2. Change the second number in the read_menu_choice function call to match the number of numbered options
+#  3. Add the relevant case to the case statement
+
 help_menu_dispatcher() {
     helpmenu_run=1
     while true; do
@@ -67,12 +83,13 @@ help_menu_dispatcher() {
         msg_normal "3) Environment and Secret Keys"
         msg_normal "4) Downloading LLMs"
         msg_normal "5) Stop Command"
-        msg_normal "6) Viewing Logs"
+        msg_normal "6) Up Command"
+        msg_normal "7) Viewing Logs"
         msg_normal "b) Back"
         msg_normal "x) Exit"
         msg_line
         
-        helpmenu_opt=$(read_menu_choice "Selection: " 1 6)
+        helpmenu_opt=$(read_menu_choice "Selection: " 1 7)
         
         case "$helpmenu_opt" in
             1)
@@ -91,6 +108,9 @@ help_menu_dispatcher() {
                 print_help_down
                 ;;
             6)
+                print_help_start
+                ;;
+            7)
                 print_help_logs
                 ;;
             b)
@@ -105,6 +125,8 @@ help_menu_dispatcher() {
     done
 }
 
+# - This helper shows back options in help menus if they were launched from the menu
+#   but not the command
 help_menu_backopt() {
     [ "$helpmenu_run" -eq 0 ] && return 0
     msg_line
@@ -679,6 +701,7 @@ main_menu() {
                 ;;
             6)
                 logs_helper
+                exit 0
                 ;;
             7)
                 help_menu_dispatcher
@@ -722,6 +745,7 @@ process_commands() {
             ;;
         logs|-l|--logs)
             logs_helper
+            exit 0
             ;;
         download|-dl|--download)
             download_helper

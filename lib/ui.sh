@@ -69,7 +69,7 @@ msg_header() {
     case "$1" in
         \\033*) msghdr_color="$1"; shift ;;
     esac
-    log 2 "${msghdr_color}== $* ==${NC}"
+    log 2 " ${msghdr_color}== $* ==${NC}"
 }
 msg_title() {
     msgttl_term_width=$(tput cols 2>/dev/null || printf '%s' $term_width_fallback)
@@ -100,7 +100,7 @@ msg_line() { # for lines that are terminal width
 msg_col() {
     msgcol_left="   $1"
     msgcol_right="$2"
-    msgcol_padding=18
+    msgcol_padding="${3:-18}"
 
     msgcol_leftLength=${#msgcol_left}
     msgcol_diff="$((msgcol_padding - msgcol_leftLength))"
@@ -137,14 +137,14 @@ print_help_general() {
     msg_col "(default)| 2"      "Standard output: shows essential info and progress."
     msg_col "--quiet  | 1"      "Warning level: hides everything except critical errors."
     msg_col "--silent | 0"      "Silent mode: suppresses all output."
-    msg_normal "(Place before <command> to alter default behavior for that output)"
+    msg_usage "Use as the first argument only."
     msg_blank
     msg_header ${BLUE} "Example Commands"
-    msg_col "$script_name"                 "Starts the containers. On first start, runs setup and generates the secret key."
-    msg_col "$script_name setup"           "Runs setup, for changing which setup you're using."
-    msg_col "$script_name -d"              "Stops all $app_name containers."
-    msg_col "$script_name --help"          "Shows the help message."
-    msg_col "$script_name -l --verbose"    "Shows the logs and passes the --verbose argument."
+    msg_col "$script_name up"              "Starts the containers. On first start, runs setup and generates the secret key." 25
+    msg_col "$script_name setup"           "Runs setup, for changing which setup you're using." 25
+    msg_col "$script_name -d"              "Stops all $app_name containers." 25
+    msg_col "$script_name --help"          "Shows the help message." 25
+    msg_col "$script_name -l --verbose"    "Shows the logs and passes the --verbose argument." 25
     msg_blank
     msg_normal "Run '$script_name help [command]' for more help with a specific command, you can pass their alias names."
     msg_blank
@@ -154,20 +154,20 @@ print_help_down() {
     msg_blank
     msg_header ${YELLOW} "$app_name Down Command Help Menu"
     msg_blank
-    msg_usage "$script_name down [subcommands]"
+    msg_usage "$script_name down [flags]"
     msg_blank
-    msg_normal "${BOLD}[WRAPS]${NC}   docker compose down [subcommands]"
+    msg_normal "${BOLD}[WRAPS]${NC}   docker compose down [flags]"
     msg_blank
     msg_info "The 'down' command is a wrapper command so you don't have to type the full command to stop or delete parts of the stack. It accepts multiple flags. Use caution."
     msg_blank
-    msg_header ${BLUE} "Subcommands"
-    msg_col "(no argument)"       "None, stops the stack, leaves volumes and app images (default)."
-    msg_col "--volumes | -v"      "Remove volumes named in the compose file."
-    msg_col "--remove-orphans"    "Remove containers for services no longer in the compose file (i.e. you modify it)."
-    msg_col "--rmi"               "Remove images used by services."
-    msg_col "--help | -h"         "Show the inbuilt Docker help message (not this one)."
-    msg_blank
     msg_normal "${GREEN}[ALIASES]${NC} -d, --down"
+    msg_blank
+    msg_header ${BLUE} "Common Flags"
+    msg_col "(no argument)"       "None, stops the stack, leaves volumes and app images (default)." 23
+    msg_col "--volumes | -v"      "Remove volumes named in the compose file." 23
+    msg_col "--remove-orphans"    "Remove containers for services no longer in the compose file (i.e. you modify it)." 23
+    msg_col "--rmi"               "Remove images used by services." 23
+    msg_col "--help | -h"         "Show the inbuilt Docker help message (not this one)." 23
     msg_blank
     help_menu_backopt || msg_line
 }
@@ -176,21 +176,21 @@ print_help_logs() {
     msg_blank
     msg_header ${YELLOW} "$app_name Logs Command Help Menu"
     msg_blank
-    msg_usage "$script_name logs [subcommands]"
+    msg_usage "$script_name logs [flags]"
     msg_blank
-    msg_normal "${BOLD}[WRAPS]${NC}   docker compose logs [subcommands]"
+    msg_normal "${BOLD}[WRAPS]${NC}   docker compose logs [flags]"
     msg_blank
     msg_info "The 'logs' command is a wrapper command so you don't have to type the full command to see the Docker Compose logs. It accepts multiple flags."
     msg_blank
-    msg_header ${BLUE} "Subcommands"
-    msg_col "(no argument)"     "--tail 100 shows last 100 logs by default"
-    msg_col "<container name>"  "View logs for that container."
-    msg_col "--timestamps | -t" "Show timestamps for each file."
-    msg_col "--no-color"        "Black and white."
-    msg_col "--no-log-prefix"   "Omit service name/container from each log line."
-    msg_col "help | -h"         "Show the inbuilt Docker help message (not this one)."
-    msg_blank
     msg_normal "${GREEN}[ALIASES]${NC} -l, --logs"
+    msg_blank
+    msg_header ${BLUE} "Common Flags"
+    msg_col "(no argument)"     "--tail 100 shows last 100 logs by default" 21
+    msg_col "<container name>"  "View logs for that container." 21
+    msg_col "--timestamps | -t" "Show timestamps for each file." 21
+    msg_col "--no-color"        "Black and white." 21
+    msg_col "--no-log-prefix"   "Omit service name/container from each log line." 21
+    msg_col "help | -h"         "Show the inbuilt Docker help message (not this one)." 21
     msg_blank
     help_menu_backopt || msg_line
 }
@@ -202,34 +202,36 @@ print_help_env() {
     msg_blank
     msg_info "The $app_name Environment Handler (E.H.) manages the environment variables in the $env_file file. It will automatically replace the SearXNG secret key if it is not 64 digit hexadecimal."
     msg_blank
-    msg_info "As of app version 3.0, you can edit the $env_file file directly, or use the E.H."
+    msg_info "As of $app_name version v3.0.0, you can either use the E.H., or edit the $env_file file directly (prohibited in prior versions)."
     msg_blank
-    msg_header ${BLUE} "Subcommands"
+    msg_normal "${GREEN}[ALIASES]${NC} -env, environment, --environment"
+    msg_blank
+    msg_header ${BLUE} "Commands"
     msg_col "(no argument)"    "Show the E.H. menu."
-    msg_col "list"             "Show a list of $env_file variables and view options to manage them (obscures SearXNG secret)."
+    msg_col "list"             "Show a list of $env_file variables and view options to manage them."
     msg_col "add"              "Add or modify specific variables directly."
     msg_col "rm"               "Remove a specific variable from the environment."
     msg_col "rotate"           "Automatically rotate the SearXNG secret key."
     msg_blank
-    msg_normal "${GREEN}[ALIASES]${NC} -env, environment, --environment"
+    msg_warn "Note that the E.H. list cannot show the SearXNG secret key line. If $app_name starts without error, the secret key does exist and is sufficiently random. You can see the key in the $env_file file."
     msg_blank
-    msg_normal "${BOLD}To add specific variables by name:${NC}"
-    msg_usage "$script_name env add [KEY] [VALUE]"
+    msg_header ${GREEN} "Add"
+    msg_normal "${GREEN}[USAGE]${NC} $script_name env add [KEY] [VALUE]"
     msg_blank
-    msg_normal "${BOLD}To remove specific variables by name:${NC}"
-    msg_usage "$script_name env rm [KEY]"
-    msg_normal "${GREEN}'Remove' Aliases:${NC} rm, -rm, --remove, remove"
-    msg_info "Use --silent (0) mode to skip validation."
+    msg_header ${RED} "Remove"
+    msg_normal "${RED}[USAGE]${NC} $script_name env rm [KEY]"
+    msg_normal "${RED}[ALIASES]${NC} -rm, --remove, remove"
     msg_blank
-    msg_normal "${BOLD}To rotate secret keys:${NC}"
+    msg_header ${YELLOW} "Rotate"
     msg_usage "$script_name env rotate [KEY]"
-    msg_normal "${GREEN}'Rotate' Aliases:${NC} rk, -rk, --rotate, rotate"
+    msg_normal "${YELLOW}[ALIASES]${NC} rk, -rk, --rotate"
+    msg_blank
     msg_info "Use --silent (0) mode to skip validation."
     msg_blank
     msg_header ${BLUE} "Examples"
-    msg_col "$script_name env list"      "Show a list of variables and view options to manage them."
-    msg_col "$script_name env add test variable"  "Inserts 'test=variable' into the $env_file file."
-    msg_col "$script_name --silent env -rk"  "Silences validation and all outputs and rotates secret key (for automation)."
+    msg_col "$script_name env list"      "Show a list of variables and view options to manage them." 28
+    msg_col "$script_name env add key var"  "Inserts 'key=var' into the $env_file file." 28
+    msg_col "$script_name --silent env -rk"  "Silences validation and all outputs and rotates secret key (for automation)." 28
     msg_blank
     help_menu_backopt || msg_line
 }
@@ -237,24 +239,31 @@ print_help_dl() {
     msg_blank
     msg_header ${YELLOW} "$app_name Download Help Menu"
     msg_blank
-    msg_usage "$script_name download <model name> [flags]"
+    msg_usage "$script_name download [model tag] [flags]"
     msg_blank
-    msg_normal "${BOLD}[WRAPS]${NC}   docker exec ollama ollama run <model name> [flags]"
+    msg_normal "${BOLD}[WRAPS]${NC}   docker exec ollama ollama run <model tag> [flags]"
     msg_blank
-    msg_info "The 'download' command is a wrapper so you don't have to type the long Docker exec command. Find models to download at https://ollama.com/search. The command will fail if you don't provide a model tag."
+    msg_info "The 'download' command is a wrapper so you don't have to type the long Docker exec command. The command will ask for a model tag if you don't provide one."
+    msg_info "Find models to download at https://ollama.com/search."
+    msg_blank
+    msg_normal "${GREEN}[ALIASES]${NC} -dl, --download"
     msg_blank
     msg_header ${BLUE} "Arguments"
     msg_col "<model name>"      "Name of the Ollama model you want to download/run."
     msg_blank
-    msg_header ${BLUE} "Common Options"
+    msg_header ${BLUE} "Common Flags"
     msg_col "--verbose"         "Show detailed timing and response stats."
     msg_col "--format json"     "Return output in JSON format."
     msg_col "--help"            "Show the full Ollama internal help menu."
     msg_blank
-    msg_info "You can pass any number of flags to the underlying command."
+    msg_info "You can pass any number of flags."
     msg_warn "The messaging might be inaccurate depending on the flags used."
     msg_blank
-    msg_normal "${GREEN}[ALIASES]${NC} -dl, --download"
+    msg_header ${YELLOW} "Choosing a Model"
+    msg_blank
+    msg_info "The quality of large language models that you can run is determined by the amount and speed of RAM in your system. Ollama can use VRAM if Docker is configured properly, and it will automatically share load with the CPU and slower system RAM if necessary."
+    msg_blank
+    msg_info "The way it works is that the entire model is stored in RAM (or VRAM). So the maximum size of the model you can run is determined by how much RAM/VRAM you have. Models that go beyond the limit of your access to VRAM will respond much more slowly than ones that don't."
     msg_blank
     help_menu_backopt || msg_line
 }
@@ -264,11 +273,27 @@ print_help_setup() {
     msg_blank
     msg_usage "$script_name setup"
     msg_blank
-    msg_info "Run to change system architecture for hardware acceleration (e.g., you change from CPU only to NVIDIA GPU). This is important for maximizing the speed of large language models."
+    msg_info "Run to change system architecture for hardware acceleration (e.g., you change from CPU only to NVIDIA GPU). This is necessary to maximize the performance of LLMs."
     msg_blank
-    msg_warn "To take advantage of hardware acceleration, you have to install Docker correctly. Additional dependencies are required."
+    msg_warn "To take advantage of hardware acceleration, you must install Docker correctly. Additional dependencies are required."
     msg_blank
-    msg_normal "${GREEN}[ALIASES]${NC} -s, --setup"
+    msg_normal "${GREEN}[ALIASES]${NC} -su, --setup"
+    msg_blank
+    help_menu_backopt || msg_line
+}
+print_help_start() {
+    msg_blank
+    msg_header ${YELLOW} "$app_name Start Help Menu"
+    msg_blank
+    msg_usage "$script_name up"
+    msg_blank
+    msg_normal "${BOLD}[WRAPS]${NC}   docker compose up -d --force-recreate"
+    msg_blank
+    msg_info "This command starts or restarts $app_name, and on first start, it automatically runs the setup command."
+    msg_blank
+    msg_warn "As of $app_name version $app_version, this command always runs --force-recreate."
+    msg_blank
+    msg_normal "${GREEN}[ALIASES]${NC} start, -st, --start"
     msg_blank
     help_menu_backopt || msg_line
 }
