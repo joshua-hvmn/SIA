@@ -17,10 +17,11 @@ fi
 #  - this function represents a clean alternative to arrays and for loops
 #  - adapt if you want true mapping files
 
-check_deps() { # update for new architecture
+check_deps() {
     while IFS= read -r cmd || [ -n "$cmd" ]; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             msg_error "$cmd not found"
+            error_exit 2
         fi
     done < "$DEPENDENCIES"
 }
@@ -164,8 +165,8 @@ good_exit() {
 #  - Extend by adding to the case statement
 
 error_exit () {
-    errex_errex_code="${1:-99}"
-    errex_errex_desc=""
+    errex_code="${1:-99}"
+    errex_desc=""
     case $errex_code in # Don't use code 99
         1)
             errex_desc="Improper usage!"
