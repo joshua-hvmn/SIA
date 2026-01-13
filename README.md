@@ -255,15 +255,18 @@ This project is multi-licensed to respect the upstream source while providing ma
 
 - The following files in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
    - The `sia` script in the main directory
-   - All **three** files in the `lib/` directory:
+   - All **six** files in the `lib/` directory:
+      - `lib/router.sh`
       - `lib/core.sh`
       - `lib/env_logic.sh`
+      - `lib/security.sh`
       - `lib/ui.sh`
+      - `lib/messages.sh`
    - All **three** files in the `share/` directory:
       - `share/dependencies`
       - `share/env_defaults`
       - `share/providers` (this file isn't in use in this version of SIA)
-- These seven files are licensed under the permissive MIT License.
+- These ten files are licensed under the permissive MIT License.
 - You are free to use, copy, modify, and distribute these files specifically with minimal restrictions.
 
 ------------
