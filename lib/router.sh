@@ -315,14 +315,14 @@ process_commands() {
             print_usage "$@"
             ;;
         down|-d|--down)
-            down_helper
+            down_helper "$@"
             ;;
         logs|-l|--logs)
-            logs_helper
+            logs_helper "$@"
             exit 0
             ;;
         download|-dl|--download)
-            download_helper
+            download_helper "$@"
             ;;
         env|environment|-env|--environment)
             # Check environment and dependencies

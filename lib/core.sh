@@ -185,16 +185,10 @@ list_from_file() {
 
 download_helper() {
     dlhlpr_model="${1:-}"
-    if [ $# -gt 1 ]; then
-        shift
-        dlhlpr_args="$*"
-    else
-        dlhlpr_args=""
-    fi
+    shift 2>/dev/null || true
+
     while true; do
-        # NOTE: command injection risk, fix by assigning model=$1, and shift, then args as $@
-        
-        # Check dependencies only 
+        # Check hard dependencies only 
         check_deps
         
         # Check that the ollama container is running
@@ -203,6 +197,7 @@ download_helper() {
             error_exit 2
         fi
 
+        # check model defined
         if [ -z "$dlhlpr_model" ]; then
             msg_info "Enter an Ollama model code (e.g., llama3.2:1b)"
             printf '%s' "Model name (or 'b' to go back): " >&2
@@ -217,7 +212,7 @@ download_helper() {
 
         # Execute
         msg_info "Downloading and running $dlhlpr_model..."
-        if docker exec ollama ollama run "$dlhlpr_model" $dlhlpr_args; then
+        if docker exec ollama ollama run "$dlhlpr_model" "$@"; then
             msg_success "Model $dlhlpr_model is ready!"
             return 0
         else
