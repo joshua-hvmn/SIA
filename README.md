@@ -176,14 +176,14 @@ docker kill $(docker ps -q)
 ------------
 
 ## Design Philosophy
-You may wonder why I've built a whole CLI for a simple Docker Compose stack.
+You may wonder why I would build a whole CLI for a simple Docker Compose stack.
 
 These are the **Core Principles** of my design:
 - **Beginner Friendly:** This project was motivated by my own struggles to get this stack to run correctly (and trust it). I wanted to make it easy for others.
 - **Automation Friendly:** Users should not have to open a file to manage the environment variables. Use the CLI yourself or via other tools with the `--silent` tag at the start.
 - **Explicit & Stateful:** Dependencies and the environment are validated (or repaired) on each start.
 - **Idempotent:** Run the same commands repeatedly without risk.
-- **Very Portable:** Broad hardware support and a focus on Bash 3.2 compatibility.
+- **Portable:** Broad hardware support and POSIX compliance and minimal dependencies beyond Docker itself.
 - **Secure:** Greatly simplified security concerns for the user. It won't start if the SearXNG secret key isn't 64 hexadecimal characters, and you lack the three tools it attempts to use to generate a safe one.
 
 To accomplish these goals, I set out to build the most portable and secure CLI that I could, with little prior knowledge.
@@ -255,15 +255,18 @@ This project is multi-licensed to respect the upstream source while providing ma
 
 - The following files in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
    - The `sia` script in the main directory
-   - All **three** files in the `lib/` directory:
+   - All **six** files in the `lib/` directory:
+      - `lib/router.sh`
       - `lib/core.sh`
       - `lib/env_logic.sh`
+      - `lib/security.sh`
       - `lib/ui.sh`
+      - `lib/messages.sh`
    - All **three** files in the `share/` directory:
       - `share/dependencies`
       - `share/env_defaults`
       - `share/providers` (this file isn't in use in this version of SIA)
-- These seven files are licensed under the permissive MIT License.
+- These ten files are licensed under the permissive MIT License.
 - You are free to use, copy, modify, and distribute these files specifically with minimal restrictions.
 
 ------------

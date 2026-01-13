@@ -15,18 +15,18 @@ set -eu
 # - set to 1 to mock docker and git commands
 mock_test_mode=0
 
-## Global Standards (change to change across script and .env file)
-searxng_base_url="https://localhost/"
-open_webui_url="http://localhost:3000/"
-env_file=".env" # Change if you want to use a different .env file name.
+## Global Standards (change to change across script)
+searxng_base_url="https://localhost/"   # Only affects messages, not .env
+open_webui_url="http://localhost:3000/" # Only affects messages, not .env
+env_file=".env" # Change if you want to use a different .env file name. (Not sure this would work..)
 fallback_app_version="v3.0.0"
-verbosity=2
+verbosity=2 # default
 term_width_fallback=90
 term_max_width=95
 script_name="./$(basename "$0")"
-app_name=$(basename "$0" | tr '[:lower:]' '[:upper:]')
+app_name=$(basename "$0" | tr '[:lower:]' '[:upper:]') # makes uppercase
 
-# Setup changed and need restart:
+# Setup changed and need restart (also using for changed environment)
 chngst_sel_changed=0
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the app_name is automatically made uppercase based on script name).
@@ -99,13 +99,16 @@ DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
 
 ## Source subscripts
 . "$SIA_HOME_DIR/lib/ui.sh"
+. "$SIA_HOME_DIR/lib/router.sh"
 . "$SIA_HOME_DIR/lib/core.sh"
+. "$SIA_HOME_DIR/lib/security.sh"
 . "$SIA_HOME_DIR/lib/env_logic.sh"
+. "$SIA_HOME_DIR/lib/messages.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"
 
-## Make sure launched main script, check command
+## Route to subscripts
 
 if [ "$first_arg" = "menu" ]; then
     main_menu
