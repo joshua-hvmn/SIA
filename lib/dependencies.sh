@@ -29,7 +29,9 @@ check_files() {
     chk_errors=0
 
     while IFS= read -r chk_file || [ -n "$chk_file" ]; do
-        case "$chk_file" in (""|#*) continue ;; esac
+        case "$chk_file" in
+            ""|"#"*) continue ;;
+        esac
 
         if [ ! -f "$chk_file" ]; then
             msg_error "$chk_file missing, attempting to recover..."
@@ -45,7 +47,7 @@ check_files() {
         fi
     done < "$FILES"
 
-    [ "$chk_errors" -gt 0 ] && return 1
+    [ "$chk_errors" -gt 0 ] && return 1 || return 0
 }
 
 ## Make user env file
@@ -64,7 +66,9 @@ create_env_from_template() {
 ## Make user compose files
 create_yamls_from_templates() {
     while IFS='=' read -r yaml_key yaml_val || [ -n "$yaml_key" ]; do
-        case "$yaml_key" in (""|#*) continue ;; esac
+        case "$yaml_key" in
+            ""|"#"*) continue ;;
+        esac
 
         if [ ! -f "$yaml_val" ]; then
             if cp "$yaml_key" "$yaml_val"; then
