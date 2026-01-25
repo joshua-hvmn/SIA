@@ -16,6 +16,10 @@ searxng/uwsgi.ini
 ollama/
 open-webui/
 caddy/
+config/
+data/
+archive/
+plugins/
 
 # --- SearXNG ---
 # Ignore everything generated in this folder

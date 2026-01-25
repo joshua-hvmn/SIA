@@ -139,6 +139,48 @@ print_help_env() {
     msg_blank
     help_menu_backopt || msg_line
 }
+print_help_reset() {
+    msg_blank
+    msg_header ${YELLOW} "$app_name Reset Help Menu"
+    msg_blank
+    msg_usage "$script_name env reset [argument]"
+    msg_blank
+    msg_info "Use to restore default $env_file file and yaml file settings. The last version of each is kept in archive/. This may be required after updating the $app_name components."
+    msg_blank
+    msg_normal "${GREEN}[ALIASES]${NC} rs, -rs, --reset, reset"
+    msg_blank
+    msg_header ${BLUE} "Commands"
+    msg_col "(no argument)"    "Show a menu."
+    msg_col "env"             "Reset the $env_file file to default settings."
+    msg_col "yaml"              "Reset the yaml files to default settings."
+    msg_col "all"               "Reset both of the above."
+    msg_blank
+    msg_warn "You should rename archived files if you don't want them to be overwritten."
+    msg_blank
+    help_menu_backopt || msg_line
+}
+print_help_update() {
+    msg_blank
+    msg_header ${YELLOW} "$app_name Update Help Menu"
+    msg_blank
+    msg_usage "$script_name update [argument]"
+    msg_blank
+    msg_info "Use to update the Docker images or the $app_name components."
+    msg_blank
+    msg_normal "${GREEN}[ALIASES]${NC} update, pull"
+    msg_blank
+    msg_header ${BLUE} "Commands"
+    msg_col "(no argument)"    "Show a menu."
+    msg_col "docker"             "Update docker images with docker compose pull."
+    msg_col "sia"              "Update the $app_name images."
+    msg_col "all"               "Update both of the above."
+    msg_blank
+    msg_warn "If .compose...yaml or $env_file files are updated, you may need to run $script_name env reset."
+    msg_blank
+    msg_info "If docker refuses due to 'docker-credential-desktop not found', run 'nano ~/.docker/config.json', delete the line that says '"credsStore": "desktop"', and try again."
+    msg_blank
+    help_menu_backopt || msg_line
+}
 print_help_dl() {
     msg_blank
     msg_header ${YELLOW} "$app_name Download Help Menu"

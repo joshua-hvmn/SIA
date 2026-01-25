@@ -6,6 +6,12 @@
 # |  This tool is released under the MIT License: modify & distribute freely.  |
 # |----------------------------------------------------------------------------|
 
+if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
+    msg_error "Error: This script is a component of SIA and cannot be run directly."
+    msg_usage "Please run: ./sia"
+    error_exit 1
+fi
+
 ## Check command dependencies
 #  - this function represents a clean alternative to arrays and for loops
 #  - adapt if you want true mapping files

@@ -19,7 +19,7 @@ mock_test_mode=0
 searxng_base_url="https://localhost/"   # Only affects messages, not .env
 open_webui_url="http://localhost:3000/" # Only affects messages, not .env
 env_file=".env" # Change if you want to use a different .env file name. (Not sure this would work..)
-fallback_app_version="v3.0.0"
+fallback_app_version="v3.2.0"
 verbosity=2 # default
 term_width_fallback=90
 term_max_width=95
@@ -112,6 +112,7 @@ PROVIDERS="$SIA_HOME_DIR/share/providers"
 . "$SIA_HOME_DIR/lib/env_logic.sh"
 . "$SIA_HOME_DIR/lib/messages.sh"
 . "$SIA_HOME_DIR/lib/dependencies.sh"
+. "$SIA_HOME_DIR/lib/update.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"

@@ -6,6 +6,12 @@
 # |  This tool is released under the MIT License: modify & distribute freely.  |
 # |----------------------------------------------------------------------------|
 
+if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
+    msg_error "Error: This script is a component of SIA and cannot be run directly."
+    msg_usage "Please run: ./sia"
+    error_exit 1
+fi
+
 update_docker_images() {
     yes_no "Are you sure? Updating the Docker images may take a while. "
     if [ $? -ne 0 ]; then
@@ -35,7 +41,6 @@ update_sia() {
     if git pull origin "$BRANCH"; then
         msg_info "Update successful."
         msg_warn "Please restart the script to apply changes."
-        exit 0
     else
         # Force update
         msg_warn "Standard update failed (local changes detected in defaults)."
@@ -46,6 +51,12 @@ update_sia() {
         
         msg_info "Forced update successful."
         msg_warn "Please restart the script to apply changes."
-        exit 0
     fi
+    return 0
 }
+
+#compare_yaml "$yaml_key" "$yaml_val"
+#yaml_is_updated="$?"
+#if [ "$yaml_is_updated" -eq 1 ]; then
+#    msg_info "the compose.yamls"
+#    yes_no "Would you like to reset the yaml files?"
