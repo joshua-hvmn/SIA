@@ -14,6 +14,67 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+# Update
+## menu
+update_menu() {
+    while true; do
+        msg_line
+        msg_header ${RED} "Update Menu"
+        msg_normal "1) Docker images"
+        msg_normal "2) SIA components"
+        msg_normal "3) Everything"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+        
+        
+        updatemenu_opt=$(read_menu_choice "What would you like to update: " 1 3)
+        
+        case "$updatemenu_opt" in
+            1)
+                update_docker_images
+                ;;
+            2)
+                update_sia
+                ;;
+            3)
+                update_sia
+                update_docker_images
+                ;;
+            b)
+                return 0
+                ;;
+            x)
+                good_exit "Exiting"
+                ;;
+            *) 
+                msg_error "Invalid selection: $updatemenu_opt" ;;
+        esac
+    done
+}
+## command processor
+update_cmd_parser () {
+    updtprs_cmd="${1:-menu}"
+    case $envcm_cmd in
+        menu|-m|--menu)
+            update_menu
+            ;;
+        sia)
+            update_sia
+            ;;
+        docker)
+            update_docker_images
+            ;;
+        all)
+            update_sia
+            update_docker_images
+            ;;
+        *)
+            msg_error "Unknown command: $updtprs_cmd"
+            ;;
+    esac
+}
+
 # Env Command/Menu processing
 ## .env handler command Parser
 #  - USAGE:
@@ -323,6 +384,11 @@ process_commands() {
             ;;
         download|-dl|--download)
             download_helper "$@"
+            ;;
+        update|pull)
+            check_deps
+            check_files
+            update_cmd_parser "$@"
             ;;
         env|environment|-env|--environment)
             # Check environment and dependencies

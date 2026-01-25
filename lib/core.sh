@@ -16,6 +16,28 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+## [Y/n]
+#  - Move the '' to the no section to change to default no.
+yes_no () {
+    yes_no_msg="${1:-''}"
+    while true; do
+        msg_normal "$yes_no_msg [Y/n]"
+        read -r response
+
+        case "$response" in
+            n|N|[nN]o|[nN]O|[nN][oO])
+                return 1
+                ;;
+            ''|[yY]|[yY]es|[yY][eE][sS])
+                return 0
+                ;;
+            *)
+                echo "Invalid response"
+                ;;
+        esac
+    done
+}
+
 ## Check dependencies
 #  - this function represents a clean alternative to arrays and for loops
 #  - adapt if you want true mapping files
@@ -340,13 +362,14 @@ start_up () {
 }
 
 pre_start_checks() {
+    # Check for all dependencies
+    check_deps
+    check_files
     ## Make sure env exists
     create_env_from_template
+    create_yamls_from_templates
 
     # Generate or repair SearXNG secret key
     check_seckey_main
-    
-    # Check for all dependencies
-    check_deps
 }
 

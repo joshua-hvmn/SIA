@@ -336,14 +336,3 @@ edit_kv() {
     }
 }
 
-create_env_from_template() {
-    if [ -f "$DEFAULTS" ]; then
-        if [ ! -s "$env_file" ]; then
-            cp "$DEFAULTS" "$env_file"
-            chmod 600 "$env_file"
-        fi
-    else
-        msg_error "$DEFAULTS not found, cannot restore."
-        error_exit 2
-    fi
-}
