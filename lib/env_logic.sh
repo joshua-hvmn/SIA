@@ -195,14 +195,42 @@ reset_env() {
             ;;
     esac
     if [ -f "$DEFAULTS" ]; then
-        [ -f "$env_file" ] && rm "$env_file"
+        [ -f "$env_file" ] && mv "$env_file" archive/
     else
-        msg_error "Cannot find $script_name template, exiting function."
+        msg_error "Cannot find $env_file template, exiting function."
         return 1
     fi
     create_env_from_template
     pre_start_checks
     msg_success "Environment reset!"
+    chngst_sel_changed=1
+    return 0
+}
+
+compare_yaml() {
+    if cmp -s "$1" "$2"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+reset_yaml() {
+    yes_no "Reset yaml files?"
+    reset_yaml_yes="$?"
+    if [ "$reset_yaml_yes" -eq 1 ]; then
+        msg_info "Cancelling"
+        return 0
+    fi
+    while IFS='=' read -r yaml_key yaml_val || [ -n "$yaml_key" ]; do
+        case "$yaml_key" in
+            ""|"#"*) continue ;;
+        esac
+
+        [ -f "$yaml_val" ] && mv "$yaml_val" archive/ || msg_error "$yaml_val not present"
+    done < "$PROVIDERS"
+    pre_start_checks
+    msg_success "Old yaml files moved to archive folder!"
     chngst_sel_changed=1
     return 0
 }
@@ -336,14 +364,3 @@ edit_kv() {
     }
 }
 
-create_env_from_template() {
-    if [ -f "$DEFAULTS" ]; then
-        if [ ! -s "$env_file" ]; then
-            cp "$DEFAULTS" "$env_file"
-            chmod 600 "$env_file"
-        fi
-    else
-        msg_error "$DEFAULTS not found, cannot restore."
-        error_exit 2
-    fi
-}

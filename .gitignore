@@ -7,13 +7,19 @@ searxng/uwsgi.ini
 # --- Environment Secrets ---
 # These contain your SEARXNG_SECRET and hostnames. NEVER commit these.
 .env
-sia-config.sh
+.compose.cpu.yaml
+.compose.amd.yaml
+.compose.nvidia.yaml
 
 # --- Docker Runtime Data (Bind Mounts) ---
 # These folders are created/populated on startup and can be massive (GBs).
 ollama/
 open-webui/
 caddy/
+config/
+data/
+archive/
+plugins/
 
 # --- SearXNG ---
 # Ignore everything generated in this folder

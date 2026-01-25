@@ -14,6 +14,67 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+# Update
+## menu
+update_menu() {
+    while true; do
+        msg_line
+        msg_header ${RED} "Update Menu"
+        msg_normal "1) Docker images"
+        msg_normal "2) SIA components"
+        msg_normal "3) Everything"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+        
+        
+        updatemenu_opt=$(read_menu_choice "What would you like to update: " 1 3)
+        
+        case "$updatemenu_opt" in
+            1)
+                update_docker_images
+                ;;
+            2)
+                update_sia
+                ;;
+            3)
+                update_sia
+                update_docker_images
+                ;;
+            b)
+                return 0
+                ;;
+            x)
+                good_exit "Exiting"
+                ;;
+            *) 
+                msg_error "Invalid selection: $updatemenu_opt" ;;
+        esac
+    done
+}
+## command processor
+update_cmd_parser () {
+    updtprs_cmd="${1:-menu}"
+    case $updtprs_cmd in
+        menu|-m|--menu)
+            update_menu
+            ;;
+        sia)
+            update_sia
+            ;;
+        docker)
+            update_docker_images
+            ;;
+        all)
+            update_sia
+            update_docker_images
+            ;;
+        *)
+            msg_error "Unknown command: $updtprs_cmd"
+            ;;
+    esac
+}
+
 # Env Command/Menu processing
 ## .env handler command Parser
 #  - USAGE:
@@ -43,6 +104,9 @@ envCommand () {
             ;;
         rk|-rk|--rotate|rotate)
             env_rotate_key_hlpr
+            ;;
+        rs|-rs|--reset|reset)
+            reset_parser
             ;;
     esac
 }
@@ -90,6 +154,67 @@ env_list_menu() {
     done
 }
 
+# Reset parser
+reset_parser() {
+    resetps_cmd="${envcm_key:-menu}"
+    case $resetps_cmd in
+        menu|-m|--menu)
+            reset_menu
+            ;;
+        env)
+            reset_env
+            ;;
+        yaml|compose)
+            reset_yaml
+            ;;
+        -a|all)
+            reset_env
+            reset_yaml
+            ;;
+        *)
+            msg_error "Unknown command: $resetps_cmd"
+            ;;
+    esac
+}
+
+# Reset menu
+reset_menu() {
+    while true; do
+        msg_line
+        msg_header ${RED} "Reset Menu"
+        msg_normal "1) $env_file"
+        msg_normal "2) yaml files"
+        msg_normal "3) Everything"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+        
+        
+        resetmenu_opt=$(read_menu_choice "What would you like to reset: " 1 3)
+        
+        case "$resetmenu_opt" in
+            1)
+                reset_env
+                ;;
+            2)
+                reset_yaml
+                ;;
+            3)
+                reset_env
+                reset_yaml
+                ;;
+            b)
+                return 0
+                ;;
+            x)
+                good_exit "Exiting"
+                ;;
+            *) 
+                msg_error "Invalid selection: $resetmenu_opt" ;;
+        esac
+    done
+}
+
 # env menu
 env_menu() {
     while true; do
@@ -113,7 +238,7 @@ env_menu() {
                 env_rotate_key_hlpr
                 ;;
             3)
-                reset_env
+                reset_menu
                 ;;
             b)
                 return 0
@@ -163,6 +288,11 @@ print_usage () {
         start|up|--start|-st)
             print_help_start
             ;;
+        rs|-rs|--reset|reset)
+            print_help_reset
+            ;;
+        update|pull)
+            print_help_update
     esac
 }
 
@@ -184,15 +314,17 @@ help_menu_dispatcher() {
         msg_normal "1) General Usage"
         msg_normal "2) Setup and Hardware Acceleration"
         msg_normal "3) Environment and Secret Keys"
-        msg_normal "4) Downloading LLMs"
-        msg_normal "5) Stop Command"
-        msg_normal "6) Up Command"
-        msg_normal "7) Viewing Logs"
+        msg_normal "4) Environment Reset Command"
+        msg_normal "5) Downloading LLMs"
+        msg_normal "6) Stop Command"
+        msg_normal "7) Update command"
+        msg_normal "8) Up Command"
+        msg_normal "9) Viewing Logs"
         msg_normal "b) Back"
         msg_normal "x) Exit"
         msg_line
         
-        helpmenu_opt=$(read_menu_choice "Selection: " 1 7)
+        helpmenu_opt=$(read_menu_choice "Selection: " 1 9)
         
         case "$helpmenu_opt" in
             1)
@@ -205,15 +337,21 @@ help_menu_dispatcher() {
                 print_help_env
                 ;;
             4)
-                print_help_dl
+                print_help_reset
                 ;;
             5)
-                print_help_down
+                print_help_dl
                 ;;
             6)
-                print_help_start
+                print_help_down
                 ;;
             7)
+                print_help_update
+                ;;
+            8)
+                print_help_start
+                ;;
+            9)
                 print_help_logs
                 ;;
             b)
@@ -240,12 +378,13 @@ main_menu() {
         msg_normal "3) Edit Environment Variables"
         msg_normal "4) Download an Ollama large language model"
         msg_normal "5) Stop $app_name"
-        msg_normal "6) View the docker logs"
-        msg_normal "7) View the help menus"
+        msg_normal "6) Update $app_name"
+        msg_normal "7) View the docker logs"
+        msg_normal "8) View the help menus"
         msg_normal "x) Exit (or 'b')"
         msg_line
         
-        mainmenu_opt=$(read_menu_choice "Selection: " 1 7)
+        mainmenu_opt=$(read_menu_choice "Selection: " 1 8)
         
         case "$mainmenu_opt" in
             1)
@@ -272,10 +411,15 @@ main_menu() {
                 down_helper
                 ;;
             6)
+                check_deps
+                check_files
+                update_cmd_parser
+                ;;
+            7)
                 logs_helper
                 exit 0
                 ;;
-            7)
+            8)
                 help_menu_dispatcher
                 ;;
             b|x)
@@ -323,6 +467,11 @@ process_commands() {
             ;;
         download|-dl|--download)
             download_helper "$@"
+            ;;
+        update|pull)
+            check_deps
+            check_files
+            update_cmd_parser "$@"
             ;;
         env|environment|-env|--environment)
             # Check environment and dependencies
