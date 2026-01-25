@@ -19,12 +19,18 @@ mock_test_mode=0
 searxng_base_url="https://localhost/"   # Only affects messages, not .env
 open_webui_url="http://localhost:3000/" # Only affects messages, not .env
 env_file=".env" # Change if you want to use a different .env file name. (Not sure this would work..)
-fallback_app_version="v3.0.0"
+fallback_app_version="v3.2.0"
 verbosity=2 # default
 term_width_fallback=90
 term_max_width=95
 script_name="./$(basename "$0")"
 app_name=$(basename "$0" | tr '[:lower:]' '[:upper:]') # makes uppercase
+
+## Git Repo standards
+LINK="https://raw.githubusercontent.com"
+USERNAME="joshua-hvmn"
+REPOSITORY="SIA"
+BRANCH="main"
 
 # Setup changed and need restart (also using for changed environment)
 chngst_sel_changed=0
@@ -95,7 +101,8 @@ fi
 ## Relative Paths
 DEFAULTS="$SIA_HOME_DIR/share/env_defaults"
 DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
-# PROVIDERS="$SIA_HOME_DIR/share/providers"
+FILES="$SIA_HOME_DIR/share/files"
+PROVIDERS="$SIA_HOME_DIR/share/providers"
 
 ## Source subscripts
 . "$SIA_HOME_DIR/lib/ui.sh"
@@ -104,6 +111,8 @@ DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
 . "$SIA_HOME_DIR/lib/security.sh"
 . "$SIA_HOME_DIR/lib/env_logic.sh"
 . "$SIA_HOME_DIR/lib/messages.sh"
+. "$SIA_HOME_DIR/lib/dependencies.sh"
+. "$SIA_HOME_DIR/lib/update.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"

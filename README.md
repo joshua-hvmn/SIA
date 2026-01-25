@@ -4,9 +4,9 @@ Take back some sovereignty in just *ten* simple steps, if that!
 
 Here's a simple, all-in-one tool for running a Docker Compose stack which provides *simple, secure, self-hosted* alternatives to ChatGPT and Google — with a foolproof setup process on Linux and Mac, SIA should also be compatible with Windows via Docker Desktop and WSL.
 
-SIA features a thoughtfully designed command line interface, you should never have to type long commands or search for hidden files to manage something so simple. Moreover, the CLI is extremely portable — designed to be POSIX sh compliant — so it should work without issue on most Unix-like systems! And best of all, the CLI source code is *yours* to keep, copy, and use — licensed under the permissive MIT license!
+SIA features a carefully designed command line interface, you should never have to type long commands or search for hidden files to manage something so simple. Moreover, the CLI is extremely portable — designed to be POSIX sh compliant — so it should work without issue on most Unix-like systems! And best of all, the CLI source code is *yours* to keep, copy, and use — licensed under the permissive MIT license!
 
-SIA builds on popular open-source tools, it's extensible, and it's secure by default. Enjoy!
+SIA builds on popular open-source tools, it's extensible, and it's secure by default. Enjoy simplicity!
 
 
 ## What is included?
@@ -113,6 +113,26 @@ If it fails to restart, you can use the following command to check what is activ
 Stop whatever is running by force: `sudo systemctl stop [container name, i.e., ollama]`
 
 Restart the containers again: `./sia up`
+
+------------
+
+### V. Updating
+SIA wraps different update commands so you can easily update its components, or the Docker images, and it will optionally clean up old images.
+
+<u>Update:</u>
+```shell
+./sia update [argument]
+```
+
+<u>Arguments:</u>
+- sia: updates the SIA components with `git pull` (or curl).
+- docker: updates the Docker images with `docker compose pull`
+- all: updates SIA components and Docker images.
+
+<u>**Important:**</u>
+- If the env or yaml file defaults are updated, you will have to restore defaults with `./sia env reset [arg]` (args: blank=menu, otherwise, specify `env` or `yaml`).
+- If you customized any of those files, they are stored in the `archive/` folder. The tool overwrites files in the archive if they have their default names. Change the names of archived files if you want them to stay around.
+
 
 ------------
 
@@ -245,28 +265,33 @@ Additional Security Information:
 
 This project is multi-licensed to respect the upstream source while providing maximum flexibility for the original tooling created for SIA.
 
+All files are provided under open source licenses, as is, without warranty. Use at your own risk.
+
 ### 1. GNU AGPL-3.0
 
-- All files are derived from the [searxng-docker](https://github.com/searxng/searxng-docker) project unless otherwise specified below. This project is a deeply modified clone with a broadened scope (Ollama/OpenWebUI).
-- These files inherit the GNU Affero General Public License v3.0.
+- Files are derived from the [searxng-docker](https://github.com/searxng/searxng-docker) project unless otherwise specified below. This project is a deeply modified clone with a broadened scope (Ollama, OpenWebUI, management tool).
+- Any files *not specified as MIT licensed* inherit the GNU Affero General Public License v3.0.
 - **Key Requirement:** If you modify these files and run them on a server accessible over a network, you must make your modified source code available to your users.
 
 ### 2. MIT License
 
 - The following files in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
    - The `sia` script in the main directory
-   - All **six** files in the `lib/` directory:
+   - All **eight** files in the `lib/` directory:
       - `lib/router.sh`
       - `lib/core.sh`
       - `lib/env_logic.sh`
       - `lib/security.sh`
       - `lib/ui.sh`
       - `lib/messages.sh`
-   - All **three** files in the `share/` directory:
+      - `lib/dependencies.sh`
+      - `lib/update.sh`
+   - These **four** files in the `share/` directory (NOT the yaml files): 
       - `share/dependencies`
       - `share/env_defaults`
-      - `share/providers` (this file isn't in use in this version of SIA)
-- These ten files are licensed under the permissive MIT License.
+      - `share/providers`
+      - `share/files`
+- These thirteen files are licensed under the permissive MIT License.
 - You are free to use, copy, modify, and distribute these files specifically with minimal restrictions.
 
 ------------
