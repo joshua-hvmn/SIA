@@ -1,13 +1,31 @@
 # see https://docs.searxng.org/admin/settings/settings.html#settings-use-default-settings
 use_default_settings: true
+general:
+  debug: false
+  instance_name: "SecureSearch"
+  donation_url: false
+  contact_url: false
+  enable_metrics: false
+
 server:
-  # base_url is defined in the SEARXNG_BASE_URL environment variable, see .env and docker-compose.yml
+  # base_url is defined in the SEARXNG_BASE_URL environment variable, see .env and *.yaml
   secret_key: "${SEARXNG_SECRET}"
   limiter: false  # enable this when running the instance for a public usage on the internet
   image_proxy: true
-  bind_address: "127.0.0.1"
-  ports: "127.0.0.1:8888:8888"
+  bind_address: "0.0.0.0"
+  port: 8080
+  method: "POST"
+
+ui:
+  static_use_hash: true
+  default_themes: simple
+  center_alignment: true
+  hotkeys: default
+
 search:
+  safe_search: 1
+  autocomplete: ""
+  favicon_resolver: ""
   formats:
     - html
     - csv
@@ -15,3 +33,8 @@ search:
     - rss
 redis:
   url: redis://redis:6379/0
+
+outgoing:
+  useragent_suffix: ""
+  request_timeout: 5.0
+  max_request_timeout: 10.0
