@@ -2,10 +2,19 @@
 use_default_settings: true
 general:
   debug: false
-  instance_name: "SecureSearch"
+  instance_name: "SearXNG Search"
   donation_url: false
   contact_url: false
   enable_metrics: false
+  enabled_plugins:
+    - 'Hash plugin'
+    - 'Self Information'
+    - 'Tracker URL remover'
+    - 'Ahmia blacklist'
+    - 'Open Access DOI rewrite'
+    - 'Hostnames plugin'
+    - 'Unit converter plugin'
+    - 'Basic Calculator'
 
 server:
   # base_url is defined in the SEARXNG_BASE_URL environment variable, see .env and *.yaml
@@ -24,8 +33,8 @@ ui:
 
 search:
   safe_search: 1
-  autocomplete: ""
-  favicon_resolver: ""
+  autocomplete: "duckduckgo"
+  favicon_resolver: "duckduckgo"
   formats:
     - html
     - csv
@@ -38,3 +47,31 @@ outgoing:
   useragent_suffix: ""
   request_timeout: 5.0
   max_request_timeout: 10.0
+
+engines:
+  - name: google
+    engine: google
+    shortcut: go
+    use_mobile_ui: false
+    disabled: false
+  - name: startpage
+    engine: startpage
+    disabled: false
+  - name: reddit
+    engine: reddit
+    shortcut: re
+    disabled: false
+    weight: 2
+  - name: stackoverflow
+    engine: stackoverflow
+    shortcut: st
+    disabled: false
+  - name: github
+    engine: github
+    shortcut: gh
+    disabled: false
+  - name: duckduckgo_definitions
+    engine: duckduckgo_definitions
+    shortcut: def
+    disabled: false
+    weight: 2

@@ -38,19 +38,6 @@ yes_no () {
     done
 }
 
-## Check dependencies
-#  - this function represents a clean alternative to arrays and for loops
-#  - adapt if you want true mapping files
-
-check_deps() {
-    while IFS= read -r cmd || [ -n "$cmd" ]; do
-        if ! command -v "$cmd" >/dev/null 2>&1; then
-            msg_error "$cmd not found"
-            error_exit 2
-        fi
-    done < "$DEPENDENCIES"
-}
-
 # - This helper shows back options in help menus if they were launched from the menu
 #   but not the command
 help_menu_backopt() {
