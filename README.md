@@ -2,9 +2,15 @@
 
 Take back some sovereignty in just *ten* simple steps, if that!
 
-Here's a simple, all-in-one tool for running a Docker Compose stack which provides *simple, secure, self-hosted* alternatives to ChatGPT and Google — with a foolproof setup process on Linux and Mac, SIA should also be compatible with Windows via Docker Desktop and WSL.
+Here's a simple, all-in-one tool for running a Docker Compose stack which provides *simple, secure, self-hosted* alternatives to ChatGPT and Google — with a foolproof setup process on Linux and Mac, SIA should also mostly be compatible with Windows via Docker Desktop and WSL.
 
-SIA features a carefully designed command line interface, you should never have to type long commands or search for hidden files to manage something so simple. Moreover, the CLI is extremely portable — designed to be POSIX sh compliant — so it should work without issue on most Unix-like systems! And best of all, the CLI source code is *yours* to keep, copy, and use — licensed under the permissive MIT license!
+SIA features a carefully designed command line interface, you should never have to type long commands or search for hidden files to manage something so simple.
+- Automated setup and configuration!
+- Use menus or commands
+- Rotate secret keys, configure trust certificates
+- Extremely portable — designed to be POSIX sh compliant. 
+
+And best of all, the CLI source code is *yours* to keep, copy, and use — licensed under the permissive MIT license!
 
 SIA builds on popular open-source tools, it's extensible, and it's secure by default. Enjoy simplicity!
 
@@ -47,6 +53,11 @@ The SearXNG secret key will be randomly generated upon first setup, and stored i
 
 If you want to use your own proxy rather than Caddy, Complete [Using Another Proxy](#using-another-proxy-advanced-users) below **before** running the script.
 
+After the Docker containers start, SIA will configure the Caddy CA certificates so your system and browser can see them. After this is finished, you have to restart SIA one more time:
+```
+./sia up
+```
+
 **5. <u>Install an Ollama LLM</u>** from [their search directory](https://ollama.com/search).
 
 ```
@@ -73,7 +84,7 @@ On Environment Variables:
 
 ### III. Post Install
 
-6. Access Open WebUI at [http://localhost:3000](http://localhost:3000) by default.
+6. Access Open WebUI at [https://chat.localhost](https://chat.localhost) by default.
 7. Create an "Admin Account" and bookmark the page.
 8. Connect Ollama to Open WebUI if necessary: (SIA should inject the settings, but it might not work)
    - Click name in corner > Admin Panel > Settings > Connections > Ollama API > Manage Ollama API Connections > Configure (gear icon)
@@ -83,7 +94,7 @@ On Environment Variables:
    - Enable, set to SearXNG
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
    - Note: In this version of SIA, web searches are sent over HTTP (unencrypted) between containers to avoid certificate trust issues.
-10. Use SearXNG at [https://localhost:443](https://localhost:443) by default. You will need to accept the security warning for the self-signed certificates. You have to configure the Caddy TLS certificate for your system to resolve this issue. It is in fact secure and encrypted, the warning is mostly an annoyance.
+10. Use SearXNG at [https://localhost:443](https://localhost:443) by default.
 
 Set your default search bar in your browser: 
 | Browser       | Search Query                                            |                                     |
@@ -277,7 +288,7 @@ All files are provided under open source licenses, as is, without warranty. Use 
 
 - The following files in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
    - The `sia` script in the main directory
-   - All **eight** files in the `lib/` directory:
+   - All **nine** files in the `lib/` directory:
       - `lib/router.sh`
       - `lib/core.sh`
       - `lib/env_logic.sh`
@@ -286,12 +297,13 @@ All files are provided under open source licenses, as is, without warranty. Use 
       - `lib/messages.sh`
       - `lib/dependencies.sh`
       - `lib/update.sh`
+      - `lib/caddy-ca-config.sh`
    - These **four** files in the `share/` directory (NOT the yaml files): 
       - `share/dependencies`
       - `share/env_defaults`
       - `share/providers`
       - `share/files`
-- These thirteen files are licensed under the permissive MIT License.
+- These fourteen files are licensed under the permissive MIT License.
 - You are free to use, copy, modify, and distribute these files specifically with minimal restrictions.
 
 ------------

@@ -1,4 +1,4 @@
-#   SIA  =  v3.0.0
+#   SIA  =  v3.3.0
 #  For public access, change:
 #  - SEARXNG_HOSTNAME to your domain name
 #  - SEARXNG_TLS=letsencrypt key
