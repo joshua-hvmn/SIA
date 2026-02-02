@@ -82,8 +82,8 @@ services:
     restart: unless-stopped
     networks:
       - SIAintranet
-    ports:                   # Removable when https working right
-      - "3000:8080"
+    # ports:
+    #   - "3000:8080"
     volumes:
       - ./open-webui:/app/backend/data
     environment:
@@ -92,7 +92,7 @@ services:
       - WEBUI_URL=${WEBUI_URL}
       - WEB_SEARCH_ENGINE=searxng
       - DOCKER=true
-      - OFFLINE_MODE=true
+      - OFFLINE_MODE=false
 
 networks:
   SIAintranet:

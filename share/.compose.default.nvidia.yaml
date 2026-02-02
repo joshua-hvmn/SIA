@@ -93,8 +93,8 @@ services:
     restart: unless-stopped
     networks:
       - SIAintranet
-    ports:
-      - "3000:8080"
+    # ports:
+    #   - "3000:8080"
     volumes:
       - ./open-webui:/app/backend/data
     depends_on:
@@ -107,7 +107,7 @@ services:
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
       - WEBUI_URL=${WEBUI_URL}
       - WEB_SEARCH_ENGINE=searxng
-      - OFFLINE_MODE=true
+      - OFFLINE_MODE=false
       - USE_CUDA_DOCKER=true
       - DOCKER=true
       - USE_CUDA=true
