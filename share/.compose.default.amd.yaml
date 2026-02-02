@@ -60,7 +60,6 @@ services:
   ollama:
     container_name: ollama
     image: ollama/ollama:rocm
-    runtime: amd
     restart: unless-stopped
     networks:
       - SIAintranet
@@ -71,9 +70,12 @@ services:
     environment:
       - DOCKER=true
       - AMD_VISIBLE_DEVICES=all
-    devices:                # \
-      - /dev/kfd            #  Optional if AMD Container Runtime Toolkit present
-      - /dev/dri            # /
+      - HSA_OVERRIDE_GFX_VERSION=10.3.0
+    devices:                         # \
+      - /dev/kfd:/dev/kfd            #  Optional if AMD Container Runtime Toolkit present
+      - /dev/dri:/dev/dri            # /
+    group_add:
+      - video
     security_opt:
       - seccomp=unconfined
     healthcheck:
@@ -84,8 +86,7 @@ services:
 
   open-webui:
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:main
-    runtime: amd
+    image: ghcr.io/open-webui/open-webui:latest
     restart: unless-stopped
     networks:
       - SIAintranet
@@ -93,6 +94,11 @@ services:
     #   - "3000:8080"
     volumes:
       - ./open-webui:/app/backend/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+      searxng:
+        condition: service_started
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
@@ -100,12 +106,6 @@ services:
       - WEB_SEARCH_ENGINE=searxng
       - OFFLINE_MODE=false
       - DOCKER=true
-      - AMD_VISIBLE_DEVICES=all
-    devices:                # \
-      - /dev/kfd            #  Optional if AMD Container Runtime Toolkit present
-      - /dev/dri            # /
-    security_opt:
-      - seccomp=unconfined
 
 networks:
   SIAintranet:
