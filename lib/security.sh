@@ -44,6 +44,9 @@ generate_secret_key() {
     # Append to .env:
     edit_kv "SEARXNG_SECRET" "$ensuresk_secret_key" .env
     msg_info "Secret key was generated with $ensuresk_method, and injected into the .env."
+    
+    export SIA_NEEDS_CERT_INSTALL="true"
+    
     return 0
 }
 
