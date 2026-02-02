@@ -1,4 +1,4 @@
-#   SIA  =  v3.0.0
+#   SIA  =  v3.3.0
 #  For public access, change:
 #  - SEARXNG_HOSTNAME to your domain name
 #  - SEARXNG_TLS=letsencrypt key
@@ -7,7 +7,7 @@
 SEARXNG_HOSTNAME=localhost
 SEARXNG_TLS=internal
 SEARXNG_BASE_URL=https://localhost/
-WEBUI_URL=http://localhost:3000/
+WEBUI_URL=https://chat.localhost/
 OLLAMA_BASE_URL=http://ollama:11434
 WEB_SEARCH_ENGINE=searxng
 SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json

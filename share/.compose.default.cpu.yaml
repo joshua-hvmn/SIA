@@ -4,7 +4,6 @@ services:
     image: docker.io/library/caddy:2-alpine
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8888:8888"
       - "443:443"
     networks:
       - SIAintranet
@@ -42,11 +41,14 @@ services:
     restart: unless-stopped
     networks:
       - SIAintranet
+    depends_on:
+      - redis
     volumes:
       - ./searxng:/etc/searxng:rw
       - searxng-data:/var/cache/searxng:rw
     environment:
-      - SEARXNG_BASE_URL=http://localhost/
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
+      - SEARXNG_REDIS_URL=redis://redis:6379/0
       - DOCKER=true
       - SEARXNG_SECRET=${SEARXNG_SECRET}
     logging:
@@ -62,30 +64,40 @@ services:
     networks:
       - SIAintranet
     ports:                 # uncomment if you want to use 
-      - "11435:11434"      # http://localhost:11434/ to diagnose ollama
+      - "127.0.0.1:11435:11434"      # http://localhost:11434/ to diagnose ollama
     volumes:
       - ./ollama:/root/.ollama
     environment:
       - DOCKER=true
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 
   open-webui:
     container_name: open-webui
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:latest
     restart: unless-stopped
     networks:
       - SIAintranet
-    ports:                   # Removable when https working right
-      - "3000:8080"
+    # ports:
+    #   - "3000:8080"
     volumes:
       - ./open-webui:/app/backend/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+      searxng:
+        condition: service_started
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_URL=http://localhost:3000/
-      - WEB_SEARCH_ENGINE=searxng
       - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+      - WEBUI_URL=${WEBUI_URL}
+      - WEB_SEARCH_ENGINE=searxng
       - DOCKER=true
-      - OFFLINE_MODE=true # Optional, you will have to manually check for updates
+      - OFFLINE_MODE=false
 
 networks:
   SIAintranet:

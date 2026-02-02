@@ -25,6 +25,7 @@ term_width_fallback=90
 term_max_width=95
 script_name="./$(basename "$0")"
 app_name=$(basename "$0" | tr '[:lower:]' '[:upper:]') # makes uppercase
+systemOS="$(uname -s)"
 
 ## Git Repo standards
 LINK="https://raw.githubusercontent.com"
@@ -34,6 +35,7 @@ BRANCH="main"
 
 # Setup changed and need restart (also using for changed environment)
 chngst_sel_changed=0
+SIA_NEEDS_CERT_INSTALL="false"
 
 ### Set app name and version number (Rename this script as you please, it should still work, but note that the app_name is automatically made uppercase based on script name).
 if [ -d .git ]; then
@@ -113,6 +115,7 @@ PROVIDERS="$SIA_HOME_DIR/share/providers"
 . "$SIA_HOME_DIR/lib/messages.sh"
 . "$SIA_HOME_DIR/lib/dependencies.sh"
 . "$SIA_HOME_DIR/lib/update.sh"
+. "$SIA_HOME_DIR/lib/caddy-ca-config.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"
