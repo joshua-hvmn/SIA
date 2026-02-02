@@ -356,7 +356,14 @@ start_up () {
         fi
     fi
     docker compose up -d --force-recreate
-    stmes_start_done
+
+    # Check if caddy cert needs to be configured
+    if [ "${SIA_NEEDS_CERT_INSTALL:-}" = "true" ]; then
+        install_caddy_cert
+    else
+     stmes_start_done
+    fi
+
     chngst_sel_changed=0
     return 0
 }
