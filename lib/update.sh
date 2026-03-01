@@ -30,28 +30,53 @@ update_docker_images() {
 }
 
 update_sia() {
-    yes_no "Are you sure? Updating $app_name will overwrite any changes to the sia script, the scripts in lib/ and all of share/. "
+    # Check for local changes
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        msg_warn "Local changes detected."
+    fi
+
+    yes_no "Are you sure you want to update? Updating $app_name will overwrite any changes. "
     if [ $? -ne 0 ]; then
         msg_info "Cancelling." && return 0
     fi
 
     msg_info "Updating SIA..."
     
-    # Try pull
-    if git pull origin "$BRANCH"; then
+    # Fetch changes
+    git fetch origin "$BRANCH" || {
+        msg_error "Failed to fetch from remote. Check your network connection."
+        return 1
+    }
+
+    # Check update needed
+    LOCAL=$(git rev-parse @)
+    REMOTE=$(git rev-parse "origin/$BRANCH")
+    if [ "$LOCAL" = "$REMOTE" ]; then
+        msg_info "Already up to date."
+        return 0
+    fi
+
+
+    # Try normal pull
+    if git pull origin "$BRANCH" 2>/dev/null; then
         msg_info "Update successful."
         msg_warn "Please restart the script to apply changes."
-    else
-        # Force update
-        msg_warn "Standard update failed (local changes detected in defaults)."
-        msg_warn "Forcing update to match repository..."
-        
-        git fetch origin "$BRANCH"
-        git reset --hard "origin/$BRANCH"
-        
-        msg_info "Forced update successful."
-        msg_warn "Please restart the script to apply changes."
     fi
+    
+    # Force update if pull fails
+    msg_warn "Standard update failed (local changes detected in defaults)."
+    msg_warn "Forcing update to match repository..."
+    
+    # Abort ongoing merges
+    git merge --abort 2>/dev/null || true
+    
+    # Reset to remote branch
+    git reset --hard "origin/$BRANCH" || {
+        msg_error "Failed to reset to remote branch."
+    }
+    
+    msg_info "Forced update successful."
+    msg_warn "Please restart the script to apply changes."
     return 0
 }
 
