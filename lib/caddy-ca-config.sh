@@ -62,10 +62,19 @@ install_caddy_cert() {
 
         ## Configure
         # Firefox
+        firefox_policy_dir=""
         if [ -d "/etc/firefox" ]; then
-             msg_debug "Applying Firefox enterprise policy..."
-             sudo mkdir -p /etc/firefox/policies
-             cat <<EOF | sudo tee /etc/firefox/policies/policies.json >/dev/null
+            firefox_policy_dir="/etc/firefox/policies"
+        elif [ -d "/usr/lib/firefox/distribution" ]; then
+            firefox_policy_dir="/usr/lib/firefox/distribution"
+        elif [ -d "/usr/lib64/firefox/distribution" ]; then
+            firefox_policy_dir="/usr/lib64/firefox/distribution"
+        fi
+
+        if [ -n "$firefox_policy_dir" ]; then
+            msg_debug "Applying Firefox enterprise policy to: $firefox_policy_dir"
+            sudo mkdir -p "$firefox_policy_dir"
+            cat <<EOF | sudo tee "$firefox_policy_dir/policies.json" >/dev/null
 {
   "policies": {
     "Certificates": { "ImportEnterpriseRoots": true }
@@ -73,7 +82,24 @@ install_caddy_cert() {
 }
 EOF
         fi
-        # Chromium
+
+        # Firefox injection
+        if command -v certutil >/dev/null 2>&1; then
+            ff_profile_base="$REAL_HOME/.mozilla/firefox"
+            if [ -d "$ff_profile_base" ]; then
+                for ff_profile_dir in "$ff_profile_base"/*.default-release "$ff_profile_base"/*.default; do
+                    if [ -d "$ff_profile_dir" ]; then
+                        msg_debug "Updating Firefox profile NSS DB at: $ff_profile_dir"
+                        certutil -d "sql:$ff_profile_dir" -D -n "SIA Root" 2>/dev/null || true
+                        certutil -d "sql:$ff_profile_dir" -A -t "CT,," -n "SIA Root" -i "$icc_tmp_cert"
+                    fi
+                done
+            else
+                msg_error "No Firefox profile directory found, skipping Firefox NSS injection"
+            fi
+        fi
+        
+        # Chromium injection
         if command -v certutil >/dev/null 2>&1; then
             icc_target_db="sql:$REAL_HOME/.pki/nssdb"
             if [ -d "$REAL_HOME/.pki/nssdb" ]; then
@@ -84,7 +110,7 @@ EOF
                 certutil -d "$icc_target_db" -A -t "C,," -n "SIA Root" -i "$icc_tmp_cert"
             fi
         else
-            msg_error "Chromium detected but 'certutil' is missing."
+            msg_error "'certutil' is missing - Chromium and Firefox need it for NSS profile injection."
             msg_info "FIX: 'sudo apt install libnss3-tools' (Debian/Ubuntu), or 'sudo dnf install nss-tools' (Fedora)"
             msg_info "Then regenerate the secret key in the CLI environment menu."
         fi
