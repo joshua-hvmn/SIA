@@ -17,9 +17,9 @@ mock_test_mode=0
 
 ## Global Standards (change to change across script)
 searxng_base_url="https://localhost/"   # Only affects messages, not .env
-open_webui_url="http://localhost:3000/" # Only affects messages, not .env
+open_webui_url="https://chat.localhost/" # Only affects messages, not .env
 env_file=".env" # Change if you want to use a different .env file name. (Not sure this would work..)
-fallback_app_version="v3.2.0"
+fallback_app_version="v3.3.3"
 verbosity=2 # default
 term_width_fallback=90
 term_max_width=95
