@@ -64,8 +64,8 @@ services:
     restart: unless-stopped
     networks:
       - SIAintranet
-    ports:                 # uncomment if you want to use
-      - "127.0.0.1:11435:11434"      # http://localhost:11434/ to diagnose ollama
+    ports: # uncomment if you want to use
+      - "127.0.0.1:11435:11434" # http://localhost:11434/ to diagnose ollama
     volumes:
       - ./ollama:/root/.ollama
     environment:

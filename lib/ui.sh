@@ -27,10 +27,11 @@ NC='\033[0m' # No Color
 
 # Log func to filter outputs based on global verbosity
 log() {
-    log_lvl=$1; shift
+    log_lvl=$1
+    shift
 
     [ ${verbosity:-2} -lt $log_lvl ] && return 0
-    
+
     if [ $log_lvl -eq 1 ]; then
         printf "%b\n" "$*" >&2
     else
@@ -42,12 +43,12 @@ log() {
 # These call log() internally so you don't have to remember the numbers.
 wrap_text() {
     wrptxt_text="$1"
-    wrptxt_prefix_width=0  # Extra space reserved for the prefix (e.g., "[INFO]    ")
-    wrptxt_wrap_indent="${2:-10}"    # How far in the continued lines should start
+    wrptxt_prefix_width=0         # Extra space reserved for the prefix (e.g., "[INFO]    ")
+    wrptxt_wrap_indent="${2:-10}" # How far in the continued lines should start
 
     # Wrap the text to the available width (total 75 minus prefix space)
-    printf "%s" "$wrptxt_text" | fold -w "$((term_max_width - wrptxt_prefix_width))" | \
-    awk -v pw="$wrptxt_prefix_width" -v iw="$wrptxt_wrap_indent" '
+    printf "%s" "$wrptxt_text" | fold -w "$((term_max_width - wrptxt_prefix_width))" |
+        awk -v pw="$wrptxt_prefix_width" -v iw="$wrptxt_wrap_indent" '
     {
         if (NR == 1) {
             printf "%*s%s\n", pw, "", $0
@@ -57,42 +58,48 @@ wrap_text() {
     }'
 }
 
-msg_error()   { log 1 "${RED}[ERROR]${NC}   $(wrap_text "$*")"; }
-msg_usage()   { log 2 "${YELLOW}[USAGE]${NC}   $(wrap_text "$*")"; }
-msg_warn()    { log 2 "${YELLOW}[WARN]${NC}    $(wrap_text "$*")"; }
-msg_info()    { log 2 "${BLUE}[INFO]${NC}    $(wrap_text "$*")"; }
+msg_error() { log 1 "${RED}[ERROR]${NC}   $(wrap_text "$*")"; }
+msg_usage() { log 2 "${YELLOW}[USAGE]${NC}   $(wrap_text "$*")"; }
+msg_warn() { log 2 "${YELLOW}[WARN]${NC}    $(wrap_text "$*")"; }
+msg_info() { log 2 "${BLUE}[INFO]${NC}    $(wrap_text "$*")"; }
 msg_success() { log 2 "${GREEN}[CHECK]${NC}   $(wrap_text "$*")"; }
-msg_debug()   { log 3 "${BOLD}[DEBUG]${NC}   $(wrap_text "$*")"; }
-msg_normal()  { log 2 "$(wrap_text "$*")"; }
+msg_debug() { log 3 "${BOLD}[DEBUG]${NC}   $(wrap_text "$*")"; }
+msg_normal() { log 2 "$(wrap_text "$*")"; }
 # msg_normal()  { log 2 "$(printf "%*s" $((10)) '')$(wrap_text "$*")"; }
 msg_header() {
     msghdr_color="$BOLD"
     # POSIX way to check for ANSI prefix
     case "$1" in
-        \\033*) msghdr_color="$1"; shift ;;
+    \\033*)
+        msghdr_color="$1"
+        shift
+        ;;
     esac
     log 2 " ${msghdr_color}== $* ==${NC}"
 }
 msg_title() {
     msgttl_term_width=$(tput cols 2>/dev/null || printf '%s' $term_width_fallback)
     [ "$msgttl_term_width" -gt $term_width_fallback ] && msgttl_term_width=$term_width_fallback
-    
+
     msgttl_color="$BOLD"
     case "$1" in
-        \\033*) msgttl_color="$1"; shift ;;
+    \\033*)
+        msgttl_color="$1"
+        shift
+        ;;
     esac
-    
+
     msgttl_text="$*"
     # Calc visible chars
     msgttl_visible_text=$(printf "%b" "$msgttl_text" | sed 's/\x1b\[[0-9;]*m//g')
     msgttl_text_length=${#msgttl_visible_text}
-    
-    msgttl_padding=$(( (msgttl_term_width - msgttl_text_length) / 2 ))
+
+    msgttl_padding=$(((msgttl_term_width - msgttl_text_length) / 2))
     [ "$msgttl_padding" -lt 0 ] && msgttl_padding=0
 
     log 2 "$(printf '%*s%b%b%b' "$msgttl_padding" '' "$msgttl_color" "$msgttl_text" "$NC")"
 }
-msg_blank()  { log 2 ""; }
+msg_blank() { log 2 ""; }
 msg_line() { # for lines that are terminal width
     msgline_term_width=$(tput cols 2>/dev/null || printf '%s' $term_width_fallback)
     [ "$msgline_term_width" -gt $term_max_width ] && msgline_term_width=$term_max_width
@@ -110,6 +117,6 @@ msg_col() {
     [ "$msgcol_diff" -lt 1 ] && msgcol_diff=1
 
     msgcol_spacer="$(printf '%*s' "$msgcol_diff" "")"
-    
+
     log 2 "$(wrap_text "${msgcol_left}${msgcol_spacer}${msgcol_right}" "$msgcol_padding")"
 }

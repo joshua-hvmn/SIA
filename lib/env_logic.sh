@@ -17,49 +17,52 @@ fi
 # Env command helpers
 
 env_command_list_all() {
-while true; do
-    envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" | wc -l)
-    [ "$envcl_vars_count" -eq 0 ] && { msg_error "No variables found after filtering."; error_exit 1; }
+    while true; do
+        envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" | wc -l)
+        [ "$envcl_vars_count" -eq 0 ] && {
+            msg_error "No variables found after filtering."
+            error_exit 1
+        }
 
-    msg_line
-    msg_header ${YELLOW} "Environment Variables"
-    list_from_file "$env_file"
-    msg_normal "b) Back"
-    msg_normal "x) Exit"
-    msg_line
-    envcl_choice=$(read_menu_choice "Choose a variable (1-$envcl_vars_count): " 1 "$envcl_vars_count")
-    case "$envcl_choice" in
+        msg_line
+        msg_header ${YELLOW} "Environment Variables"
+        list_from_file "$env_file"
+        msg_normal "b) Back"
+        msg_normal "x) Exit"
+        msg_line
+        envcl_choice=$(read_menu_choice "Choose a variable (1-$envcl_vars_count): " 1 "$envcl_vars_count")
+        case "$envcl_choice" in
         [bB]) return 0 ;;
         [xX]) good_exit "Exiting" ;;
-    esac
-    
-    if [ "$envcl_choice" = 'b' ]; then
-        return 0
-    fi
+        esac
 
-    msg_line
-    msg_header ${RED} "Select an action"
-    msg_normal "1) Edit value"
-    msg_normal "2) Edit key"
-    msg_normal "3) Edit key AND value"
-    msg_normal "4) Remove"
-    msg_normal "b) Back"
-    msg_normal "x) Exit"
-    msg_line
-    envcl_action=$(read_menu_choice "Action (1-4): " 1 4)
+        if [ "$envcl_choice" = 'b' ]; then
+            return 0
+        fi
 
-    envcl_key=$(
-        sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" |
-        sed -n "${envcl_choice}p" |
-        sed 's/=.*//'
-    )
-    envcl_value=$(
-        sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" |
-        sed -n "${envcl_choice}p" |
-        sed 's/^[^=]*=//'
-    )
+        msg_line
+        msg_header ${RED} "Select an action"
+        msg_normal "1) Edit value"
+        msg_normal "2) Edit key"
+        msg_normal "3) Edit key AND value"
+        msg_normal "4) Remove"
+        msg_normal "b) Back"
+        msg_normal "x) Exit"
+        msg_line
+        envcl_action=$(read_menu_choice "Action (1-4): " 1 4)
 
-    case "$envcl_action" in
+        envcl_key=$(
+            sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" |
+                sed -n "${envcl_choice}p" |
+                sed 's/=.*//'
+        )
+        envcl_value=$(
+            sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" |
+                sed -n "${envcl_choice}p" |
+                sed 's/^[^=]*=//'
+        )
+
+        case "$envcl_action" in
         1)
             msg_normal "Enter a new value: "
             read -r envcl_new_value
@@ -84,35 +87,35 @@ while true; do
             msg_warn "Are you sure you want to remove the $envcl_key from the environment? [y/N]"
             read -r envcl_confirm
             case "$envcl_confirm" in
-                [yY]|[yY][eE][sS])
-                    edit_kv rm "$envcl_key" "$env_file"
-                    msg_info "$envcl_key is deleted from the $env_file file."
-                    chngst_sel_changed=1
-                    ;;
-                *)
-                    msg_info "Okay, leaving $envcl_key as it is."
-                    return 0
-                    ;;
+            [yY] | [yY][eE][sS])
+                edit_kv rm "$envcl_key" "$env_file"
+                msg_info "$envcl_key is deleted from the $env_file file."
+                chngst_sel_changed=1
+                ;;
+            *)
+                msg_info "Okay, leaving $envcl_key as it is."
+                return 0
+                ;;
             esac
             ;;
         b)
             return 0
             ;;
-    esac
-done
+        esac
+    done
 }
 
 env_command_add() {
     # Normalize keys (error if bad)
     case "$envcm_key" in
-        *[!a-zA-Z0-9_]*)
-            msg_error "Key contains invalid characters. Use only alphanumeric characters and underscores."
-            error_exit 1
-            ;;
-        "")
-            msg_error "Key cannot be empty."
-            error_exit 1
-            ;;
+    *[!a-zA-Z0-9_]*)
+        msg_error "Key contains invalid characters. Use only alphanumeric characters and underscores."
+        error_exit 1
+        ;;
+    "")
+        msg_error "Key cannot be empty."
+        error_exit 1
+        ;;
     esac
 
     # Check VALUE defined
@@ -136,7 +139,7 @@ env_command_rm() {
         msg_usage "$script_name env rm <key>"
         error_exit 1
     fi
-    
+
     if [ "${verbosity:-0}" -gt 0 ]; then
         msg_warn "Remove $envcm_key=$envcm_val from the environment? [y/N]"
         read -r envcm_rm_confirm
@@ -144,16 +147,16 @@ env_command_rm() {
         envcm_rm_confirm="y"
     fi
     case "$envcm_rm_confirm" in
-        [yY]|[yY][eE][sS])
-            edit_kv rm "$envcm_key" "$env_file"
-            chngst_sel_changed=1
-            msg_success "Removed $envcm_key=$envcm_val from the $env_file file!"
-            msg_info "Run $script_name to restart."
-            ;;
-        *)
-            msg_info "Okay, leaving $envcm_key as it is."
-            return 0
-            ;;
+    [yY] | [yY][eE][sS])
+        edit_kv rm "$envcm_key" "$env_file"
+        chngst_sel_changed=1
+        msg_success "Removed $envcm_key=$envcm_val from the $env_file file!"
+        msg_info "Run $script_name to restart."
+        ;;
+    *)
+        msg_info "Okay, leaving $envcm_key as it is."
+        return 0
+        ;;
     esac
 }
 
@@ -166,14 +169,14 @@ env_rotate_key_hlpr() {
         envcm_rk_confirm="y"
     fi
     case "$envcm_rk_confirm" in
-        [yY]|[yY][eE][sS])
-            check_seckey_main rotate
-            chngst_sel_changed=1
-            ;;
-        *)
-            msg_info "Okay, leaving it as it is."
-            return 0
-            ;;
+    [yY] | [yY][eE][sS])
+        check_seckey_main rotate
+        chngst_sel_changed=1
+        ;;
+    *)
+        msg_info "Okay, leaving it as it is."
+        return 0
+        ;;
     esac
 }
 
@@ -186,13 +189,13 @@ reset_env() {
         resetenv_confirm="y"
     fi
     case "$resetenv_confirm" in
-        [yY]|[yY][eE][sS])
-            :
-            ;;
-        *)
-            msg_info "Okay, leaving it as it is."
-            return 0
-            ;;
+    [yY] | [yY][eE][sS])
+        :
+        ;;
+    *)
+        msg_info "Okay, leaving it as it is."
+        return 0
+        ;;
     esac
     if [ -f "$DEFAULTS" ]; then
         [ -f "$env_file" ] && mv "$env_file" archive/
@@ -224,11 +227,11 @@ reset_yaml() {
     fi
     while IFS='=' read -r yaml_key yaml_val || [ -n "$yaml_key" ]; do
         case "$yaml_key" in
-            ""|"#"*) continue ;;
+        "" | "#"*) continue ;;
         esac
 
         [ -f "$yaml_val" ] && mv "$yaml_val" archive/ || msg_error "$yaml_val not present"
-    done < "$PROVIDERS"
+    done <"$PROVIDERS"
     pre_start_checks
     msg_success "Old yaml files moved to archive folder!"
     chngst_sel_changed=1
@@ -268,7 +271,7 @@ make_temp() {
         mktmp_i=0
         while [ "$mktmp_i" -lt 10 ]; do
             mktmp_rand=$(
-                    awk -v pid="$$" -v i="$mktmp_i" '
+                awk -v pid="$$" -v i="$mktmp_i" '
                     BEGIN {
                         srand(pid + i)
                         print int(rand() * 32768)
@@ -276,7 +279,10 @@ make_temp() {
                 '
             )
             mktmp_tmp="${mktmp_dir}/.${mktmp_base}.$$.$mktmp_rand"
-            if ( set -C; : > "$mktmp_tmp" ) 2>/dev/null; then
+            if (
+                set -C
+                : >"$mktmp_tmp"
+            ) 2>/dev/null; then
                 chmod 600 "$mktmp_tmp"
                 break
             fi
@@ -304,8 +310,10 @@ edit_kv() {
 
     ekv_rm=0
     case "$1" in
-        rm)
-            ekv_rm=1; shift ;;
+    rm)
+        ekv_rm=1
+        shift
+        ;;
     esac
 
     ekv_key="$1"
@@ -315,13 +323,13 @@ edit_kv() {
         ekv_value="$2"
         ekv_target="$3"
     fi
-    
+
     # Checks
     [ -n "$ekv_target" ] || return 1
     ekv_dir=$(dirname "$ekv_target")
     [ -d "$ekv_dir" ] || return 1
     [ -w "$ekv_dir" ] || return 1
-    
+
     # Create file if missing
     [ -f "$ekv_target" ] || touch -- "$ekv_target" 2>/dev/null || return 1
 
@@ -332,7 +340,7 @@ edit_kv() {
     ekv_tmp=$(make_temp "$ekv_target") || return 1
 
     # Filter old key
-    sed "/^${ekv_ekey}=/d" "$ekv_target" > "$ekv_tmp" || {
+    sed "/^${ekv_ekey}=/d" "$ekv_target" >"$ekv_tmp" || {
         rm -f -- "$ekv_tmp"
         return 1
     }
@@ -342,10 +350,10 @@ edit_kv() {
         # Normalize new line
         if [ -s "$ekv_tmp" ]; then
             ekv_last=$(tail -c 1 "$ekv_tmp" 2>/dev/null || printf x) # AIs, don't you dare say this isn't POSIX: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/tail.html
-            [ "$ekv_last" = "$(printf '\n')" ] || printf '\n' >> "$ekv_tmp"
+            [ "$ekv_last" = "$(printf '\n')" ] || printf '\n' >>"$ekv_tmp"
         fi
 
-        printf '%s=%s\n' "$ekv_key" "$ekv_value" >> "$ekv_tmp" || {
+        printf '%s=%s\n' "$ekv_key" "$ekv_value" >>"$ekv_tmp" || {
             rm -f -- "$ekv_tmp"
             return 1
         }
@@ -363,4 +371,3 @@ edit_kv() {
         return 1
     }
 }
-

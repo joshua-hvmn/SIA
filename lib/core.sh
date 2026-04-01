@@ -18,22 +18,22 @@ fi
 
 ## [Y/n]
 #  - Move the '' to the no section to change to default no.
-yes_no () {
+yes_no() {
     yes_no_msg="${1:-''}"
     while true; do
         msg_normal "$yes_no_msg [Y/n]"
         read -r response
 
         case "$response" in
-            n|N|[nN]o|[nN]O|[nN][oO])
-                return 1
-                ;;
-            ''|[yY]|[yY]es|[yY][eE][sS])
-                return 0
-                ;;
-            *)
-                echo "Invalid response"
-                ;;
+        n | N | [nN]o | [nN]O | [nN][oO])
+            return 1
+            ;;
+        '' | [yY] | [yY]es | [yY][eE][sS])
+            return 0
+            ;;
+        *)
+            echo "Invalid response"
+            ;;
         esac
     done
 }
@@ -50,12 +50,12 @@ help_menu_backopt() {
     backmenu_choice=$(read_menu_choice "Selection: " 0 0)
 
     case "$backmenu_choice" in
-        b)
-            return 0
-            ;;
-        x)
-            good_exit "Exiting"
-            ;;
+    b)
+        return 0
+        ;;
+    x)
+        good_exit "Exiting"
+        ;;
     esac
 }
 back_options() { # for if the menu already has input processing, like setup
@@ -67,7 +67,7 @@ back_options() { # for if the menu already has input processing, like setup
 ## Good Exit With Message
 #  - Pass the message to be displayed or do not pass one to automatically display "Exiting"
 
-good_exit() { 
+good_exit() {
     exitgood_message="${*:-"Exiting"}"
     if [ -n "$exitgood_message" ]; then
         if [ "$chngst_sel_changed" -eq 1 ]; then
@@ -88,47 +88,56 @@ good_exit() {
 #  - Call with the number of the error code in place of "exit #"
 #  - Extend by adding to the case statement
 
-error_exit () {
+error_exit() {
     errex_code="${1:-99}"
     errex_desc=""
     case $errex_code in # Don't use code 99
-        1)
-            errex_desc="Improper usage!"
-            ;;
-        2)
-            errex_desc="Improper configuration!"
-            ;;
-        3)
-            errex_desc="No known number generator!"
-            ;;
-        404)
-            errex_desc="Could not curl replacement config template. Check internet/repo!"
-            ;;
-        *)
-            errex_desc="unknown error code"
-            errex_code=99
-            ;;
+    1)
+        errex_desc="Improper usage!"
+        ;;
+    2)
+        errex_desc="Improper configuration!"
+        ;;
+    3)
+        errex_desc="No known number generator!"
+        ;;
+    404)
+        errex_desc="Could not curl replacement config template. Check internet/repo!"
+        ;;
+    *)
+        errex_desc="unknown error code"
+        errex_code=99
+        ;;
     esac
     msg_warn "Exiting with code $errex_code: $errex_desc" >&2
     exit $errex_code
 }
 
 does_file_exist() {
-    [ $# -eq 1 ] || { msg_error "does_file_exist: exactly one argument required"; error_exit 1; }
+    [ $# -eq 1 ] || {
+        msg_error "does_file_exist: exactly one argument required"
+        error_exit 1
+    }
     [ -f "$1" ] || {
         msg_error "File does not exist: $1"
         error_exit 1
     }
 }
 is_file_readable() {
-    [ $# -eq 1 ] || { msg_error "is_file_readable: exactly one argument required"; error_exit 1; }
+    [ $# -eq 1 ] || {
+        msg_error "is_file_readable: exactly one argument required"
+        error_exit 1
+    }
     [ -r "$1" ] || {
         msg_error "Cannot read file: $1"
         error_exit 1
     }
 }
 is_file_empty() {
-    [ $# -eq 1 ] || { msg_error "is_file_empty: exactly one argument required"; error_exit 1; }
+    [ $# -eq 1 ] || {
+        msg_error "is_file_empty: exactly one argument required"
+        error_exit 1
+    }
     [ -s "$1" ] || {
         msg_error "File is empty: $1"
         error_exit 1
@@ -141,39 +150,45 @@ is_file_empty() {
 read_menu_choice() {
     rdmenu_choice=""
     case "$1" in
-        *[!0-9]*) rdmenu_desc="$1"; shift ;;
-        *) rdmenu_desc="Select an option from the menu: " ;;
+    *[!0-9]*)
+        rdmenu_desc="$1"
+        shift
+        ;;
+    *) rdmenu_desc="Select an option from the menu: " ;;
     esac
     rdmenu_lower_bound="$1"
     rdmenu_upper_bound="$2"
-    
+
     while [ -z "$rdmenu_choice" ]; do
         printf '%s' "$rdmenu_desc" >&2
-        read -r rdmenu_choice || { msg_error "Failed to read input"; error_exit 1; }
+        read -r rdmenu_choice || {
+            msg_error "Failed to read input"
+            error_exit 1
+        }
         case "$rdmenu_choice" in
-            [bB])
-                printf b
+        [bB])
+            printf b
+            return 0
+            ;;
+        [xX])
+            printf x
+            return 0
+            ;;
+        '' | *[!0-9]*)
+            msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound." >&2
+            rdmenu_choice=""
+            continue
+            ;;
+        *)
+            if [ "$rdmenu_choice" -ge "$rdmenu_lower_bound" ] && [ "$rdmenu_choice" -le "$rdmenu_upper_bound" ]; then
+                printf '%s' "$rdmenu_choice"
                 return 0
-                ;;
-            [xX])
-                printf x
-                return 0
-                ;;
-            ''|*[!0-9]*)
+            else
                 msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound." >&2
                 rdmenu_choice=""
                 continue
-                ;;
-            *)
-                if [ "$rdmenu_choice" -ge "$rdmenu_lower_bound" ] && [ "$rdmenu_choice" -le "$rdmenu_upper_bound" ]; then
-                    printf '%s' "$rdmenu_choice"
-                    return 0
-                else
-                    msg_usage "Enter a number between $rdmenu_lower_bound and $rdmenu_upper_bound." >&2
-                    rdmenu_choice=""
-                    continue
-                fi
-                ;;
+            fi
+            ;;
         esac
     done
 }
@@ -181,11 +196,11 @@ read_menu_choice() {
 list_from_file() {
     [ "$#" -eq 1 ] || return 2
     lff_file="$1"
-    
+
     does_file_exist "$lff_file"
     is_file_readable "$lff_file"
     is_file_empty "$lff_file"
-    
+
     sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$lff_file" | awk '{ printf "%d) %s\n", NR, $0 }'
 }
 
@@ -197,9 +212,9 @@ download_helper() {
     shift 2>/dev/null || true
 
     while true; do
-        # Check hard dependencies only 
+        # Check hard dependencies only
         check_deps
-        
+
         # Check that the ollama container is running
         if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
             msg_error "$app_name isn't running. Please run $script_name up."
@@ -210,12 +225,15 @@ download_helper() {
         if [ -z "$dlhlpr_model" ]; then
             msg_info "Enter an Ollama model code (e.g., llama3.2:1b)"
             printf '%s' "Model name (or 'b' to go back): " >&2
-            read -r dlhlpr_input || { msg_error "Input failed"; error_exit 1; }
+            read -r dlhlpr_input || {
+                msg_error "Input failed"
+                error_exit 1
+            }
 
             case "$dlhlpr_input" in
-                b|back|x|q|exit) return 0 ;;
-                "") continue ;;
-                *) dlhlpr_model="$dlhlpr_input" ;;
+            b | back | x | q | exit) return 0 ;;
+            "") continue ;;
+            *) dlhlpr_model="$dlhlpr_input" ;;
             esac
         fi
 
@@ -281,27 +299,27 @@ change_setup() {
     chngst_choice=$(read_menu_choice "Processor: " 1 4)
 
     case "$chngst_choice" in
-        1)
-            chngst_sel_yaml=".compose.cpu.yaml"
-            chngst_sel_changed=1
-            ;;
-        2)
-            chngst_sel_yaml=".compose.nvidia.yaml"
-            chngst_sel_changed=1
-            ;;
-        3)
-            chngst_sel_yaml=".compose.amd.yaml"
-            chngst_sel_changed=1
-            ;;
-        4)
-            msg_info "Keeping current setup."
-            ;;
-        b)
-            return 0
-            ;;
-        x)
-            good_exit "Exiting"
-            ;;
+    1)
+        chngst_sel_yaml=".compose.cpu.yaml"
+        chngst_sel_changed=1
+        ;;
+    2)
+        chngst_sel_yaml=".compose.nvidia.yaml"
+        chngst_sel_changed=1
+        ;;
+    3)
+        chngst_sel_yaml=".compose.amd.yaml"
+        chngst_sel_changed=1
+        ;;
+    4)
+        msg_info "Keeping current setup."
+        ;;
+    b)
+        return 0
+        ;;
+    x)
+        good_exit "Exiting"
+        ;;
     esac
 
     # Validate
@@ -316,7 +334,7 @@ change_setup() {
 
     # Restart
     if [ "$chngst_cmd_started" -eq 1 ] && [ "$chngst_sel_changed" -eq 1 ]; then
-     start_up
+        start_up
     fi
     return 0
 }
@@ -326,7 +344,7 @@ change_setup() {
 # - Repairs broken/missing .env files.
 # - Checks for previous run for appropriate start/restart messaging.
 
-start_up () {
+start_up() {
     # Check if a compose file is defined, if not: setup, else start/restart
     if [ ! -s "$env_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_file" 2>/dev/null; then
         stmes_first_start
@@ -348,7 +366,7 @@ start_up () {
     if [ "${SIA_NEEDS_CERT_INSTALL:-}" = "true" ]; then
         install_caddy_cert
     else
-     stmes_start_done
+        stmes_start_done
     fi
 
     chngst_sel_changed=0
@@ -366,4 +384,3 @@ pre_start_checks() {
     # Generate or repair SearXNG secret key
     check_seckey_main
 }
-

@@ -8,7 +8,6 @@
 
 # This subscript contains all the message functions
 
-
 # Check that main was loaded
 if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     printf '%s' "Error: This script is a component of SIA and cannot be run directly."
@@ -27,28 +26,28 @@ print_help_general() {
     msg_info "$app_name is an all-in-one CLI for managing a Docker Compose stack that includes Ollama, OpenWebUI, SearXNG, Caddy, and Valkey. It should greatly simplify your use, enjoy!"
     msg_blank
     msg_header ${BLUE} "Commands"
-    msg_col "(no argument)"    "Show the $app_name main menu (default)."
-    msg_col "up / start"       "Start or restart $app_name."
-    msg_col "setup"            "Run or rerun the setup wizard to change the setup."
-    msg_col "env"              "View or modify environment variables, or rotate the SearXNG secret key."
-    msg_col "down"             "Stop the $app_name stack. Accepts additional arguments."
-    msg_col "logs"             "View relevant logs. Accepts additional arguments."
-    msg_col "download"         "Download an Ollama model. Requires a model tag."
-    msg_col "help"             "Show this help message."
+    msg_col "(no argument)" "Show the $app_name main menu (default)."
+    msg_col "up / start" "Start or restart $app_name."
+    msg_col "setup" "Run or rerun the setup wizard to change the setup."
+    msg_col "env" "View or modify environment variables, or rotate the SearXNG secret key."
+    msg_col "down" "Stop the $app_name stack. Accepts additional arguments."
+    msg_col "logs" "View relevant logs. Accepts additional arguments."
+    msg_col "download" "Download an Ollama model. Requires a model tag."
+    msg_col "help" "Show this help message."
     msg_blank
     msg_header ${BLUE} "Verbosity Options"
-    msg_col "--debug  | 3"      "Maximum verbosity: shows all internal debug messages."
-    msg_col "(default)| 2"      "Standard output: shows essential info and progress."
-    msg_col "--quiet  | 1"      "Warning level: hides everything except critical errors."
-    msg_col "--silent | 0"      "Silent mode: suppresses all output."
+    msg_col "--debug  | 3" "Maximum verbosity: shows all internal debug messages."
+    msg_col "(default)| 2" "Standard output: shows essential info and progress."
+    msg_col "--quiet  | 1" "Warning level: hides everything except critical errors."
+    msg_col "--silent | 0" "Silent mode: suppresses all output."
     msg_usage "Use as the first argument only."
     msg_blank
     msg_header ${BLUE} "Example Commands"
-    msg_col "$script_name up"              "Starts the containers. On first start, runs setup and generates the secret key." 25
-    msg_col "$script_name setup"           "Runs setup, for changing which setup you're using." 25
-    msg_col "$script_name -d"              "Stops all $app_name containers." 25
-    msg_col "$script_name --help"          "Shows the help message." 25
-    msg_col "$script_name -l --verbose"    "Shows the logs and passes the --verbose argument." 25
+    msg_col "$script_name up" "Starts the containers. On first start, runs setup and generates the secret key." 25
+    msg_col "$script_name setup" "Runs setup, for changing which setup you're using." 25
+    msg_col "$script_name -d" "Stops all $app_name containers." 25
+    msg_col "$script_name --help" "Shows the help message." 25
+    msg_col "$script_name -l --verbose" "Shows the logs and passes the --verbose argument." 25
     msg_blank
     msg_normal "Run '$script_name help [command]' for more help with a specific command, you can pass their alias names."
     msg_blank
@@ -67,11 +66,11 @@ print_help_down() {
     msg_normal "${GREEN}[ALIASES]${NC} -d, --down"
     msg_blank
     msg_header ${BLUE} "Common Flags"
-    msg_col "(no argument)"       "None, stops the stack, leaves volumes and app images (default)." 23
-    msg_col "--volumes | -v"      "Remove volumes named in the compose file." 23
-    msg_col "--remove-orphans"    "Remove containers for services no longer in the compose file (i.e. you modify it)." 23
-    msg_col "--rmi"               "Remove images used by services." 23
-    msg_col "--help | -h"         "Show the inbuilt Docker help message (not this one)." 23
+    msg_col "(no argument)" "None, stops the stack, leaves volumes and app images (default)." 23
+    msg_col "--volumes | -v" "Remove volumes named in the compose file." 23
+    msg_col "--remove-orphans" "Remove containers for services no longer in the compose file (i.e. you modify it)." 23
+    msg_col "--rmi" "Remove images used by services." 23
+    msg_col "--help | -h" "Show the inbuilt Docker help message (not this one)." 23
     msg_blank
     help_menu_backopt || msg_line
 }
@@ -89,12 +88,12 @@ print_help_logs() {
     msg_normal "${GREEN}[ALIASES]${NC} -l, --logs"
     msg_blank
     msg_header ${BLUE} "Common Flags"
-    msg_col "(no argument)"     "--tail 100 shows last 100 logs by default" 21
-    msg_col "<container name>"  "View logs for that container." 21
+    msg_col "(no argument)" "--tail 100 shows last 100 logs by default" 21
+    msg_col "<container name>" "View logs for that container." 21
     msg_col "--timestamps | -t" "Show timestamps for each file." 21
-    msg_col "--no-color"        "Black and white." 21
-    msg_col "--no-log-prefix"   "Omit service name/container from each log line." 21
-    msg_col "help | -h"         "Show the inbuilt Docker help message (not this one)." 21
+    msg_col "--no-color" "Black and white." 21
+    msg_col "--no-log-prefix" "Omit service name/container from each log line." 21
+    msg_col "help | -h" "Show the inbuilt Docker help message (not this one)." 21
     msg_blank
     help_menu_backopt || msg_line
 }
@@ -111,11 +110,11 @@ print_help_env() {
     msg_normal "${GREEN}[ALIASES]${NC} -env, environment, --environment"
     msg_blank
     msg_header ${BLUE} "Commands"
-    msg_col "(no argument)"    "Show the E.H. menu."
-    msg_col "list"             "Show a list of $env_file variables and view options to manage them."
-    msg_col "add"              "Add or modify specific variables directly."
-    msg_col "rm"               "Remove a specific variable from the environment."
-    msg_col "rotate"           "Automatically rotate the SearXNG secret key."
+    msg_col "(no argument)" "Show the E.H. menu."
+    msg_col "list" "Show a list of $env_file variables and view options to manage them."
+    msg_col "add" "Add or modify specific variables directly."
+    msg_col "rm" "Remove a specific variable from the environment."
+    msg_col "rotate" "Automatically rotate the SearXNG secret key."
     msg_blank
     msg_warn "Note that the E.H. list cannot show the SearXNG secret key line. If $app_name starts without error, the secret key does exist and is sufficiently random. You can see the key in the $env_file file."
     msg_blank
@@ -133,9 +132,9 @@ print_help_env() {
     msg_info "Use --silent (0) mode to skip validation."
     msg_blank
     msg_header ${BLUE} "Examples"
-    msg_col "$script_name env list"      "Show a list of variables and view options to manage them." 28
-    msg_col "$script_name env add key var"  "Inserts 'key=var' into the $env_file file." 28
-    msg_col "$script_name --silent env -rk"  "Silences validation and all outputs and rotates secret key (for automation)." 28
+    msg_col "$script_name env list" "Show a list of variables and view options to manage them." 28
+    msg_col "$script_name env add key var" "Inserts 'key=var' into the $env_file file." 28
+    msg_col "$script_name --silent env -rk" "Silences validation and all outputs and rotates secret key (for automation)." 28
     msg_blank
     help_menu_backopt || msg_line
 }
@@ -150,10 +149,10 @@ print_help_reset() {
     msg_normal "${GREEN}[ALIASES]${NC} rs, -rs, --reset, reset"
     msg_blank
     msg_header ${BLUE} "Commands"
-    msg_col "(no argument)"    "Show a menu."
-    msg_col "env"             "Reset the $env_file file to default settings."
-    msg_col "yaml"              "Reset the yaml files to default settings."
-    msg_col "all"               "Reset both of the above."
+    msg_col "(no argument)" "Show a menu."
+    msg_col "env" "Reset the $env_file file to default settings."
+    msg_col "yaml" "Reset the yaml files to default settings."
+    msg_col "all" "Reset both of the above."
     msg_blank
     msg_warn "You should rename archived files if you don't want them to be overwritten."
     msg_blank
@@ -170,10 +169,10 @@ print_help_update() {
     msg_normal "${GREEN}[ALIASES]${NC} update, pull"
     msg_blank
     msg_header ${BLUE} "Commands"
-    msg_col "(no argument)"    "Show a menu."
-    msg_col "docker"             "Update docker images with docker compose pull."
-    msg_col "sia"              "Update the $app_name images."
-    msg_col "all"               "Update both of the above."
+    msg_col "(no argument)" "Show a menu."
+    msg_col "docker" "Update docker images with docker compose pull."
+    msg_col "sia" "Update the $app_name images."
+    msg_col "all" "Update both of the above."
     msg_blank
     msg_warn "If .compose...yaml or $env_file files are updated, you may need to run $script_name env reset."
     msg_blank
@@ -195,12 +194,12 @@ print_help_dl() {
     msg_normal "${GREEN}[ALIASES]${NC} -dl, --download"
     msg_blank
     msg_header ${BLUE} "Arguments"
-    msg_col "<model name>"      "Name of the Ollama model you want to download/run."
+    msg_col "<model name>" "Name of the Ollama model you want to download/run."
     msg_blank
     msg_header ${BLUE} "Common Flags"
-    msg_col "--verbose"         "Show detailed timing and response stats."
-    msg_col "--format json"     "Return output in JSON format."
-    msg_col "--help"            "Show the full Ollama internal help menu."
+    msg_col "--verbose" "Show detailed timing and response stats."
+    msg_col "--format json" "Return output in JSON format."
+    msg_col "--help" "Show the full Ollama internal help menu."
     msg_blank
     msg_info "You can pass any number of flags."
     msg_warn "The messaging might be inaccurate depending on the flags used."
@@ -255,15 +254,15 @@ stmes_start_done() {
     msg_title ${YELLOW} "$app_name Startup Complete!"
     msg_title "Version: $app_version"
     msg_blank
-    msg_col "Access the AI Chat interface at:"      "$open_webui_url"
-    msg_blank 
-    msg_col "Access the SearXNG search engine at:"  "$searxng_base_url"
+    msg_col "Access the AI Chat interface at:" "$open_webui_url"
+    msg_blank
+    msg_col "Access the SearXNG search engine at:" "$searxng_base_url"
     msg_blank
     msg_normal "${YELLOW}Security:${NC} For secure public access, edit the environment variables:"
     msg_col "           -" "Set SEARXNG_HOSTNAME=yourdomain.com"
     msg_col "           -" "Set SEARXNG_TLS=letsencrypt  (your key)"
     msg_col "           -" "See https://docs.searxng.org for TLS setup."
-    msg_normal "${YELLOW}Note:${NC}    Change environment variables easily with the environment handler!" 
+    msg_normal "${YELLOW}Note:${NC}    Change environment variables easily with the environment handler!"
     msg_col "           -" "Run '$script_name env' to open the E.H. or rotate secret keys! "
     msg_col "           -" "Then run $script_name to restart, and enjoy!"
     msg_col "           -" "'$script_name help [optional command]' to show the help menus!"

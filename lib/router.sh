@@ -26,52 +26,52 @@ update_menu() {
         back_options
         msg_normal "x) Exit"
         msg_line
-        
-        
+
         updatemenu_opt=$(read_menu_choice "What would you like to update: " 1 3)
-        
+
         case "$updatemenu_opt" in
-            1)
-                update_docker_images
-                ;;
-            2)
-                update_sia
-                ;;
-            3)
-                update_sia
-                update_docker_images
-                ;;
-            b)
-                return 0
-                ;;
-            x)
-                good_exit "Exiting"
-                ;;
-            *) 
-                msg_error "Invalid selection: $updatemenu_opt" ;;
+        1)
+            update_docker_images
+            ;;
+        2)
+            update_sia
+            ;;
+        3)
+            update_sia
+            update_docker_images
+            ;;
+        b)
+            return 0
+            ;;
+        x)
+            good_exit "Exiting"
+            ;;
+        *)
+            msg_error "Invalid selection: $updatemenu_opt"
+            ;;
         esac
     done
 }
 ## command processor
-update_cmd_parser () {
+update_cmd_parser() {
     updtprs_cmd="${1:-menu}"
     case $updtprs_cmd in
-        menu|-m|--menu)
-            update_menu
-            ;;
-        sia)
-            update_sia
-            ;;
-        docker)
-            update_docker_images
-            ;;
-        all)
-            update_sia
-            update_docker_images
-            ;;
-        *)
-            msg_error "Unknown command: $updtprs_cmd"
-            ;;
+    menu | -m | --menu)
+        update_menu
+        ;;
+    sia)
+        update_sia
+        ;;
+    docker)
+        update_docker_images
+        ;;
+    all)
+        update_sia
+        update_docker_images
+        ;;
+    *)
+        msg_error "Unknown command: $updtprs_cmd"
+        ;;
     esac
 }
 
@@ -83,31 +83,31 @@ update_cmd_parser () {
 #  - ./sia env rotate: to rotate key
 #  - ./sia --silent env rotate: rotate key and skip confirmation
 
-envCommand () {
+envCommand() {
     envcm_cmd="${1:-menu}"
     envcm_key="${2:-}"
     envcm_val="${3:-}"
     case $envcm_cmd in
-        menu|-m|--menu)
-            env_menu
-            ;;
-        list|-l|--list)
-            # envCommandListEdit envVars
-            env_command_list_all
-            ;;
-        add|-a|--add)
-            # Make sure args defined
-            env_command_add
-            ;;
-        rm|-rm|--remove|remove)
-            env_command_rm
-            ;;
-        rk|-rk|--rotate|rotate)
-            env_rotate_key_hlpr
-            ;;
-        rs|-rs|--reset|reset)
-            reset_parser
-            ;;
+    menu | -m | --menu)
+        env_menu
+        ;;
+    list | -l | --list)
+        # envCommandListEdit envVars
+        env_command_list_all
+        ;;
+    add | -a | --add)
+        # Make sure args defined
+        env_command_add
+        ;;
+    rm | -rm | --remove | remove)
+        env_command_rm
+        ;;
+    rk | -rk | --rotate | rotate)
+        env_rotate_key_hlpr
+        ;;
+    rs | -rs | --reset | reset)
+        reset_parser
+        ;;
     esac
 }
 
@@ -122,34 +122,34 @@ env_list_menu() {
         msg_normal "b) Back"
         msg_normal "x) Exit"
         msg_line
-        
-        
+
         envlsmenu_opt=$(read_menu_choice "Selection: " 1 3)
-        
+
         case "$envlsmenu_opt" in
-            1)
-                env_command_list_all
-                ;;
-            2)
-                msg_normal "Enter a new key: "
-                read -r envclmenu_new_key
-                msg_normal "Enter a new value: "
-                read -r envclmenu_new_value
-                envCommand add "$envclmenu_new_key" "$envclmenu_new_value"
-                ;;
-            3)
-                msg_normal "Enter the key you want to remove: "
-                read -r envclmenu_rm_key
-                envCommand rm "$envclmenu_rm_key"
-                ;;
-            b)
-                return 0
-                ;;
-            x)
-                good_exit "Exiting"
-                ;;
-            *) 
-                msg_error "Invalid selection: $envlsmenu_opt" ;;
+        1)
+            env_command_list_all
+            ;;
+        2)
+            msg_normal "Enter a new key: "
+            read -r envclmenu_new_key
+            msg_normal "Enter a new value: "
+            read -r envclmenu_new_value
+            envCommand add "$envclmenu_new_key" "$envclmenu_new_value"
+            ;;
+        3)
+            msg_normal "Enter the key you want to remove: "
+            read -r envclmenu_rm_key
+            envCommand rm "$envclmenu_rm_key"
+            ;;
+        b)
+            return 0
+            ;;
+        x)
+            good_exit "Exiting"
+            ;;
+        *)
+            msg_error "Invalid selection: $envlsmenu_opt"
+            ;;
         esac
     done
 }
@@ -158,22 +158,22 @@ env_list_menu() {
 reset_parser() {
     resetps_cmd="${envcm_key:-menu}"
     case $resetps_cmd in
-        menu|-m|--menu)
-            reset_menu
-            ;;
-        env)
-            reset_env
-            ;;
-        yaml|compose)
-            reset_yaml
-            ;;
-        -a|all)
-            reset_env
-            reset_yaml
-            ;;
-        *)
-            msg_error "Unknown command: $resetps_cmd"
-            ;;
+    menu | -m | --menu)
+        reset_menu
+        ;;
+    env)
+        reset_env
+        ;;
+    yaml | compose)
+        reset_yaml
+        ;;
+    -a | all)
+        reset_env
+        reset_yaml
+        ;;
+    *)
+        msg_error "Unknown command: $resetps_cmd"
+        ;;
     esac
 }
 
@@ -188,29 +188,29 @@ reset_menu() {
         back_options
         msg_normal "x) Exit"
         msg_line
-        
-        
+
         resetmenu_opt=$(read_menu_choice "What would you like to reset: " 1 3)
-        
+
         case "$resetmenu_opt" in
-            1)
-                reset_env
-                ;;
-            2)
-                reset_yaml
-                ;;
-            3)
-                reset_env
-                reset_yaml
-                ;;
-            b)
-                return 0
-                ;;
-            x)
-                good_exit "Exiting"
-                ;;
-            *) 
-                msg_error "Invalid selection: $resetmenu_opt" ;;
+        1)
+            reset_env
+            ;;
+        2)
+            reset_yaml
+            ;;
+        3)
+            reset_env
+            reset_yaml
+            ;;
+        b)
+            return 0
+            ;;
+        x)
+            good_exit "Exiting"
+            ;;
+        *)
+            msg_error "Invalid selection: $resetmenu_opt"
+            ;;
         esac
     done
 }
@@ -226,29 +226,29 @@ env_menu() {
         msg_normal "b) Back"
         msg_normal "x) Exit"
         msg_line
-        
-        
+
         envmenu_opt=$(read_menu_choice "Selection: " 1 3)
-        
+
         case "$envmenu_opt" in
-            1)
-                env_list_menu
-                ;;
-            2)
-                env_rotate_key_hlpr
-                ;;
-            3)
-                reset_menu
-                ;;
-            b)
-                return 0
-                ;;
-            x)
-                [ "$chngst_sel_changed" -eq 1 ] && pre_start_checks && start_up
-                good_exit "Exiting"
-                ;;
-            *) 
-                msg_error "Invalid selection: $envmenu_opt" ;;
+        1)
+            env_list_menu
+            ;;
+        2)
+            env_rotate_key_hlpr
+            ;;
+        3)
+            reset_menu
+            ;;
+        b)
+            return 0
+            ;;
+        x)
+            [ "$chngst_sel_changed" -eq 1 ] && pre_start_checks && start_up
+            good_exit "Exiting"
+            ;;
+        *)
+            msg_error "Invalid selection: $envmenu_opt"
+            ;;
         esac
     done
 }
@@ -263,36 +263,37 @@ env_menu() {
 #  - Follow the extension instructions above the help menu dispatcher
 
 # command processor
-print_usage () {
+print_usage() {
     prnthlp_arg="${1:-general}"
     mainmenu_run=0
     case "$prnthlp_arg" in
-        down|-d|--down)
-            print_help_down
-            ;;
-        logs|-l|--logs)
-            print_help_logs
-            ;;
-        setup|-su|--setup)
-            print_help_setup
-            ;;
-        download|-dl|--download)
-            print_help_dl
-            ;;
-        env|environment|-env|--environment)
-            print_help_env
-            ;;
-        general)
-            print_help_general
-            ;;
-        start|up|--start|-st)
-            print_help_start
-            ;;
-        rs|-rs|--reset|reset)
-            print_help_reset
-            ;;
-        update|pull)
-            print_help_update
+    down | -d | --down)
+        print_help_down
+        ;;
+    logs | -l | --logs)
+        print_help_logs
+        ;;
+    setup | -su | --setup)
+        print_help_setup
+        ;;
+    download | -dl | --download)
+        print_help_dl
+        ;;
+    env | environment | -env | --environment)
+        print_help_env
+        ;;
+    general)
+        print_help_general
+        ;;
+    start | up | --start | -st)
+        print_help_start
+        ;;
+    rs | -rs | --reset | reset)
+        print_help_reset
+        ;;
+    update | pull)
+        print_help_update
+        ;;
     esac
 }
 
@@ -323,49 +324,49 @@ help_menu_dispatcher() {
         msg_normal "b) Back"
         msg_normal "x) Exit"
         msg_line
-        
+
         helpmenu_opt=$(read_menu_choice "Selection: " 1 9)
-        
+
         case "$helpmenu_opt" in
-            1)
-                print_help_general
-                ;;
-            2)
-                print_help_setup
-                ;;
-            3)
-                print_help_env
-                ;;
-            4)
-                print_help_reset
-                ;;
-            5)
-                print_help_dl
-                ;;
-            6)
-                print_help_down
-                ;;
-            7)
-                print_help_update
-                ;;
-            8)
-                print_help_start
-                ;;
-            9)
-                print_help_logs
-                ;;
-            b)
-                return 0
-                ;;
-            x)
-                good_exit "Exiting"
-                ;;
-            *) 
-                msg_error "Invalid selection" ;;
+        1)
+            print_help_general
+            ;;
+        2)
+            print_help_setup
+            ;;
+        3)
+            print_help_env
+            ;;
+        4)
+            print_help_reset
+            ;;
+        5)
+            print_help_dl
+            ;;
+        6)
+            print_help_down
+            ;;
+        7)
+            print_help_update
+            ;;
+        8)
+            print_help_start
+            ;;
+        9)
+            print_help_logs
+            ;;
+        b)
+            return 0
+            ;;
+        x)
+            good_exit "Exiting"
+            ;;
+        *)
+            msg_error "Invalid selection"
+            ;;
         esac
     done
 }
-
 
 # Main Command and Menu processing
 main_menu() {
@@ -383,57 +384,58 @@ main_menu() {
         msg_normal "8) View the help menus"
         msg_normal "x) Exit (or 'b')"
         msg_line
-        
+
         mainmenu_opt=$(read_menu_choice "Selection: " 1 8)
-        
+
         case "$mainmenu_opt" in
-            1)
-                msg_info "$app_name validating configuration..."
-                # Check environment and dependencies
+        1)
+            msg_info "$app_name validating configuration..."
+            # Check environment and dependencies
+            pre_start_checks
+            # Start and run setup if needed
+            start_up
+            return 0
+            ;;
+        2)
+            # Check environment and dependencies
+            pre_start_checks
+            # Run setup and then start
+            change_setup 0
+            ;;
+        3)
+            env_menu
+            ;;
+        4)
+            download_helper
+            ;;
+        5)
+            down_helper
+            ;;
+        6)
+            check_deps
+            check_files
+            update_cmd_parser
+            ;;
+        7)
+            logs_helper
+            exit 0
+            ;;
+        8)
+            help_menu_dispatcher
+            ;;
+        b | x)
+            if [ "$chngst_sel_changed" -eq 1 ]; then
+                msg_info "Exiting and restarting $app_name."
                 pre_start_checks
-                # Start and run setup if needed
                 start_up
-                return 0
-                ;;
-            2)
-                # Check environment and dependencies
-                pre_start_checks
-                # Run setup and then start
-                change_setup 0
-                ;;
-            3)
-                env_menu
-                ;;
-            4)
-                download_helper
-                ;;
-            5)
-                down_helper
-                ;;
-            6)
-                check_deps
-                check_files
-                update_cmd_parser
-                ;;
-            7)
-                logs_helper
                 exit 0
-                ;;
-            8)
-                help_menu_dispatcher
-                ;;
-            b|x)
-                if [ "$chngst_sel_changed" -eq 1 ]; then
-                    msg_info "Exiting and restarting $app_name."
-                    pre_start_checks
-                    start_up
-                    exit 0
-                else
-                    good_exit "Exiting." 
-                fi
-                ;;
-            *) 
-                msg_error "Invalid selection" ;;
+            else
+                good_exit "Exiting."
+            fi
+            ;;
+        *)
+            msg_error "Invalid selection"
+            ;;
         esac
     done
 }
@@ -441,47 +443,47 @@ main_menu() {
 process_commands() {
     mainmenu_run=0
     case "$first_arg" in
-        start|up|--start|-st)
-            msg_info "$app_name validating configuration..."
-            # Check environment and dependencies
-            pre_start_checks
-            # Start and run setup if needed
-            start_up
-            ;;
-        setup|-su|--setup)
-            # Check environment and dependencies
-            pre_start_checks
-            # Run setup and then start
-            change_setup 1
-            good_exit
-            ;;
-        help|-h|--help)
-            print_usage "$@"
-            ;;
-        down|-d|--down)
-            down_helper "$@"
-            ;;
-        logs|-l|--logs)
-            logs_helper "$@"
-            exit 0
-            ;;
-        download|-dl|--download)
-            download_helper "$@"
-            ;;
-        update|pull)
-            check_deps
-            check_files
-            update_cmd_parser "$@"
-            ;;
-        env|environment|-env|--environment)
-            # Check environment and dependencies
-            pre_start_checks
-            envCommand "$@"
-            ;;
-        *)
-            msg_error "Unknown command: $first_arg"
-            print_usage
-            error_exit 1
-            ;;
+    start | up | --start | -st)
+        msg_info "$app_name validating configuration..."
+        # Check environment and dependencies
+        pre_start_checks
+        # Start and run setup if needed
+        start_up
+        ;;
+    setup | -su | --setup)
+        # Check environment and dependencies
+        pre_start_checks
+        # Run setup and then start
+        change_setup 1
+        good_exit
+        ;;
+    help | -h | --help)
+        print_usage "$@"
+        ;;
+    down | -d | --down)
+        down_helper "$@"
+        ;;
+    logs | -l | --logs)
+        logs_helper "$@"
+        exit 0
+        ;;
+    download | -dl | --download)
+        download_helper "$@"
+        ;;
+    update | pull)
+        check_deps
+        check_files
+        update_cmd_parser "$@"
+        ;;
+    env | environment | -env | --environment)
+        # Check environment and dependencies
+        pre_start_checks
+        envCommand "$@"
+        ;;
+    *)
+        msg_error "Unknown command: $first_arg"
+        print_usage
+        error_exit 1
+        ;;
     esac
 }
