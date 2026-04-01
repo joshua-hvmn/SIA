@@ -7,19 +7,19 @@ general:
   contact_url: false
   enable_metrics: false
   enabled_plugins:
-    - 'Hash plugin'
-    - 'Self Information'
-    - 'Tracker URL remover'
-    - 'Ahmia blacklist'
-    - 'Open Access DOI rewrite'
-    - 'Hostnames plugin'
-    - 'Unit converter plugin'
-    - 'Basic Calculator'
+    - "Hash plugin"
+    - "Self Information"
+    - "Tracker URL remover"
+    - "Ahmia blacklist"
+    - "Open Access DOI rewrite"
+    - "Hostnames plugin"
+    - "Unit converter plugin"
+    - "Basic Calculator"
 
 server:
   # base_url is defined in the SEARXNG_BASE_URL environment variable, see .env and *.yaml
   secret_key: "${SEARXNG_SECRET}"
-  limiter: false  # enable this when running the instance for a public usage on the internet
+  limiter: false # enable this when running the instance for a public usage on the internet
   image_proxy: true
   bind_address: "0.0.0.0"
   port: 8080

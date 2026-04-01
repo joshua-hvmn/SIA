@@ -22,7 +22,7 @@ check_deps() {
             msg_error "$cmd not found"
             error_exit 2
         fi
-    done < "$DEPENDENCIES"
+    done <"$DEPENDENCIES"
 }
 
 ## Check SIA file dependencies
@@ -36,12 +36,12 @@ check_files() {
 
     while IFS= read -r chk_file || [ -n "$chk_file" ]; do
         case "$chk_file" in
-            ""|"#"*) continue ;;
+        "" | "#"*) continue ;;
         esac
 
         if [ ! -f "$chk_file" ]; then
             msg_error "$chk_file missing, attempting to recover..."
-            
+
             REPO_URL="$LINK/$USERNAME/$REPOSITORY/$BRANCH/$chk_file"
 
             if curl -fsSL --create-dirs "$REPO_URL" -o "$chk_file"; then
@@ -51,7 +51,7 @@ check_files() {
                 chk_errors=$((chk_errors + 1))
             fi
         fi
-    done < "$FILES"
+    done <"$FILES"
 
     [ "$chk_errors" -gt 0 ] && return 1 || return 0
 }
@@ -73,7 +73,7 @@ create_env_from_template() {
 create_yamls_from_templates() {
     while IFS='=' read -r yaml_key yaml_val || [ -n "$yaml_key" ]; do
         case "$yaml_key" in
-            ""|"#"*) continue ;;
+        "" | "#"*) continue ;;
         esac
 
         if [ ! -f "$yaml_val" ]; then
@@ -83,5 +83,5 @@ create_yamls_from_templates() {
                 msg_error "Unable to copy $yaml_key to $yaml_val."
             fi
         fi
-    done < "$PROVIDERS"
+    done <"$PROVIDERS"
 }

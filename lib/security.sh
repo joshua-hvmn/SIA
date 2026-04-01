@@ -30,7 +30,7 @@ generate_secret_key() {
     else
         # Try od (POSIX) :
         if command -v od >/dev/null 2>&1; then
-            ensuresk_secret_key=$(od -An -N32 -tx1 < /dev/urandom | tr -d '[:space:]')
+            ensuresk_secret_key=$(od -An -N32 -tx1 </dev/urandom | tr -d '[:space:]')
             ensuresk_method="Octal dump (32 byte hexadecimal)"
         fi
         # Error out if no easy way to generate a secure key :
@@ -44,9 +44,9 @@ generate_secret_key() {
     # Append to .env:
     edit_kv "SEARXNG_SECRET" "$ensuresk_secret_key" .env
     msg_info "Secret key was generated with $ensuresk_method, and injected into the .env."
-    
+
     export SIA_NEEDS_CERT_INSTALL="true"
-    
+
     return 0
 }
 
@@ -60,7 +60,7 @@ is_valid_hex() {
     fi
     # check key only hex
     case "$vldhex_key" in
-        *[!0-9a-fA-F]*) return 1 ;;
+    *[!0-9a-fA-F]*) return 1 ;;
     esac
     # if printf "%s" "$vldhex_key" | grep -q '[^0-9a-fA-F]'; then
     #     return 1
@@ -80,7 +80,7 @@ validate_env_sec() {
         msg_debug "No secret key found. Generating."
         return 1
     fi
-    
+
     if is_valid_hex "$vldsec_extrctd_key"; then
         return 0
     else
@@ -99,11 +99,11 @@ check_seckey_main() {
     chksec_mode="check"
     if [ $# -gt 0 ]; then
         case "$1" in
-            "rotate")
-                chksec_mode="rotate"
-                shift        
-                ;;
-            *) : ;;
+        "rotate")
+            chksec_mode="rotate"
+            shift
+            ;;
+        *) : ;;
         esac
     fi
 

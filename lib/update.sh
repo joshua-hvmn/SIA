@@ -41,7 +41,7 @@ update_sia() {
     fi
 
     msg_info "Updating SIA..."
-    
+
     # Fetch changes
     git fetch origin "$BRANCH" || {
         msg_error "Failed to fetch from remote. Check your network connection."
@@ -56,25 +56,24 @@ update_sia() {
         return 0
     fi
 
-
     # Try normal pull
     if git pull origin "$BRANCH" 2>/dev/null; then
         msg_info "Update successful."
         msg_warn "Please restart the script to apply changes."
     fi
-    
+
     # Force update if pull fails
     msg_warn "Standard update failed (local changes detected in defaults)."
     msg_warn "Forcing update to match repository..."
-    
+
     # Abort ongoing merges
     git merge --abort 2>/dev/null || true
-    
+
     # Reset to remote branch
     git reset --hard "origin/$BRANCH" || {
         msg_error "Failed to reset to remote branch."
     }
-    
+
     msg_info "Forced update successful."
     msg_warn "Please restart the script to apply changes."
     return 0

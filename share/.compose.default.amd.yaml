@@ -63,17 +63,17 @@ services:
     restart: unless-stopped
     networks:
       - SIAintranet
-    ports:                 # uncomment if you want to use 
-      - "127.0.0.1:11435:11434"      # http://localhost:11434/ to diagnose ollama
+    ports: # uncomment if you want to use
+      - "127.0.0.1:11435:11434" # http://localhost:11434/ to diagnose ollama
     volumes:
       - ./ollama:/root/.ollama
     environment:
       - DOCKER=true
       - AMD_VISIBLE_DEVICES=all
       - HSA_OVERRIDE_GFX_VERSION=10.3.0
-    devices:                         # \
-      - /dev/kfd:/dev/kfd            #  Optional if AMD Container Runtime Toolkit present
-      - /dev/dri:/dev/dri            # /
+    devices: # \
+      - /dev/kfd:/dev/kfd #  Optional if AMD Container Runtime Toolkit present
+      - /dev/dri:/dev/dri # /
     group_add:
       - video
     security_opt:
@@ -115,4 +115,3 @@ volumes:
   caddy-config:
   valkey-data2:
   searxng-data:
-  

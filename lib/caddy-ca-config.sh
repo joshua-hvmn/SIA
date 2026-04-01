@@ -49,12 +49,12 @@ install_caddy_cert() {
         if command -v update-ca-certificates >/dev/null 2>&1; then
             sudo cp "$icc_tmp_cert" "/usr/local/share/ca-certificates/sia-root.crt"
             sudo update-ca-certificates 2>&1 | grep -v "ca-certificates.crt"
-    
+
         # Fedora / RHEL
         elif command -v update-ca-trust >/dev/null 2>&1; then
             sudo cp "$icc_tmp_cert" "/etc/pki/ca-trust/source/anchors/sia-root.crt"
             sudo update-ca-trust
-    
+
         # Arch (p11-kit)
         elif command -v trust >/dev/null 2>&1; then
             sudo trust anchor --store "$icc_tmp_cert"
@@ -98,7 +98,7 @@ EOF
                 msg_error "No Firefox profile directory found, skipping Firefox NSS injection"
             fi
         fi
-        
+
         # Chromium injection
         if command -v certutil >/dev/null 2>&1; then
             icc_target_db="sql:$REAL_HOME/.pki/nssdb"
@@ -118,7 +118,7 @@ EOF
     # Mac
     elif [ "$systemOS" = "Darwin" ]; then
         msg_debug "Detected macOS, adding to System Keychain..."
-        
+
         sudo security add-trusted-cert \
             -d -r trustRoot \
             -k /Library/Keychains/System.keychain \
