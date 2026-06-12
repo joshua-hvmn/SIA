@@ -12,9 +12,6 @@ SIA features a carefully designed command line interface, you should never have 
 
 And best of all, the CLI source code is *yours* to keep, copy, and use — licensed under the permissive MIT license!
 
-SIA builds on popular open-source tools, it's extensible, and it's secure by default. Enjoy simplicity!
-
-
 ## What is included?
 
 | Name                                          | Description                                                    | Docker image                                                                 | Dockerfile                                                                                                                                                                                    |
@@ -29,9 +26,9 @@ SIA builds on popular open-source tools, it's extensible, and it's secure by def
 
 
 ### I. Install
-**1. [Install docker](https://docs.docker.com/install/)** (make sure you install it correctly for your GPU if you have one)
+**1. [Install docker](https://docs.docker.com/install/)** (make sure you install it correctly for your GPU if you have one, or it will say "runtime not found")
 
-**2. <u>Get SIA</u>**
+**2. <u>Clone the SIA Repository</u>**
 
 ```shell
 cd ~
@@ -72,9 +69,8 @@ Extra functionality is accessible through the carefully designed menus! To use t
 ./sia
 ```
 
-On Environment Variables: 
-- You can edit the `.env` file manually, or better yet, use the built in Environment Handler (E.H.): `./sia env`
-- You can also access the E.H. through the menus!
+Editing Environment Variables: 
+- You can edit the `.env` file manually or use the built in Environment Handler (E.H.): `./sia env`, which can be accessed by either menus or commands.
 - You can rotate SearXNG secret keys easily with: `./sia env rotate`
 - You can trigger a full reset of the environment, but not any other data in the stack, by *deleting* the `.env` file. It will create a new one from the template `env_defaults`.
 
@@ -93,16 +89,30 @@ On Environment Variables:
    - Admin Panel > Settings > Web Search
    - Enable, set to SearXNG
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
-   - Note: In this version of SIA, web searches are sent over HTTP (unencrypted) between containers to avoid certificate trust issues.
-10. Use SearXNG at [https://localhost:443](https://localhost:443) by default.
+10. Use SearXNG at [https://localhost:443](https://localhost:443) by default and set your default search engine in your browser:
 
-Set your default search bar in your browser: 
-| Browser       | Search Query                                            |                                     |
-| ----------    | ------------------------------------------------------- | ----------------------------------- |
-| Chromium      | `https://localhost/search?q=%s`                         |                                     |
-| Firefox       | Need additional extensions.                             | (Switch to Ungoogled Chromium *ha*) |
-| Edge.        | `https://localhost/search?q=%s`                         | (Chromium)                          |
-| Safari        | Need an extension Like AnySearch. Easier than Firefox.  | Query URL is the same as Chromium.  |
+**Firefox:**
+
+* **A.** Navigate to `https://localhost`
+* **B.** Right click on the Firefox search bar at the top
+* **C.** Click **"Add SearXNG"**
+* **D.** Go to **Settings > Search**, and change the default to **SearXNG**
+      
+**Chromium / Chrome / Brave:**
+      
+* **A.** Navigate to `https://localhost`, and do a test search to ensure Chromium detects the search engine.
+* **B.** Go to **Settings > Search engine > Manage search engines and site search.**
+* *Note: If Chromium fails to detect SearXNG, set the default search URL to: `https://localhost/search?q=%s`*
+* **C.** Under **Site search**, locate `localhost`. Click the three dots next to it and **Make default**.
+      
+**Safari:**
+
+> *Note: Safari doesn't natively support custom OpenSearch URLs. To use a custom instance, you must use a third-party extension.*
+      
+* **A.** Download a search-routing extension from the Mac App Store [Customize Search Engine (FOSS)](https://apps.apple.com/app/customize-search-engine/id6445840140) or [xSearch (Paid, cloud sync)](https://apps.apple.com/app/xsearch-for-safari/id1579902068).
+* **B.** Open the extension's settings.
+* **C.** Set your custom Query URL to: `https://localhost/search?q=%s`
+* **D.** Enable the extension in **Safari > Settings > Extensions**.
 
 11. That's pretty much everything, enjoy!
 
