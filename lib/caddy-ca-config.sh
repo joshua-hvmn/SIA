@@ -20,6 +20,8 @@ suggest_fix_missing_certutil() {
         msg_info "FIX: Run 'sudo apt install libnss3-tools'"
     elif command -v dnf >/dev/null 2>&1; then
         msg_info "FIX: Run 'sudo dnf install nss-tools'"
+    elif command -v brew >/dev/null 2>&1; then
+        msg_info "FIX: Run 'brew install nss'"
     else
         msg_info "FIX: Please install the NSS utilities package."
     fi
