@@ -67,10 +67,16 @@ services:
       - "127.0.0.1:11435:11434" # http://localhost:11434/ to diagnose ollama
     volumes:
       - ./ollama:/root/.ollama
+      - ./models:/models:rw # for huggingface models
     environment:
       - DOCKER=true
       - AMD_VISIBLE_DEVICES=all
       - HSA_OVERRIDE_GFX_VERSION=10.3.0
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_KV_CACHE_TYPE=q8_0
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=30m
     devices: # \
       - /dev/kfd:/dev/kfd #  Optional if AMD Container Runtime Toolkit present
       - /dev/dri:/dev/dri # /
@@ -101,9 +107,10 @@ services:
         condition: service_started
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
       - WEBUI_URL=${WEBUI_URL}
+      - ENABLE_WEB_SEARCH=true
       - WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
       - OFFLINE_MODE=false
       - DOCKER=true
 
