@@ -378,10 +378,11 @@ main_menu() {
         msg_normal "2) Change Setup"
         msg_normal "3) Edit Environment Variables"
         msg_normal "4) Download an Ollama large language model"
-        msg_normal "5) Stop $app_name"
-        msg_normal "6) Update $app_name"
-        msg_normal "7) View the docker logs"
-        msg_normal "8) View the help menus"
+        msg_normal "5) Download a HuggingFace large language model"
+        msg_normal "6) Stop $app_name"
+        msg_normal "7) Update $app_name"
+        msg_normal "8) View the docker logs"
+        msg_normal "9) View the help menus"
         msg_normal "x) Exit (or 'b')"
         msg_line
 
@@ -409,18 +410,21 @@ main_menu() {
             download_helper
             ;;
         5)
-            down_helper
+            hfmodel_command_router menu
             ;;
         6)
+            down_helper
+            ;;
+        7)
             check_deps
             check_files
             update_cmd_parser
             ;;
-        7)
+        8)
             logs_helper
             exit 0
             ;;
-        8)
+        9)
             help_menu_dispatcher
             ;;
         b | x)
@@ -479,6 +483,10 @@ process_commands() {
         # Check environment and dependencies
         pre_start_checks
         envCommand "$@"
+        ;;
+    hfmodel | -hf | --huggingface | hfm)
+        pre_start_checks
+        hfmodel_command_router "$@"
         ;;
     *)
         msg_error "Unknown command: $first_arg"
