@@ -116,7 +116,7 @@ PROVIDERS="$SIA_HOME_DIR/share/providers"
 . "$SIA_HOME_DIR/lib/dependencies.sh"
 . "$SIA_HOME_DIR/lib/update.sh"
 . "$SIA_HOME_DIR/lib/caddy-ca-config.sh"
-. "$SIA_HOME_DIR/lib/hf_model_manager.sh"
+. "$SIA_HOME_DIR/lib/model_manager.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"
