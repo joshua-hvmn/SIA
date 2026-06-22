@@ -180,29 +180,28 @@ print_help_update() {
     msg_blank
     help_menu_backopt || msg_line
 }
-print_help_dl() {
+print_help_ollama() {
     msg_blank
-    msg_header ${YELLOW} "$app_name Download Help Menu"
+    msg_header ${YELLOW} "$app_name Ollama Command Help Menu"
     msg_blank
-    msg_usage "$script_name download [model tag] [flags]"
+    msg_usage "$script_name ollama [menu | run <model name/HuggingFace URL> | list | rm <model> | ps]"
     msg_blank
-    msg_normal "${BOLD}[WRAPS]${NC}   docker exec ollama ollama run <model tag> [flags]"
+    msg_normal "${BOLD}[WRAPS]${NC}   docker exec ollama ollama [flags]"
     msg_blank
-    msg_info "The 'download' command is a wrapper so you don't have to type the long Docker exec command. The command will ask for a model tag if you don't provide one."
-    msg_info "Find models to download at https://ollama.com/search."
+    msg_info "The 'ollama' command is a wrapper so you don't have to type the long Docker exec command. Without a tag, it will open the model manager menu."
+    msg_info "Find models to download at https://ollama.com/search, or https://huggingface.co/models."
     msg_blank
-    msg_normal "${GREEN}[ALIASES]${NC} -dl, --download"
+    msg_normal "${GREEN}[ALIASES]${NC} -o, --ollama"
     msg_blank
-    msg_header ${BLUE} "Arguments"
-    msg_col "<model name>" "Name of the Ollama model you want to download/run."
+    msg_header ${BLUE} "Subcommands"
+    msg_col "menu" "Opens a graphic menu in the terminal to view and run subcommands."
+    msg_col "run <model>" "Download an LLM."
+    msg_col "list" "Lists installed LLMs."
+    msg_col "rm <model>" "Remove an LLM."
+    msg_col "ps" "Shows running models and their memory usage."
     msg_blank
-    msg_header ${BLUE} "Common Flags"
-    msg_col "--verbose" "Show detailed timing and response stats."
-    msg_col "--format json" "Return output in JSON format."
-    msg_col "--help" "Show the full Ollama internal help menu."
-    msg_blank
-    msg_info "You can pass any number of flags."
-    msg_warn "The messaging might be inaccurate depending on the flags used."
+    msg_info "You can pass any number of flags, the ollama command is meant to be used where you would normally run an ollama command on a direct install. This wrapper just makes it so you don't have to type 'docker exec ollama' before the commands."
+    msg_warn "$app_name messaging might be inaccurate depending on the flags used."
     msg_blank
     msg_header ${YELLOW} "Choosing a Model"
     msg_blank
