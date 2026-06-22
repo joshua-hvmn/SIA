@@ -194,13 +194,13 @@ print_help_ollama() {
     msg_normal "${GREEN}[ALIASES]${NC} -o, --ollama"
     msg_blank
     msg_header ${BLUE} "Subcommands"
-    msg_col "menu" "Opens a graphic menu in the terminal to view and run subcommands."
+    msg_col "menu" "Open a graphical menu in the terminal to view and run subcommands."
     msg_col "run <model>" "Download an LLM."
-    msg_col "list" "Lists installed LLMs."
+    msg_col "list" "List installed LLMs."
     msg_col "rm <model>" "Remove an LLM."
-    msg_col "ps" "Shows running models and their memory usage."
+    msg_col "ps" "Show running models and their memory usage (TIP: use this command to ensure your GPU is being used properly)."
     msg_blank
-    msg_info "You can pass any number of flags, the ollama command is meant to be used where you would normally run an ollama command on a direct install. This wrapper just makes it so you don't have to type 'docker exec ollama' before the commands."
+    msg_info "You can pass any number of flags, the Ollama command is meant to be used where you would normally run an Ollama command on a direct install. This wrapper just makes it so you don't have to type 'docker exec ollama' before the commands."
     msg_warn "$app_name messaging might be inaccurate depending on the flags used."
     msg_blank
     msg_header ${YELLOW} "Choosing a Model"
