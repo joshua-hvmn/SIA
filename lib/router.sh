@@ -276,8 +276,8 @@ print_usage() {
     setup | -su | --setup)
         print_help_setup
         ;;
-    download | -dl | --download)
-        print_help_dl
+    ollama | -o | --ollama | model)
+        print_help_ollama
         ;;
     env | environment | -env | --environment)
         print_help_env
@@ -316,12 +316,12 @@ help_menu_dispatcher() {
         msg_normal "2) Setup and Hardware Acceleration"
         msg_normal "3) Environment and Secret Keys"
         msg_normal "4) Environment Reset Command"
-        msg_normal "5) Downloading LLMs"
+        msg_normal "5) Managing LLMs (Ollama/HuggingFace)"
         msg_normal "6) Stop Command"
         msg_normal "7) Update command"
         msg_normal "8) Up Command"
         msg_normal "9) Viewing Logs"
-        msg_normal "b) Back"
+        back_options
         msg_normal "x) Exit"
         msg_line
 
@@ -341,7 +341,7 @@ help_menu_dispatcher() {
             print_help_reset
             ;;
         5)
-            print_help_dl
+            print_help_ollama
             ;;
         6)
             print_help_down
@@ -377,7 +377,7 @@ main_menu() {
         msg_normal "1) Start $app_name"
         msg_normal "2) Change Setup"
         msg_normal "3) Edit Environment Variables"
-        msg_normal "4) Download an Ollama large language model"
+        msg_normal "4) Manage LLMs (Ollama & HuggingFace)"
         msg_normal "5) Stop $app_name"
         msg_normal "6) Update $app_name"
         msg_normal "7) View the docker logs"
@@ -406,7 +406,7 @@ main_menu() {
             env_menu
             ;;
         4)
-            download_helper
+            ollama_command_router menu
             ;;
         5)
             down_helper
@@ -467,8 +467,9 @@ process_commands() {
         logs_helper "$@"
         exit 0
         ;;
-    download | -dl | --download)
-        download_helper "$@"
+    ollama | -o | --ollama | model)
+        pre_start_checks
+        ollama_command_router "$@"
         ;;
     update | pull)
         check_deps

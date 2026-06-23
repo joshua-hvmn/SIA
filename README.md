@@ -12,6 +12,21 @@ SIA features a carefully designed command line interface, you should never have 
 
 And best of all, the CLI source code is *yours* to keep, copy, and use — licensed under the permissive MIT license!
 
+### Table of Contents
+1. [Install](#i-install)
+2. [Quick Start](#ii-quick-start)
+3. [Post Install](#iii-post-install)
+4. [Restarting](#iv-restarting)
+5. [Updating](#v-updating)
+6. [Using Another Proxy (Advanced Users)](#using-another-proxy-advanced-users)
+7. [Commands](#commands)
+8. [Troubleshooting](#troubleshooting)
+9. [Design Philosophy](#design-philosophy)
+10. [Security](#security)
+11. [Licensing](#licensing)
+
+------------
+
 ## What is included?
 
 | Name                                          | Description                                                    | Docker image                                                                 | Dockerfile                                                                                                                                                                                    |
@@ -21,6 +36,9 @@ And best of all, the CLI source code is *yours* to keep, copy, and use — licen
 | [Valkey](https://github.com/valkey-io/valkey) | In-memory database                                             | [docker.io/valkey/valkey:8-alpine](https://hub.docker.com/r/valkey/valkey)   | [Dockerfile](https://github.com/valkey-io/valkey-container/blob/mainline/Dockerfile.template)                                                                                                 |
 | [Ollama](https://github.com/ollama/ollama) | LLM runner                                             | [docker.io/ollama/ollama](https://hub.docker.com/r/ollama/ollama)   |                                                                                                  |
 | [Open WebUI](https://github.com/open-webui/open-webui) | AI chat GUI                                             | ghcr.io/open-webui/open-webui   |                                                                                                  |
+| SIA CLI | POSIX compliant sh CLI for managing this stack                                             |    |           |
+
+------------
 
 ## Usage
 
@@ -35,7 +53,7 @@ cd ~
 git clone https://github.com/joshua-hvmn/SIA.git
 cd SIA
 ```
----------
+------------
 ### II. Quick Start
 **3. <u>Run the SIA command line tool</u>:**
 ```
@@ -50,17 +68,18 @@ The SearXNG secret key will be randomly generated upon first setup, and stored i
 
 If you want to use your own proxy rather than Caddy, Complete [Using Another Proxy](#using-another-proxy-advanced-users) below **before** running the script.
 
-After the Docker containers start, SIA will configure the Caddy CA certificates so your system and browser can see them. After this is finished, you have to restart SIA one more time:
+After the Docker containers start, SIA will configure the Caddy CA certificates so your system and browser can trust them. After this is finished, you have to restart SIA one more time:
 ```
 ./sia up
 ```
 
-**5. <u>Install an Ollama LLM</u>** from [their search directory](https://ollama.com/search).
+**5. <u>Install an LLM</u>** from [Ollama](https://ollama.com/search) or from [HuggingFace](https://huggingface.co/models).
 
 ```
-./sia -dl <model-tag>
+./sia ollama run <model-tag>
 ```
 - *e.g., llama3.2:1b*
+- *Note: This is just a wrapper for the command `docker exec ollama ollama ...`*
 
 **<u>Additional Information</u>**
 
@@ -76,16 +95,16 @@ Editing Environment Variables:
 
 *Run `./sia help [command]` for help!*
 
----------
+------------
 
 ### III. Post Install
 
 6. Access Open WebUI at [https://chat.localhost](https://chat.localhost) by default.
 7. Create an "Admin Account" and bookmark the page.
-8. Connect Ollama to Open WebUI if necessary: (SIA should inject the settings, but it might not work)
+8. Connect Ollama to Open WebUI if necessary: (SIA should inject the settings, but it might not work, make sure you have a model running)
    - Click name in corner > Admin Panel > Settings > Connections > Ollama API > Manage Ollama API Connections > Configure (gear icon)
    - Make sure Ollama API is enabled, and the API connection is set to `http://ollama:11434`
-9. Connect SearXNG to Open WebUI if necessary:
+9. Connect SearXNG to Open WebUI if necessary (again, this should be set up automatically):
    - Admin Panel > Settings > Web Search
    - Enable, set to SearXNG
    - Set query URL to `http://searxng:8080/search?q=<query>&format=json`
@@ -116,7 +135,7 @@ Editing Environment Variables:
 
 11. That's pretty much everything, enjoy!
 
----------
+------------
 
 ### IV. Restarting
 When you restart your computer, you have to restart the containers:
@@ -170,20 +189,20 @@ Bring your own reverse proxy
 
 ## Commands
 
-The SIA tool comes with many commands. More features are planned, for example, an Ollama model handler.
+The SIA tool comes with many commands. More features are planned.
 
 | Command       | Other Names                | Description |
 | ----------    | -------------------------- | ----------- |
 | (no command)  | menu                       | Opens the CLI menu system. |
 | up            | -st, start, --start        | Start/restart. Automatically runs setup on first start. |
-| setup         | -su, --setup               | Runs the setup wizard. Run if you change between CPU/Nvidia/AMD. |
+| setup         | -su, --setup               | Run the setup wizard. Run if you change between CPU/Nvidia/AMD. |
 | down          | -d, --down                 | Stop the SIA stack. Accepts additional arguments. (Docker Compose wrapper) |
 | logs          | -l, --logs                 | View relevant logs Accepts additional arguments. (Docker Compose wrapper) |
-| download      | -dl, --download            | Download an Ollama model. Requires an additional argument. (Ollama wrapper) |
+| ollama        | -o, --ollama               | Open the Ollama command wrapper menu, or run the ollama command you define. (Ollama wrapper) |
 | help          | -h, --help                 | Show useful help messages. Add another command at the end for that command's help menu! |
 | environment   | env, -env, --environment   | Open the Environment Handler. Has subcommands, check help (or just use the menus). |
 
------------
+------------
 
 ## Troubleshooting
 
@@ -255,7 +274,7 @@ Core assumptions:
 
 1. Most users are not technically literate to the same degree as tech enthusiasts or developers.
 2. Most users are ignorant of cryptography.
-3. **ALL** users **will** break things and configure them incorrectly in some way if they can — especially power users.
+3. **ALL** users **will** break things and configure them incorrectly in some way if they can — even power users.
 
 So, by design:
 
@@ -263,10 +282,10 @@ So, by design:
 - SIA will automatically generate a new secret key if it's missing, ***or*** if it isn't 64 digits of hexadecimal characters (i.e., it's damaged by the user).
 - You can rotate secret keys with one command. By running in --silent mode, you can skip the validation checks, meaning you can automate key rotation with another tool if needed.
 
-In conclusion, I gave SIA control over the environment variables *primarily* to enable secret key generation, repair, and rotation; and *secondarily* for statefulness and ease of use — secret key automation was my ultimate goal. In old versions of SIA, there were no scripts at all; it was a simple guide only six weeks before writing this section. I worried that someone might skip the steps in the guide to generate a safe secret key, and that they might accidentally leak what they do have. I've been working diligently to put those worries to rest.
+In conclusion, I gave SIA control over the environment variables *primarily* to enable secret key generation, repair, and rotation; and *secondarily* for statefulness and ease of use — secret key automation was my ultimate goal. In old versions of SIA, there were no scripts at all; it was once just a simple guide. I worried that someone might skip the steps in the guide to generate a safe secret key, and that they might accidentally leak what they do have.
 
 Additional Security Information:
-- SIA requires additional configuration for public usage. Follow the prompt shown on startup or in the .env file, or check the SearXNG and Open WebUI documentation.
+- SIA requires additional configuration for public usage. Follow the prompt shown on startup or in the .env file, and check the SearXNG and Open WebUI documentation.
 - The SIA E.H. **cannot** display the SearXNG secret key. To view it, you *must* open the .env file.
 - Whenever SIA edits the .env file (or any file by using the edit_kv function), it uses a sophisticated temp file creation system:
    - It tries mktemp, and if that isn't available, it uses a hardened and randomized PID approach to minimize the attack surface.
@@ -298,7 +317,7 @@ All files are provided under open source licenses, as is, without warranty. Use 
 
 - The following files in this repository are *original works* by [Joshua Haveman](https://github.com/joshua-hvmn).
    - The `sia` script in the main directory
-   - All **nine** files in the `lib/` directory:
+   - All **ten** files in the `lib/` directory:
       - `lib/router.sh`
       - `lib/core.sh`
       - `lib/env_logic.sh`
@@ -308,12 +327,13 @@ All files are provided under open source licenses, as is, without warranty. Use 
       - `lib/dependencies.sh`
       - `lib/update.sh`
       - `lib/caddy-ca-config.sh`
+      - `lib/model_manager.sh`
    - These **four** files in the `share/` directory (NOT the yaml files): 
       - `share/dependencies`
       - `share/env_defaults`
       - `share/providers`
       - `share/files`
-- These fourteen files are licensed under the permissive MIT License.
+- These fifteen files are licensed under the permissive MIT License.
 - You are free to use, copy, modify, and distribute these files specifically with minimal restrictions.
 
 ------------
