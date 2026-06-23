@@ -19,6 +19,7 @@ mock_test_mode=0
 searxng_base_url="https://localhost/"   # Only affects messages, not .env
 open_webui_url="https://chat.localhost/" # Only affects messages, not .env
 env_file=".env" # Change if you want to use a different .env file name. (Not sure this would work..)
+compose_file=".compose.yaml"
 fallback_app_version="v3.3.3"
 verbosity=2 # default
 term_width_fallback=90
@@ -105,6 +106,9 @@ DEFAULTS="$SIA_HOME_DIR/share/env_defaults"
 DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
 FILES="$SIA_HOME_DIR/share/files"
 PROVIDERS="$SIA_HOME_DIR/share/providers"
+SERVICE_PROFILES="$SIA_HOME_DIR/share/profiles/service_profiles"
+LLM_RUNNER_PROFILES="$SIA_HOME_DIR/share/profiles/llm_runner_profiles"
+HW_PROFILES="$SIA_HOME_DIR/share/profiles/hw_profiles"
 
 ## Source subscripts
 . "$SIA_HOME_DIR/lib/ui.sh"

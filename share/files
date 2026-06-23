@@ -1,9 +1,10 @@
 share/dependencies
 share/env_defaults
 share/providers
-share/.compose.default.cpu.yaml
-share/.compose.default.amd.yaml
-share/.compose.default.nvidia.yaml
+share/.compose.default.yaml
+share/profiles/hw_profiles
+share/profiles/llm_runner_profiles
+share/profiles/service_profiles
 lib/core.sh
 lib/dependencies.sh
 lib/env_logic.sh
@@ -11,6 +12,9 @@ lib/messages.sh
 lib/router.sh
 lib/security.sh
 lib/ui.sh
+lib/update.sh
+lib/caddy-ca-config.sh
+lib/model_manager.sh
 sia
 Caddyfile
 README.md

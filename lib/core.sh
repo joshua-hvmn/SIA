@@ -230,65 +230,111 @@ logs_helper() {
 
 ## Setup :
 # - Pass 1 after calling to force inbuilt auto-restart
-# - Asks user to select which compose file to use.
+# - Multi-step setup wizard: Services -> Hardware -> LLM Runner.
 # - Stack will restart automatically when you select or change a setup.
 
 change_setup() {
     chngst_cmd_started="${1:-0}"
-    chngst_sel_yaml=".compose.cpu.yaml"
-    chngst_upper_bound="3"
+    chngst_sel_changed=0
 
-    # Detect current config if there is one
-    if grep -q "^COMPOSE_FILE=" "$env_file" 2>/dev/null; then
-        chngst_sel_yaml=$(sed -n 's/^[[:space:]]*COMPOSE_FILE[[:space:]]*=[[:space:]]*//p' "$env_file")
-    fi
-    # not moved to messages.sh to keep it simple to extend
+    # Check state
+    cur_srv="${SIA_SERVICES:-None}"
+    cur_hw="${SIA_HW:-None}"
+    cur_run="${SIA_RUNNER:-None}"
+
+    # 1. Services
     msg_line
-    msg_header ${GREEN} "Select a processor"
-    msg_normal "1) CPU only (no discete GPU)"
-    msg_normal "2) NVIDIA GPU"
-    msg_normal "3) AMD GPU"
-    msg_normal "4) Keep current: $chngst_sel_yaml"
+    msg_header ${GREEN} "Step 1: Select Active Services"
+    msg_normal "1) Full SIA stack (AI and SearXNG)"
+    msg_normal "2) SearXNG only (Search Engine)"
+    msg_normal "3) AI only (WebUI, LLM Runner)"
+    msg_normal "4) Keep current [${cur_srv}]"
     back_options
-    msg_normal "x) Exit"
+    msg_normal ""
     msg_line
 
-    # Read choice
-    chngst_choice=$(read_menu_choice "Processor: " 1 4)
-
-    case "$chngst_choice" in
-    1)
-        chngst_sel_yaml=".compose.cpu.yaml"
-        chngst_sel_changed=1
-        ;;
-    2)
-        chngst_sel_yaml=".compose.nvidia.yaml"
-        chngst_sel_changed=1
-        ;;
-    3)
-        chngst_sel_yaml=".compose.amd.yaml"
-        chngst_sel_changed=1
-        ;;
-    4)
-        msg_info "Keeping current setup."
-        ;;
-    b)
-        return 0
-        ;;
-    x)
-        good_exit "Exiting"
-        ;;
+    srv_choice=$(read_menu_choice "Services" 1 4)
+    case
+        1) new_srv="full" ;;
+        2) new_srv="searxng" ;;
+        3) new_srv="ai" ;;
+        4) new_srv="${cur_srv}"; [ "$new_srv" = "None" ] && new_srv="full" ;;
+        b) return 0 ;;
+        x) good_exit "Exiting" ;;
     esac
+    [ "$new_srv" != "$cur_srv" ] && chngst_sel_changed=1
 
-    # Validate
-    if [ ! -f "$chngst_sel_yaml" ]; then
-        msg_error "YAML file $chngst_sel_yaml not found!"
-        error_exit 2
+    new_hw="$cur_hw"
+    new_run="$cur_run"
+
+    if [ "$new_srv" = "ai" ] || [ "$new_srv" = full ]; then
+
+        # 2. Select hardware profile
+        msg_line
+        msg_header ${GREEN} "Step 2: Select Hardware Optimization"
+        msg_normal "1) CPU only (no discete GPU)"
+        msg_normal "2) NVIDIA GPU (CUDA)"
+        msg_normal "3) AMD GPU (ROCm)"
+        msg_normal "4) Keep current: $chngst_sel_profile"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+
+        hw_choice=$(read_menu_choice "Hardware: " 1 4)
+
+        case "$chngst_choice" in
+        1) new_hw="cpu" ;;
+        2) new_hw="nvidia" ;;
+        3) new_hw="amd" ;;
+        4) [ "$new_hw" = "None" ] && new_hw="cpu" ;;
+        b) return 0 ;;
+        x) good_exit "Exiting" ;;
+        esac
+        [ "$new_hw" != "cur_hw" ] && chngst_sel_changed=1
+
+        # 3. LLM Runner
+        msg_line
+        msg_header ${GREEN} "Step 3: Select LLM Runner"
+        msg_normal "1) Ollama"
+        msg_normal "2) llama.cpp"
+        msg_normal "3) Keep current [${cur_run}]"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+
+        run_choice=$(read_menu_choice "Runner: " 1 3)
+        case "$run_choice" in
+            1) new_run="ollama" ;;
+            2) new_run="llammacpp" ;;
+            3) [ "$new_run" = "None" ] && new_run="ollama" ;;
+            b) return 0 ;;
+            x good_exit "Exiting" ;;
+        esac
+        [ "3$new_run" != "$cur_run" ] && chngst_sel_changed=1
     fi
 
-    # Edit env
-    edit_kv "COMPOSE_FILE" "$chngst_sel_yaml" "$env_file"
-    edit_kv "SETUP_COMPLETE" "true" "$env_file"
+    # Finish
+    if [ "$chngst_sel_changed" -eq 1 ]; then
+        # i. Save state
+        edit_kv "SIA_SERVICES" "$new_srv" "$env_file"
+        edit_kv "SIA_HW" "$new_hw" "$env_file"
+        edit_kv "SIA_RUNNER" "$new_run" "$env_file"
+
+        # ii. compile DC exec string
+        compiled_profiles=""
+
+        if [ "$new_srv" = "searxng" ] || [ "$new_srv" = "full" ]; then
+            compiled_profiles="searxng"
+        fi
+
+        if [ "$new_srv" = "searxng" ] || [ "$new_srv" = "full" ]
+            [ -n "$compiled_profiles" ] && compiled_profiles="${compiled_profiles},"
+            compiled_profiles="${compiled_profiles}webui-${new_hw},${new_run}-${new_hw}"
+        fi
+
+        edit_kv "COMPOSE_PROFILES" "$compiled_profiles" "$env_file"
+        edit_kv "SETUP_COMPLETE" "true" "$env_file"
+    fi
 
     # Restart
     if [ "$chngst_cmd_started" -eq 1 ] && [ "$chngst_sel_changed" -eq 1 ]; then

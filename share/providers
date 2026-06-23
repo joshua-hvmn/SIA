@@ -1,3 +1,4 @@
 share/.compose.default.cpu.yaml=.compose.cpu.yaml
 share/.compose.default.nvidia.yaml=.compose.nvidia.yaml
 share/.compose.default.amd.yaml=.compose.amd.yaml
+share/.compose.default.yaml=.compose.yaml

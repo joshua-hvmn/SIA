@@ -299,6 +299,54 @@ make_temp() {
     printf '%s\n' "$mktmp_tmp"
 }
 
+## Profile manager
+#  - add or remove profiles form the .env
+manage_profile() {
+    [ $# -eq 2 ] || return 2
+    mp_action="$1"
+    mp_profile="$2"
+
+    mp_current=$(sed -n "s/^COMPOSE_PROFILES=//p" "$env_file" | tr -d '\r')
+
+    case "$mp_action" in
+    add)
+        # Check if new profile belongs to a mutually exclusive group
+        for profile_group in "$HW_PROFILES" "$LLM_RUNNER_PROFILES"; do
+            if [ -f "$profile_group" ] && grep -q "^${mp_profile}$" "$profile_group" 2>/dev/null; then
+                while IFS= read -r p || [ -n "$p" ]; do
+                    case "$p" in "" | "#"*) continue ;; esac
+
+                    mp_current=$(printf '%s' ",${mp_current}," | sed "s/,${p},/,/g" | sed 's/^,//; s/,$//')
+                done <"$profile_group"
+
+                break
+            fi
+        done
+
+        # check for duplicate
+        case "${mp_current}," in
+        *,"${mp_profile}",*)
+            return 0
+            ;;
+        esac
+
+        if [ -z "$mp_current" ]; then
+            mp_new="$mp_profile"
+        else
+            mp_new="${mp_current},${mp_profile}"
+        fi
+        ;;
+    rm)
+        mp_new=$(printf '%s' ",${mp_current}," | sed "s/,${mp_profile},/,/g" | sed 's/^,//; s/,$//')
+        ;;
+    *)
+        return 1
+        ;;
+    esac
+
+    edit_kv "COMPOSE_PROFILES" "$mp_new" "$env_file"
+}
+
 ## Key Value File Editor
 #  - Usage: edit_kv [rm] <key> <value (if not rm)> <file to edit>
 #  - inserts update at end or if rm mode, doesn't - deleting it
