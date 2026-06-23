@@ -207,48 +207,6 @@ list_from_file() {
 # MAIN HELPERS
 # - not big enough for their own scripts
 
-download_helper() {
-    dlhlpr_model="${1:-}"
-    shift 2>/dev/null || true
-
-    while true; do
-        # Check hard dependencies only
-        check_deps
-
-        # Check that the ollama container is running
-        if [ -z "$(docker compose ps -q ollama 2>/dev/null)" ]; then
-            msg_error "$app_name isn't running. Please run $script_name up."
-            error_exit 2
-        fi
-
-        # check model defined
-        if [ -z "$dlhlpr_model" ]; then
-            msg_info "Enter an Ollama model code (e.g., llama3.2:1b)"
-            printf '%s' "Model name (or 'b' to go back): " >&2
-            read -r dlhlpr_input || {
-                msg_error "Input failed"
-                error_exit 1
-            }
-
-            case "$dlhlpr_input" in
-            b | back | x | q | exit) return 0 ;;
-            "") continue ;;
-            *) dlhlpr_model="$dlhlpr_input" ;;
-            esac
-        fi
-
-        # Execute
-        msg_info "Downloading and running $dlhlpr_model..."
-        if docker exec ollama ollama run "$dlhlpr_model" "$@"; then
-            msg_success "Model $dlhlpr_model is ready!"
-            return 0
-        else
-            msg_error "Failed to download $dlhlpr_model"
-            dlhlpr_model=""
-        fi
-    done
-}
-
 down_helper() {
     # Check dependencies only
     check_deps
