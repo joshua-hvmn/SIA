@@ -1,13 +1,41 @@
-#   SIA  =  v3.3.0
+# ---------------------------------------------------------
+#   SIA  =  v4.0.0
+# ---------------------------------------------------------
 #  For public access, change:
 #  - SEARXNG_HOSTNAME to your domain name
 #  - SEARXNG_TLS=letsencrypt key
 #  - Uncomment and set LETSENCRYPT_EMAIL to create a Let's Encrypt certificate
 # LETSENCRYPT_EMAIL=
+#
+# ---------------------------------------------------------
+# SIA SERVICE CONFIGURATION (Manual editing not recommended. Use './sia env')
+# ---------------------------------------------------------
+
 SEARXNG_HOSTNAME=localhost
 SEARXNG_TLS=internal
 SEARXNG_BASE_URL=https://localhost/
 WEBUI_URL=https://chat.localhost/
-OLLAMA_BASE_URL=http://ollama:11434
+ENABLE_WEB_SEARCH=true
 WEB_SEARCH_ENGINE=searxng
-SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+# SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+
+# ---------------------------------------------------------
+# OLLAMA OPTIMIZATION SETTINGS ('./sia env')
+# ---------------------------------------------------------
+
+OLLAMA_FLASH_ATTENTION=1
+OLLAMA_KV_CACHE_TYPE=q8_0
+OLLAMA_NUM_PARALLEL=1
+OLLAMA_MAX_LOADED_MODELS=1
+OLLAMA_KEEP_ALIVE=30m
+OLLAMA_GPU_OVERHEAD=0
+
+# ---------------------------------------------------------
+# SIA SYSTEM STATE (Manual editing not recommended. Use './sia setup')
+# ---------------------------------------------------------
+SIA_SERVICES=none
+SIA_HW=none
+SIA_RUNNER=none
+COMPOSE_PROFILES=none
+SETUP_COMPLETE=false
+
