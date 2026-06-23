@@ -38,4 +38,5 @@ SIA_HW=none
 SIA_RUNNER=none
 COMPOSE_PROFILES=none
 SETUP_COMPLETE=false
+COMPOSE_FILE=.compose.yaml
 

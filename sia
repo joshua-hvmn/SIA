@@ -120,7 +120,8 @@ HW_PROFILES="$SIA_HOME_DIR/share/profiles/hw_profiles"
 . "$SIA_HOME_DIR/lib/dependencies.sh"
 . "$SIA_HOME_DIR/lib/update.sh"
 . "$SIA_HOME_DIR/lib/caddy-ca-config.sh"
-. "$SIA_HOME_DIR/lib/model_manager.sh"
+. "$SIA_HOME_DIR/lib/ollama_wrapper.sh"
+. "$SIA_HOME_DIR/lib/llama_cpp_wrapper.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"

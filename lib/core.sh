@@ -253,14 +253,17 @@ change_setup() {
     msg_normal ""
     msg_line
 
-    srv_choice=$(read_menu_choice "Services" 1 4)
-    case
-        1) new_srv="full" ;;
-        2) new_srv="searxng" ;;
-        3) new_srv="ai" ;;
-        4) new_srv="${cur_srv}"; [ "$new_srv" = "None" ] && new_srv="full" ;;
-        b) return 0 ;;
-        x) good_exit "Exiting" ;;
+    srv_choice=$(read_menu_choice "Services: " 1 4)
+    case "$srv_choice" in
+    1) new_srv="full" ;;
+    2) new_srv="searxng" ;;
+    3) new_srv="ai" ;;
+    4)
+        new_srv="${cur_srv}"
+        [ "$new_srv" = "None" ] && new_srv="full"
+        ;;
+    b) return 0 ;;
+    x) good_exit "Exiting" ;;
     esac
     [ "$new_srv" != "$cur_srv" ] && chngst_sel_changed=1
 
@@ -275,14 +278,14 @@ change_setup() {
         msg_normal "1) CPU only (no discete GPU)"
         msg_normal "2) NVIDIA GPU (CUDA)"
         msg_normal "3) AMD GPU (ROCm)"
-        msg_normal "4) Keep current: $chngst_sel_profile"
+        msg_normal "4) Keep current: [${cur_hw}]"
         back_options
         msg_normal "x) Exit"
         msg_line
 
         hw_choice=$(read_menu_choice "Hardware: " 1 4)
 
-        case "$chngst_choice" in
+        case "$hw_choice" in
         1) new_hw="cpu" ;;
         2) new_hw="nvidia" ;;
         3) new_hw="amd" ;;
@@ -304,13 +307,13 @@ change_setup() {
 
         run_choice=$(read_menu_choice "Runner: " 1 3)
         case "$run_choice" in
-            1) new_run="ollama" ;;
-            2) new_run="llammacpp" ;;
-            3) [ "$new_run" = "None" ] && new_run="ollama" ;;
-            b) return 0 ;;
-            x good_exit "Exiting" ;;
+        1) new_run="ollama" ;;
+        2) new_run="llammacpp" ;;
+        3) [ "$new_run" = "None" ] && new_run="ollama" ;;
+        b) return 0 ;;
+        x) good_exit "Exiting" ;;
         esac
-        [ "3$new_run" != "$cur_run" ] && chngst_sel_changed=1
+        [ "$new_run" != "$cur_run" ] && chngst_sel_changed=1
     fi
 
     # Finish
@@ -327,7 +330,7 @@ change_setup() {
             compiled_profiles="searxng"
         fi
 
-        if [ "$new_srv" = "searxng" ] || [ "$new_srv" = "full" ]
+        if [ "$new_srv" = "searxng" ] || [ "$new_srv" = "full" ]; then
             [ -n "$compiled_profiles" ] && compiled_profiles="${compiled_profiles},"
             compiled_profiles="${compiled_profiles}webui-${new_hw},${new_run}-${new_hw}"
         fi
