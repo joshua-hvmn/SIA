@@ -122,22 +122,40 @@ services:
       - "8080:8080"
     environment:
       - CUDA_VISIBLE_DEVICES=0
-      - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
-      - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
-      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
-      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
-      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
-      - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD}
       - HF_HUB_CACHE=/models/hf_cache
+      - SIA_LOCAL_MODEL=${SIA_LOCAL_MODEL}
+      - SIA_HF_ARGS=${SIA_HF_ARGS}
+    entrypoint: ["/bin/sh", "-c"]
     command: >
-      --hf-repo ${SIA_HF_REPO}
-      --hf-file ${SIA_HF_FILE}
-      --host 0.0.0.0
-      --port 8080
-      -c ${LLAMACPP_CTX_SIZE:-8192}
-      -ngl ${LLAMACPP_N_GL:-999}
-      -cb
-      -t ${LLAMACPP_THREADS:-8}
+      - |
+        if [ -z "$$SIA_LOCAL_MODEL" ]; then
+          echo 'ERROR: No model configured. Run ./sia llama run'
+          exit 1
+        fi
+
+        echo 'Starting llama-server...'
+
+        if [ -n "$$SIA_LOCAL_MODEL" ]; then
+          echo 'Loading local model $$SIA_LOCAL_MODEL'
+          exec /llama-server \
+            -m "$$SIA_LOCAL_MODEL" \
+            --host 0.0.0.0 \
+            --port 8080 \
+            -c "${LLAMACPP_CTX_SIZE:-8192}" \
+            -ngl "${LLAMACPP_N_GL:-999}" \
+            -cb \
+            -t "${LLAMACPP_THREADS:-8}"
+        else
+          echo 'Loading from Hugging Face...'
+          exec /llama-server \
+            $$SIA_HF_ARGS \
+            --host 0.0.0.0 \
+            --port 8080 \
+            -c "${LLAMACPP_CTX_SIZE:-8192}" \
+            -ngl "${LLAMACPP_N_GL:-999}" \
+            -cb \
+            -t "${LLAMACPP_THREADS:-8}"
+        fi
     deploy:
       resources:
         reservations:

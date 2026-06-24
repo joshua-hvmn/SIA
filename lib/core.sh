@@ -399,7 +399,7 @@ start_up() {
             edit_kv "PREVIOUSLY_RUN" "true" .env
         fi
     fi
-    docker compose up -d --force-recreate
+    docker compose up -d --force-recreate --remove-orphans
 
     # Check if caddy cert needs to be configured
     if [ "${SIA_NEEDS_CERT_INSTALL:-}" = "true" ]; then

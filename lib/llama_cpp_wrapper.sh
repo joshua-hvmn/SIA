@@ -25,7 +25,7 @@ llamacpp_run() {
 
     lcrun_target="${1:-}"
     if [ -z "$lcrun_target" ]; then
-        msg_normal "Enter HF Repo (e.g., unsloth/Llama-3.2-3B-Instruct-GGUF:Q4_K_M): "
+        msg_normal "Enter HF Repo (e.g., unsloth/Qwen3.5-4B-GGUF:Q4_K_M) or local filename: "
         read -r lcrun_target
     fi
     [ -z "$lcrun_target" ] && {
@@ -33,28 +33,51 @@ llamacpp_run() {
         return 1
     }
 
-    case "$lcrun_target" in
-    *:*)
-        lcrun_input_repo="${lcrun_target%%:*}"
-        lcrun_input_tag="${lcrun_target#*:}"
-        ;;
-    *)
-        lcrun_input_repo="$lcrun_target"
-        lcrun_input_tag=""
-        ;;
-    esac
+    # Check for local file, or download from HF
+    if [ -f "./models/$lcrun_target" ]; then
+        msg_info "Local model detected. Loading."
 
-    # Format
-    if [ -z "$lcrun_input_tag" ]; then
-        lcrun_input_file="*.gguf"
-    elif case "$lcrun_input_tag" in *.gguf) true ;; *) false ;; esac then
-        lcrun_input_file="$lcrun_input_tag"
+        edit_kv "SIA_LOCAL_MODEL" "/models/$lcrun_target" "${env_file:-.env}"
+        edit_kv "SIA_HF_ARGS" "" "${env_file:-.env}"
+
     else
-        lcrun_input_file="*${lcrun_input_tag}*.gguf"
-    fi
+        # Downloading
+        msg_debug "Formatting..."
+        edit_kv "SIA_LOCAL_MODEL" "" "${env_file:-.env}"
 
-    edit_kv "SIA_HF_REPO" "$lcrun_input_repo" "${env_file:-.env}"
-    edit_kv "SIA_HF_FILE" "$lcrun_input_file" "${env_file:-.env}"
+        case "$lcrun_target" in
+        *:*)
+            lcrun_input_repo="${lcrun_target%%:*}"
+            lcrun_input_tag="${lcrun_target#*:}"
+            ;;
+        *)
+            lcrun_input_repo="$lcrun_target"
+            lcrun_input_tag=""
+            ;;
+        esac
+
+        # Format
+        if [ -z "$lcrun_input_tag" ]; then
+            msg_warn "No quantization tag specified. Defaulting to Q4_K_M.gguf"
+            lcrun_resolved_tag="Q4_K_M"
+        else
+            lcrun_resolved_tag="$lcrun_input_tag"
+        fi
+
+        # Check for literal filename
+        lcrun_is_not_gguf=1
+        case "$lcrun_resolved_tag" in
+        *.gguf) lcrun_is_not_gguf=0 ;;
+        esac
+
+        if [ "$lcrun_is_not_gguf" -eq 1 ]; then
+            lcrun_hf_args="--hf-model ${lcrun_input_repo}:${lcrun_resolved_tag}"
+        else
+            lcrun_hf_args="--hf-model $lcrun_input_repo --hf-file $lcrun_resolved_tag"
+        fi
+
+        edit_kv "SIA_HF_ARGS" "$lcrun_hf_args" "${env_file:-.env}"
+    fi
 
     # Get hardware profile
     lcrun_hw_profile=$(get_hw_profile)
