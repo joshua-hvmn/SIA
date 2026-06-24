@@ -14,6 +14,77 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+# LLAMA.CPP ROUTERS
+## Interactive Menu
+llamacpp_menu() {
+    while true; do
+        msg_line
+        msg_header ${BLUE} "llama.cpp Model Manager"
+        msg_normal "1) Run/Deploy a GGUF model"
+        msg_normal "2) List downloaded GGUF models"
+        msg_normal "3) Delete a local GGUF model"
+        msg_normal "4) Tune llama.cpp performance"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+
+        lcmenu_opt=$(read_menu_choice "Selection: " 1 4)
+
+        case "$lcmenu_opt" in
+        1)
+            llamacpp_run
+            ;;
+        2)
+            llamacpp_list
+            ;;
+        3)
+            llamacpp_rm
+            ;;
+        4)
+            llamacpp_tune
+            ;;
+        b)
+            return 0
+            ;;
+        x)
+            good_exit "Exiting"
+            ;;
+        *)
+            msg_error "Invalid selection: $lcmenu_opt"
+            ;;
+        esac
+    done
+}
+
+## Command Parser
+llamacpp_command_router() {
+    lccmd_cmd="${1:-menu}"
+    shift 2>/dev/null || true
+
+    case "$lccmd_cmd" in
+    menu | -m | --menu)
+        llamacpp_menu
+        ;;
+    run)
+        llamacpp_run "$1"
+        ;;
+    list | ls)
+        llamacpp_list
+        ;;
+    rm)
+        llamacpp_rm "$1"
+        ;;
+    tune | config)
+        llamacpp_tune
+        ;;
+    *)
+        msg_error "Unknown llamacpp command: $lccmd_cmd"
+        msg_usage "$script_name llamacpp [ menu | run <HF URL> | list | rm | tune ]"
+        error_exit 1
+        ;;
+    esac
+}
+
 # Update
 ## menu
 update_menu() {
@@ -406,7 +477,19 @@ main_menu() {
             env_menu
             ;;
         4)
-            ollama_command_router menu
+            rtr_llm_runner=$(get_llm_runner)
+            case "$rtr_llm_runner" in
+            ollama)
+                ollama_command_router menu
+                ;;
+            llamacpp | llama.cpp | llama-cpp)
+                llamacpp_command_router menu
+                ;;
+            *)
+                msg_error "Runner '$rtr_llm_runner' not valid. Please run './sia setup'"
+                error_exit 2
+                ;;
+            esac
             ;;
         5)
             down_helper
@@ -467,9 +550,20 @@ process_commands() {
         logs_helper "$@"
         exit 0
         ;;
-    ollama | -o | --ollama | model)
+    llama | llm | ollama | -o | --ollama | model)
         pre_start_checks
-        ollama_command_router "$@"
+        case "$(get_llm_runner)" in
+        ollama)
+            ollama_command_router "$@"
+            ;;
+        llamacpp | llama.cpp | llama-cpp)
+            llamacpp_command_router "$@"
+            ;;
+        *)
+            msg_error "LLM Runner not detected. Please run './sia setup'"
+            error_exit 2
+            ;;
+        esac
         ;;
     update | pull)
         check_deps

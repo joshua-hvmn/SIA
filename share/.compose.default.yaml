@@ -92,7 +92,7 @@ services:
       - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
       - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
-      - OLLAMA_MAX_LOADED_MODELS={OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
       - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
       - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD}
     deploy:
@@ -109,7 +109,7 @@ services:
       retries: 5
 
   llama-cpp-server-nvidia:
-    image: ghcr.io/ggerganov/llama.cpp:server-cuda
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
     container_name: llama-cpp-server
     restart: unless-stopped
     profiles:
@@ -123,15 +123,19 @@ services:
       - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
       - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
-      - OLLAMA_MAX_LOADED_MODELS={OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
       - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
       - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD}
+      - HF_HUB_CACHE=/models/hf_cache
     command: >
-      -m /models/${SELECTED_GGUF_FILE}
+      --hf-repo ${SIA_HF_REPO}
+      --hf-file ${SIA_HF_FILE}
       --host 0.0.0.0
       --port 8080
-      -ngl 999
-      --n-cpu-moe 4
+      -c ${LLAMACPP_CTX_SIZE:-8192}
+      -ngl ${LLAMACPP_N_GL:-999}
+      -cb
+      -t ${LLAMACPP_THREADS:-8}
     deploy:
       resources:
         reservations:
@@ -155,12 +159,16 @@ services:
       - ./open-webui:/app/backend/data
     depends_on:
       ollama-nvidia:
-        condition: service_healthy
+        condition: service_started
+        required: false
+      llama-cpp-server-nvidia:
+        condition: service_started
+        required: false
       searxng:
         condition: service_started
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OPENAI_API_BASE_URL=http://llama-cpp-server:8080/v1
+      - OPENAI_API_BASE_URL=http://llama-cpp-server-nvidia:8080/v1
       - OPENAI_API_KEY=none
       - WEBUI_URL=${WEBUI_URL}
       - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH}
@@ -202,7 +210,7 @@ services:
       - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
       - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
-      - OLLAMA_MAX_LOADED_MODELS={OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
       - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
       - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD}
     devices: # \
@@ -265,7 +273,7 @@ services:
       - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
       - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
-      - OLLAMA_MAX_LOADED_MODELS={OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
       - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
     healthcheck:
       test: ["CMD", "ollama", "list"]

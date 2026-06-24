@@ -17,7 +17,12 @@ SEARXNG_BASE_URL=https://localhost/
 WEBUI_URL=https://chat.localhost/
 ENABLE_WEB_SEARCH=true
 WEB_SEARCH_ENGINE=searxng
-SELECTED_GGUF_FILE=     # llama.cpp only
+SELECTED_GGUF_FILE=
+SIA_HF_REPO=
+SIA_HF_FILE=
+LLAMACPP_CTX_SIZE=8192
+LLAMACPP_N_GL=999
+LLAMACPP_THREADS=8
 # SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
 
 # ---------------------------------------------------------
@@ -36,7 +41,7 @@ OLLAMA_GPU_OVERHEAD=0
 # ---------------------------------------------------------
 SIA_SERVICES=none
 SIA_HW=none
-SIA_RUNNER=none
+SIA_LLM_RUNNER=none
 COMPOSE_PROFILES=none
 SETUP_COMPLETE=false
 COMPOSE_FILE=.compose.yaml

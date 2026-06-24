@@ -14,7 +14,8 @@ lib/security.sh
 lib/ui.sh
 lib/update.sh
 lib/caddy-ca-config.sh
-lib/model_manager.sh
+lib/ollama_wrapper.sh
+lib/llama_cpp_wrapper.sh
 sia
 Caddyfile
 README.md

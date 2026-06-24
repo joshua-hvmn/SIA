@@ -16,6 +16,16 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+## Get llm runner
+get_llm_runner() {
+    # Check if already in the environment, fallback to parsing the .env file, default to ollama
+    if [ -n "${SIA_LLM_RUNNER:-}" ]; then
+        printf '%s' "$SIA_LLM_RUNNER"
+    else
+        grep "^SIA_LLM_RUNNER=" "${env_file:-.env}" | cut -d '=' -f 2 || printf '%s' "error"
+    fi
+}
+
 ## [Y/n]
 #  - Move the '' to the no section to change to default no.
 yes_no() {
@@ -240,7 +250,7 @@ change_setup() {
     # Check state
     cur_srv="${SIA_SERVICES:-None}"
     cur_hw="${SIA_HW:-None}"
-    cur_run="${SIA_RUNNER:-None}"
+    cur_run="${SIA_LLM_RUNNER:-None}"
 
     # 1. Services
     msg_line
@@ -321,7 +331,7 @@ change_setup() {
         # i. Save state
         edit_kv "SIA_SERVICES" "$new_srv" "$env_file"
         edit_kv "SIA_HW" "$new_hw" "$env_file"
-        edit_kv "SIA_RUNNER" "$new_run" "$env_file"
+        edit_kv "SIA_LLM_RUNNER" "$new_run" "$env_file"
 
         # ii. compile DC exec string
         compiled_profiles=""
