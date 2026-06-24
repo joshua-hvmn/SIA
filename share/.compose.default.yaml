@@ -125,37 +125,20 @@ services:
       - HF_HUB_CACHE=/models/hf_cache
       - SIA_LOCAL_MODEL=${SIA_LOCAL_MODEL}
       - SIA_HF_ARGS=${SIA_HF_ARGS}
+      - LLAMACPP_CTX_SIZE=${LLAMACPP_CTX_SIZE:-8192}
+      - LLAMACPP_N_GL=${LLAMACPP_N_GL:-999}
+      - LLAMACPP_THREADS=${LLAMACPP_THREADS:-8}
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      - |
-        if [ -z "$$SIA_LOCAL_MODEL" ]; then
-          echo 'ERROR: No model configured. Run ./sia llama run'
-          exit 1
-        fi
-
-        echo 'Starting llama-server...'
-
-        if [ -n "$$SIA_LOCAL_MODEL" ]; then
-          echo 'Loading local model $$SIA_LOCAL_MODEL'
-          exec /llama-server \
-            -m "$$SIA_LOCAL_MODEL" \
-            --host 0.0.0.0 \
-            --port 8080 \
-            -c "${LLAMACPP_CTX_SIZE:-8192}" \
-            -ngl "${LLAMACPP_N_GL:-999}" \
-            -cb \
-            -t "${LLAMACPP_THREADS:-8}"
-        else
-          echo 'Loading from Hugging Face...'
-          exec /llama-server \
-            $$SIA_HF_ARGS \
-            --host 0.0.0.0 \
-            --port 8080 \
-            -c "${LLAMACPP_CTX_SIZE:-8192}" \
-            -ngl "${LLAMACPP_N_GL:-999}" \
-            -cb \
-            -t "${LLAMACPP_THREADS:-8}"
-        fi
+      if [ -z "$$SIA_LOCAL_MODEL" ]; then echo 'ERROR: No model configured. Run ./sia llama run'; exit 1; fi;
+      echo 'Starting llama-server...';
+      if [ -n "$$SIA_LOCAL_MODEL" ]; then
+        echo "Loading local model: $$SIA_LOCAL_MODEL";
+        exec /llama-server -m "$$SIA_LOCAL_MODEL" --host 0.0.0.0 --port 8080 -c "$$LLAMACPP_CTX_SIZE" -ngl "$$LLAMACPP_N_GL" -cb -t "$$LLAMACPP_THREADS";
+      else
+        echo 'Loading from Hugging Face...';
+        exec /llama-server $$SIA_HF_ARGS --host 0.0.0.0 --port 8080 -c "$$LLAMACPP_CTX_SIZE" -ngl "$$LLAMACPP_N_GL" -cb -t "$$LLAMACPP_THREADS";
+      fi
     deploy:
       resources:
         reservations:
