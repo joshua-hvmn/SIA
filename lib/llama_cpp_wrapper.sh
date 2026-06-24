@@ -56,8 +56,12 @@ llamacpp_run() {
     edit_kv "SIA_HF_REPO" "$lcrun_input_repo" "${env_file:-.env}"
     edit_kv "SIA_HF_FILE" "$lcrun_input_file" "${env_file:-.env}"
 
+    # Get hardware profile
+    lcrun_hw_profile=$(get_hw_profile)
+    [ "$lcrun_hw_profile" = "error" ] && msg_error "Could not detect HW profile, run './sia setup'" && error_exit 2
+
     msg_info "Cycling container to load $lcrun_input_repo..."
-    docker compose up -d llama-cpp-server-nvidia
+    docker compose up -d --force-recreate "llama-cpp-server-$lcrun_hw_profile"
     msg_success "Started!"
 }
 

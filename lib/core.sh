@@ -16,13 +16,35 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
-## Get llm runner
+## Get HW Profile
 get_llm_runner() {
     # Check if already in the environment, fallback to parsing the .env file, default to ollama
     if [ -n "${SIA_LLM_RUNNER:-}" ]; then
         printf '%s' "$SIA_LLM_RUNNER"
     else
         grep "^SIA_LLM_RUNNER=" "${env_file:-.env}" | cut -d '=' -f 2 || printf '%s' "error"
+    fi
+}
+get_hw_profile() {
+    if [ -n "${SIA_HW_PROFILE:-}" ]; then
+        printf '%s' "$SIA_HW_PROFILE"
+    elif [ -n "${SIA_HW:-}" ]; then
+        printf '%s' "$SIA_HW"
+    else
+        # Look for SIA_HW_PROFILE first, fallback to SIA_HW
+        gethw_hw=$(sed -n 's/^SIA_HW_PROFILE=//p' "${env_file:-.env}" 2>/dev/null)
+        if [ -z "$gethw_hw" ]; then
+            gethw_hw=$(sed -n 's/^SIA_HW=//p' "${env_file:-.env}" 2>/dev/null)
+        fi
+
+        # Strip carriage returns and spaces
+        gethw_hw=$(printf '%s' "$gethw_hw" | tr -d '\r ')
+
+        if [ -n "$gethw_hw" ] && [ "$gethw_hw" != "none" ]; then
+            printf '%s' "$gethw_hw"
+        else
+            printf '%s' "error"
+        fi
     fi
 }
 
@@ -330,7 +352,7 @@ change_setup() {
     if [ "$chngst_sel_changed" -eq 1 ]; then
         # i. Save state
         edit_kv "SIA_SERVICES" "$new_srv" "$env_file"
-        edit_kv "SIA_HW" "$new_hw" "$env_file"
+        edit_kv "SIA_HW_PROFILE" "$new_hw" "$env_file"
         edit_kv "SIA_LLM_RUNNER" "$new_run" "$env_file"
 
         # ii. compile DC exec string

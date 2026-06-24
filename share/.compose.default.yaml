@@ -114,6 +114,8 @@ services:
     restart: unless-stopped
     profiles:
       - llama-cpp-nvidia
+    networks:
+      - SIAintranet
     volumes:
       - ./models:/models
     ports:
@@ -169,7 +171,7 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OPENAI_API_BASE_URL=http://llama-cpp-server-nvidia:8080/v1
-      - OPENAI_API_KEY=none
+      - OPENAI_API_KEY=sk-dummy
       - WEBUI_URL=${WEBUI_URL}
       - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH}
       - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
