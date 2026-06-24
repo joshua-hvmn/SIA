@@ -108,6 +108,38 @@ services:
       timeout: 5s
       retries: 5
 
+  llama-cpp-server-nvidia:
+    image: ghcr.io/ggerganov/llama.cpp:server-cuda
+    container_name: llama-cpp-server
+    restart: unless-stopped
+    profiles:
+      - llama-cpp-nvidia
+    volumes:
+      - ./models:/models
+    ports:
+      - "8080:8080"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
+      - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
+      - OLLAMA_MAX_LOADED_MODELS={OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
+      - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD}
+    command: >
+      -m /models/${SELECTED_GGUF_FILE}
+      --host 0.0.0.0
+      --port 8080
+      -ngl 999
+      --n-cpu-moe 4
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   open-webui-nvidia:
     container_name: open-webui
     image: ghcr.io/open-webui/open-webui:main
@@ -128,6 +160,8 @@ services:
         condition: service_started
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
+      - OPENAI_API_BASE_URL=http://llama-cpp-server:8080/v1
+      - OPENAI_API_KEY=none
       - WEBUI_URL=${WEBUI_URL}
       - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH}
       - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}

@@ -293,7 +293,7 @@ change_setup() {
         b) return 0 ;;
         x) good_exit "Exiting" ;;
         esac
-        [ "$new_hw" != "cur_hw" ] && chngst_sel_changed=1
+        [ "$new_hw" != "$cur_hw" ] && chngst_sel_changed=1
 
         # 3. LLM Runner
         msg_line
@@ -308,7 +308,7 @@ change_setup() {
         run_choice=$(read_menu_choice "Runner: " 1 3)
         case "$run_choice" in
         1) new_run="ollama" ;;
-        2) new_run="llammacpp" ;;
+        2) new_run="llama-cpp" ;;
         3) [ "$new_run" = "None" ] && new_run="ollama" ;;
         b) return 0 ;;
         x) good_exit "Exiting" ;;
@@ -330,7 +330,7 @@ change_setup() {
             compiled_profiles="searxng"
         fi
 
-        if [ "$new_srv" = "searxng" ] || [ "$new_srv" = "full" ]; then
+        if [ "$new_srv" = "ai" ] || [ "$new_srv" = "full" ]; then
             [ -n "$compiled_profiles" ] && compiled_profiles="${compiled_profiles},"
             compiled_profiles="${compiled_profiles}webui-${new_hw},${new_run}-${new_hw}"
         fi

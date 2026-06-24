@@ -17,6 +17,7 @@ SEARXNG_BASE_URL=https://localhost/
 WEBUI_URL=https://chat.localhost/
 ENABLE_WEB_SEARCH=true
 WEB_SEARCH_ENGINE=searxng
+SELECTED_GGUF_FILE=     # llama.cpp only
 # SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
 
 # ---------------------------------------------------------

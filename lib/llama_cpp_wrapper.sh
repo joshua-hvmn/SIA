@@ -15,7 +15,7 @@ fi
 
 # Configuration
 MODELS_DIR="./models"
-LLAMACPP_CONTAINER="sia-llama-cpp"
+LLAMACPP_CONTAINER="llama-cpp-server"
 
 ## Download GGUF Function
 download_gguf_model() {
@@ -34,7 +34,7 @@ download_gguf_model() {
     # Download
     if [ ! -f "$dlmod_path" ]; then
         msg_info "Downloading $dlmod_filename..."
-        if ! curl -L -C - --progress-bar -o "dlmod_path" "$dlmod_url"; then
+        if ! curl -L -C - --progress-bar -o "$dlmod_path" "$dlmod_url"; then
             msg_error "Download failed for $dlmod_filename."
             [ ! -s "$dlmod_path" ] && rm -f "$dlmod_path"
             error_exit 1
