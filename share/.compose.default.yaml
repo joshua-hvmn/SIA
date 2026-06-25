@@ -118,6 +118,7 @@ services:
       - SIAintranet
     volumes:
       - ./models:/models
+      - ./lib/llama_entrypoint.sh:/entrypoint.sh:ro
     ports:
       - "8080:8080"
     environment:
@@ -128,17 +129,7 @@ services:
       - LLAMACPP_CTX_SIZE=${LLAMACPP_CTX_SIZE:-8192}
       - LLAMACPP_N_GL=${LLAMACPP_N_GL:-999}
       - LLAMACPP_THREADS=${LLAMACPP_THREADS:-8}
-    entrypoint: ["/bin/sh", "-c"]
-    command: >
-      if [ -z "$$SIA_LOCAL_MODEL" ]; then echo 'ERROR: No model configured. Run ./sia llama run'; exit 1; fi;
-      echo 'Starting llama-server...';
-      if [ -n "$$SIA_LOCAL_MODEL" ]; then
-        echo "Loading local model: $$SIA_LOCAL_MODEL";
-        exec /llama-server -m "$$SIA_LOCAL_MODEL" --host 0.0.0.0 --port 8080 -c "$$LLAMACPP_CTX_SIZE" -ngl "$$LLAMACPP_N_GL" -cb -t "$$LLAMACPP_THREADS";
-      else
-        echo 'Loading from Hugging Face...';
-        exec /llama-server $$SIA_HF_ARGS --host 0.0.0.0 --port 8080 -c "$$LLAMACPP_CTX_SIZE" -ngl "$$LLAMACPP_N_GL" -cb -t "$$LLAMACPP_THREADS";
-      fi
+    entrypoint: ["/entrypoint.sh"]
     deploy:
       resources:
         reservations:

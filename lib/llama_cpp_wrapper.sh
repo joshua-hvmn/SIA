@@ -71,9 +71,11 @@ llamacpp_run() {
         esac
 
         if [ "$lcrun_is_not_gguf" -eq 1 ]; then
-            lcrun_hf_args="--hf-model ${lcrun_input_repo}:${lcrun_resolved_tag}"
+            # repo + quant
+            lcrun_hf_args="--hf-repo ${lcrun_input_repo}:${lcrun_resolved_tag}"
         else
-            lcrun_hf_args="--hf-model $lcrun_input_repo --hf-file $lcrun_resolved_tag"
+            # specific file
+            lcrun_hf_args="--hf-repo $lcrun_input_repo --hf-file $lcrun_resolved_tag"
         fi
 
         edit_kv "SIA_HF_ARGS" "$lcrun_hf_args" "${env_file:-.env}"
