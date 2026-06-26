@@ -16,6 +16,18 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+## Docker Compose Up wrapper
+#  Usage: sia_compose_up [extra_flags]
+sia_compose_up() {
+    dcup_env_args=""
+
+    dcup_core_env_files="
+        share/.env.core
+        share/.env.secrets
+        env.dynamic
+    "
+}
+
 ## Get HW Profile
 get_llm_runner() {
     # Check if already in the environment, fallback to parsing the .env file, default to ollama
