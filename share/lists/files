@@ -4,7 +4,7 @@ share/default_files/.env.secrets.default
 share/default_files/base_llama_cpp_tune.env.default
 share/default_files/base_ollama_tune.env.default
 share/default_files/.compose.default.yaml
-share/list/dependencies
+share/lists/dependencies
 share/maps/env_filenames
 share/maps/providers
 share/profiles/hw_profiles
@@ -23,5 +23,3 @@ lib/ollama_wrapper.sh
 lib/llama_cpp_wrapper.sh
 sia
 Caddyfile
-README.md
-.gitignore 

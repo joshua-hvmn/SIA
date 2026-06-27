@@ -100,6 +100,9 @@ if [ "${mock_test_mode:-0}" -eq 1 ]; then
     git() {
         printf '%s\n' "[MOCK] git $*"
     }
+    curl() {
+        printf '%s\n' "[MOCK] curl $*"
+    }
 fi
 
 # Main

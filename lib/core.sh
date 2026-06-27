@@ -40,34 +40,40 @@ sia_compose_up() {
     dcup_llm_runner=$(get_llm_runner)
 
     case "$dcup_llm_runner" in
-    llama-cpp | llamacpp | llama.cpp)
-        dcup_active_model="${SIA_LOCAL_MODEL:-}"
-        if [ -z "$dcup_active_model" ] && [ -f "$env_core_file" ]; then
-            dcup_active_model=$(sed -n 's/^SIA_LOCAL_MODEL=//p' .env.dynamic 2>/dev/null | tr -d '"'\' || true)
-        fi
-
-        # if active model look for tune
-        if [ -n "$dcup_active_model" ]; then
-            dcup_safe_model=$(printf '%s' "$dcup_active_model" | sed 's/\//--/g')
-            dcup_tuning_env="share/model-configs/llama-cpp-configs/${dcup_safe_model}.env"
-
-            if [ -f "$dcup_tuning_env" ]; then
-                msg_info "Applying tuning profile: $dcup_tuning_env"
-                dcup_env_args="$dcup_env_args --env-file $dcup_tuning_env"
-            fi
-        fi
-        ;;
-    ollama)
-        # OpenWebUI handles switching, not sure how to detect the active model
-        # and switch tunes on the fly. May not be possible like this.
-        msg_debug "Ollama runner active."
+    "None" | "")
+        continue
         ;;
     *)
-        msg_error "Runner '$dcup_llm_runner' not valid. Please run './sia setup'"
-        error_exit 2
+        case "$dcup_llm_runner" in
+        llama-cpp | llamacpp | llama.cpp)
+            dcup_active_model="${SIA_LOCAL_MODEL:-}"
+            if [ -z "$dcup_active_model" ] && [ -f "$env_core_file" ]; then
+                dcup_active_model=$(sed -n 's/^SIA_LOCAL_MODEL=//p' .env.dynamic 2>/dev/null | tr -d '"'\' || true)
+            fi
+
+            # if active model look for tune
+            if [ -n "$dcup_active_model" ]; then
+                dcup_safe_model=$(printf '%s' "$dcup_active_model" | sed 's/\//--/g')
+                dcup_tuning_env="share/model-configs/llama-cpp-configs/${dcup_safe_model}.env"
+
+                if [ -f "$dcup_tuning_env" ]; then
+                    msg_info "Applying tuning profile: $dcup_tuning_env"
+                    dcup_env_args="$dcup_env_args --env-file $dcup_tuning_env"
+                fi
+            fi
+            ;;
+        ollama)
+            # OpenWebUI handles switching, not sure how to detect the active model
+            # and switch tunes on the fly. May not be possible like this.
+            msg_debug "Ollama runner active."
+            ;;
+        *)
+            msg_error "Runner '$dcup_llm_runner' not valid. Please run './sia setup'"
+            error_exit 2
+            ;;
+        esac
         ;;
     esac
-
     docker compose $dcup_env_args up -d --force-recreate --remove-orphans "$@"
 }
 
