@@ -56,17 +56,27 @@ check_files() {
     [ "$chk_errors" -gt 0 ] && return 1 || return 0
 }
 
+## Copy default file
 ## Make user env file
 create_env_from_template() {
-    if [ -f "$DEFAULTS" ]; then
-        if [ ! -s "$env_file" ]; then
-            cp "$DEFAULTS" "$env_file"
-            chmod 600 "$env_file"
-        fi
-    else
-        msg_error "$DEFAULTS not found, cannot restore."
+    if [ ! -f "$DEFAULTS" ]; then
+        msg_error "$DEFAULTS manifest not found, cannot restore."
         error_exit 2
     fi
+    while IFS='=' read -r ceft_src ceft_dst || [ -n "$ceft_src" ]; do
+        case "$ceft_src" in
+        "" | "#"*) continue ;;
+        esac
+        mkdir -p "$(dirname "$ceft_dst")"
+        if [ ! -s "$ceft_dst" ]; then
+            if cp "$ceft_src" "$ceft_dst"; then
+                chmod 600 "$ceft_dst"
+                msg_debug "Successfully initialized $ceft_dst"
+            else
+                msg_error "Unable to copy $ceft_src to $ceft_dst."
+            fi
+        fi
+    done <"$DEFAULTS"
 }
 
 ## Make user compose files

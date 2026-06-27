@@ -22,9 +22,11 @@ sia_compose_up() {
     dcup_env_args=""
 
     dcup_core_env_files="
-        share/.env.core
-        share/.env.secrets
-        env.dynamic
+        share/env/.env.core
+        share/env/.env.secrets
+        share/env/.env.dynamic
+        share/model-configs/llama-cpp-configs/base_llama_cpp_tune.env
+        share/model-configs/ollama-configs/base_ollama_tune.env
     "
 
     # eval env files
@@ -40,7 +42,7 @@ sia_compose_up() {
     case "$dcup_llm_runner" in
     llama-cpp | llamacpp | llama.cpp)
         dcup_active_model="${SIA_LOCAL_MODEL:-}"
-        if [ -z "$dcup_active_model" ] && [ -f ".env.dynamic" ]; then
+        if [ -z "$dcup_active_model" ] && [ -f "$env_core_file" ]; then
             dcup_active_model=$(sed -n 's/^SIA_LOCAL_MODEL=//p' .env.dynamic 2>/dev/null | tr -d '"'\' || true)
         fi
 
@@ -75,7 +77,7 @@ get_llm_runner() {
     if [ -n "${SIA_LLM_RUNNER:-}" ]; then
         printf '%s' "$SIA_LLM_RUNNER"
     else
-        grep "^SIA_LLM_RUNNER=" "${env_file:-.env}" | cut -d '=' -f 2 || printf '%s' "error"
+        grep "^SIA_LLM_RUNNER=" "$env_core_file" | cut -d '=' -f 2 || printf '%s' "error"
     fi
 }
 get_hw_profile() {
@@ -85,9 +87,9 @@ get_hw_profile() {
         printf '%s' "$SIA_HW"
     else
         # Look for SIA_HW_PROFILE first, fallback to SIA_HW
-        gethw_hw=$(sed -n 's/^SIA_HW_PROFILE=//p' "${env_file:-.env}" 2>/dev/null)
+        gethw_hw=$(sed -n 's/^SIA_HW_PROFILE=//p' "$env_core_file" 2>/dev/null)
         if [ -z "$gethw_hw" ]; then
-            gethw_hw=$(sed -n 's/^SIA_HW=//p' "${env_file:-.env}" 2>/dev/null)
+            gethw_hw=$(sed -n 's/^SIA_HW=//p' "$env_core_file" 2>/dev/null)
         fi
 
         # Strip carriage returns and spaces
@@ -404,9 +406,9 @@ change_setup() {
     # Finish
     if [ "$chngst_sel_changed" -eq 1 ]; then
         # i. Save state
-        edit_kv "SIA_SERVICES" "$new_srv" "$env_file"
-        edit_kv "SIA_HW_PROFILE" "$new_hw" "$env_file"
-        edit_kv "SIA_LLM_RUNNER" "$new_run" "$env_file"
+        edit_kv "SIA_SERVICES" "$new_srv" "$env_core_file"
+        edit_kv "SIA_HW_PROFILE" "$new_hw" "$env_core_file"
+        edit_kv "SIA_LLM_RUNNER" "$new_run" "$env_core_file"
 
         # ii. compile DC exec string
         compiled_profiles=""
@@ -420,8 +422,8 @@ change_setup() {
             compiled_profiles="${compiled_profiles}webui-${new_hw},${new_run}-${new_hw}"
         fi
 
-        edit_kv "COMPOSE_PROFILES" "$compiled_profiles" "$env_file"
-        edit_kv "SETUP_COMPLETE" "true" "$env_file"
+        edit_kv "COMPOSE_PROFILES" "$compiled_profiles" "$env_core_file"
+        edit_kv "SETUP_COMPLETE" "true" "$env_core_file"
     fi
 
     # Restart
@@ -438,21 +440,21 @@ change_setup() {
 
 start_up() {
     # Check if a compose file is defined, if not: setup, else start/restart
-    if [ ! -s "$env_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_file" 2>/dev/null; then
+    if [ ! -s "$env_core_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_core_file" 2>/dev/null; then
         stmes_first_start
         change_setup 0
     fi
 
-    if grep -q "^PREVIOUSLY_RUN=true" "$env_file" 2>/dev/null; then
+    if grep -q "^PREVIOUSLY_RUN=true" "$env_core_file" 2>/dev/null; then
         msg_success "Valid configuration - Restarting!"
     else
         msg_success "Valid configuration - Starting for the first time, enjoy!"
         # Append to .env:
-        if ! grep -q "^PREVIOUSLY_RUN=true" "$env_file" 2>/dev/null; then
-            edit_kv "PREVIOUSLY_RUN" "true" .env
+        if ! grep -q "^PREVIOUSLY_RUN=true" "$env_core_file" 2>/dev/null; then
+            edit_kv "PREVIOUSLY_RUN" "true" "$env_core_file"
         fi
     fi
-    docker compose up -d --force-recreate --remove-orphans
+    sia_compose_up "$@"
 
     # Check if caddy cert needs to be configured
     if [ "${SIA_NEEDS_CERT_INSTALL:-}" = "true" ]; then

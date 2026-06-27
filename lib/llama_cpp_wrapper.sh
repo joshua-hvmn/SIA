@@ -37,13 +37,13 @@ llamacpp_run() {
     if [ -f "./models/$lcrun_target" ]; then
         msg_info "Local model detected. Loading."
 
-        edit_kv "SIA_LOCAL_MODEL" "/models/$lcrun_target" "${env_file:-.env}"
-        edit_kv "SIA_HF_ARGS" "" "${env_file:-.env}"
+        edit_kv "SIA_LOCAL_MODEL" "/models/$lcrun_target" "$env_core_file"
+        edit_kv "SIA_HF_ARGS" "" "$env_core_file"
 
     else
         # Downloading
         msg_debug "Formatting..."
-        edit_kv "SIA_LOCAL_MODEL" "" "${env_file:-.env}"
+        edit_kv "SIA_LOCAL_MODEL" "" "$env_core_file"
 
         case "$lcrun_target" in
         *:*)
@@ -78,7 +78,7 @@ llamacpp_run() {
             lcrun_hf_args="--hf-repo $lcrun_input_repo --hf-file $lcrun_resolved_tag"
         fi
 
-        edit_kv "SIA_HF_ARGS" "$lcrun_hf_args" "${env_file:-.env}"
+        edit_kv "SIA_HF_ARGS" "$lcrun_hf_args" "$env_core_file"
     fi
 
     # Get hardware profile
@@ -86,7 +86,7 @@ llamacpp_run() {
     [ "$lcrun_hw_profile" = "error" ] && msg_error "Could not detect HW profile, run './sia setup'" && error_exit 2
 
     msg_info "Cycling container to load $lcrun_input_repo..."
-    docker compose up -d --force-recreate "llama-cpp-server-$lcrun_hw_profile"
+    sia_compose_up "llama-cpp-server-$lcrun_hw_profile"
     msg_success "Started!"
 }
 
@@ -144,23 +144,23 @@ llamacpp_tune() {
     msg_line
     msg_header ${BLUE} "Engine Tuning (llama.cpp)"
 
-    lctune_cur_ctx=$(grep "^LLAMACPP_CTX_SIZE=" "${env_file:-.env}" | cut -d '=' -f 2 || echo "8192")
-    lctune_cur_ngl=$(grep "^LLAMACPP_N_GL=" "${env_file:-.env}" | cut -d '=' -f 2 || echo "999")
+    lctune_cur_ctx=$(grep "^LLAMACPP_CTX_SIZE=" "$env_default_tune_llama_cpp_file" | cut -d '=' -f 2 || echo "8192")
+    lctune_cur_ngl=$(grep "^LLAMACPP_N_GL=" "$env_default_tune_llama_cpp_file" | cut -d '=' -f 2 || echo "999")
 
     msg_normal "Current Context Window: $lctune_cur_ctx"
     msg_normal "Enter new Context Window (Press Enter to keep): "
     read -r lctune_new_ctx
-    [ -n "$lctune_new_ctx" ] && edit_kv "LLAMACPP_CTX_SIZE" "$lctune_new_ctx" "${env_file:-.env}"
+    [ -n "$lctune_new_ctx" ] && edit_kv "LLAMACPP_CTX_SIZE" "$lctune_new_ctx" "$env_default_tune_llama_cpp_file"
 
     msg_normal "Current GPU Layers offloaded: $lctune_cur_ngl"
     msg_normal "Enter new GPU Layers (999 for all, Enter to keep): "
     read -r lctune_new_ngl
-    [ -n "$lctune_new_ngl" ] && edit_kv "LLAMACPP_N_GL" "$lctune_new_ngl" "${env_file:-.env}"
+    [ -n "$lctune_new_ngl" ] && edit_kv "LLAMACPP_N_GL" "$lctune_new_ngl" "$env_default_tune_llama_cpp_file"
 
     if [ -n "$lctune_new_ctx" ] || [ -n "$lctune_new_ngl" ]; then
         msg_success "Parameters updated."
         if yes_no "Restart container to apply changes?"; then
-            docker compose up -d llama-cpp-server-nvidia
+            sia_compose_up llama-cpp-server-nvidia # TODO: Make this detect hw config like llamacpp_run
         fi
     fi
 }

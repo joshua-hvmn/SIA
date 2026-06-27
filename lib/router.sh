@@ -253,8 +253,8 @@ reset_menu() {
     while true; do
         msg_line
         msg_header ${RED} "Reset Menu"
-        msg_normal "1) $env_file"
-        msg_normal "2) yaml files"
+        msg_normal "1) Environment files"
+        msg_normal "2) yaml file"
         msg_normal "3) Everything"
         back_options
         msg_normal "x) Exit"
@@ -531,7 +531,7 @@ process_commands() {
         # Check environment and dependencies
         pre_start_checks
         # Start and run setup if needed
-        start_up
+        start_up "$@"
         ;;
     setup | -su | --setup)
         # Check environment and dependencies
