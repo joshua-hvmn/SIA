@@ -21,20 +21,15 @@ fi
 sia_compose_up() {
     dcup_env_args=""
 
-    dcup_core_env_files="
-        share/env/.env.core
-        share/env/.env.secrets
-        share/env/.env.dynamic
-        share/model-configs/llama-cpp-configs/base_llama_cpp_tune.env
-        share/model-configs/ollama-configs/base_ollama_tune.env
-    "
-
-    # eval env files
-    for dcup_file in $dcup_core_env_files; do
-        if [ -f "$dcup_file" ]; then
-            dcup_env_args="$dcup_env_args --env-file $dcup_file"
+    # Read env filenames from manifest and build args
+    while IFS='=' read -r dcup_src dcup_dst || [ -n "$dcup_src" ]; do
+        case "$dcup_src" in
+        "" | "#"*) continue ;;
+        esac
+        if [ -f "$dcup_dst" ]; then
+            dcup_env_args="$dcup_env_args --env-file $dcup_dst"
         fi
-    done
+    done <"$DEFAULTS"
 
     # Llama.cpp tune injection
     dcup_llm_runner=$(get_llm_runner)
