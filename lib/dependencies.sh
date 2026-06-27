@@ -14,8 +14,6 @@ fi
 
 ## Check command dependencies
 #  - this function represents a clean alternative to arrays and for loops
-#  - adapt if you want true mapping files
-
 check_deps() {
     while IFS= read -r cmd || [ -n "$cmd" ]; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -26,8 +24,8 @@ check_deps() {
 }
 
 ## Check SIA file dependencies
-#  - this function represents a clean alternative to arrays and for loops
-
+#  - repairs missing files. Something is wrong, and it fails to detect files that are present
+#  TODO: add env variable to disable this function
 check_files() {
     mkdir -p share
     mkdir -p lib

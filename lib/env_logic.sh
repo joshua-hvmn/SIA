@@ -304,7 +304,8 @@ make_temp() {
 }
 
 ## Profile manager
-#  - add or remove profiles form the .env
+#  - Usage: manage_profile <add|rm> <docker profile>
+#  - add or remove profiles from the .env
 manage_profile() {
     [ $# -eq 2 ] || return 2
     mp_action="$1"
