@@ -470,7 +470,7 @@ main_menu() {
         2)
             # Check environment and dependencies
             pre_start_checks
-            # Run setup and then start
+            # Run setup (starts on exit)
             change_setup 0
             ;;
         3)

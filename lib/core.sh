@@ -330,6 +330,8 @@ change_setup() {
     cur_hw="${SIA_HW:-None}"
     cur_run="${SIA_LLM_RUNNER:-None}"
 
+    ## PROFILE SETTINGS
+    # -----------------
     # 1. Services
     msg_line
     msg_header ${GREEN} "Step 1: Select Active Services"
@@ -360,7 +362,7 @@ change_setup() {
 
     if [ "$new_srv" = "ai" ] || [ "$new_srv" = full ]; then
 
-        # 2. Select hardware profile
+        # 2. Hardware profile
         msg_line
         msg_header ${GREEN} "Step 2: Select Hardware Optimization"
         msg_normal "1) CPU only (no discete GPU)"
@@ -403,15 +405,18 @@ change_setup() {
         esac
         [ "$new_run" != "$cur_run" ] && chngst_sel_changed=1
     fi
+    # -----------------
 
-    # Finish
+    ## INITIALIZATION
+    # -----------------
+    # 1. Save / Inject variables
     if [ "$chngst_sel_changed" -eq 1 ]; then
-        # i. Save state
+        # A. Inject SIA state variables into environment
         edit_kv "SIA_SERVICES" "$new_srv" "$env_core_file"
         edit_kv "SIA_HW_PROFILE" "$new_hw" "$env_core_file"
         edit_kv "SIA_LLM_RUNNER" "$new_run" "$env_core_file"
 
-        # ii. compile DC exec string
+        # B. Compile Docker Compose exececution string
         compiled_profiles=""
 
         if [ "$new_srv" = "searxng" ] || [ "$new_srv" = "full" ]; then
@@ -423,11 +428,12 @@ change_setup() {
             compiled_profiles="${compiled_profiles}webui-${new_hw},${new_run}-${new_hw}"
         fi
 
+        # C. Inject Compose variable and setup complete into environment
         edit_kv "COMPOSE_PROFILES" "$compiled_profiles" "$env_core_file"
         edit_kv "SETUP_COMPLETE" "true" "$env_core_file"
     fi
 
-    # Restart
+    # 2. Restart containers
     if [ "$chngst_cmd_started" -eq 1 ] && [ "$chngst_sel_changed" -eq 1 ]; then
         start_up
     fi
