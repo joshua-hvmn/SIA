@@ -6,14 +6,20 @@ searxng/uwsgi.ini
 
 # --- Environment Secrets ---
 # These contain your SEARXNG_SECRET and hostnames. NEVER commit these.
-.env
-.compose.cpu.yaml
-.compose.amd.yaml
-.compose.nvidia.yaml
+share/env/.env.secrets
+share/env/.env.core
+share/env/.env.dynamic
+# Prevent committing individual specialized hardware tuning files
+share/model-configs/llama-cpp-configs/*
+share/model-configs/ollama-configs/*
+
+# Local yaml
+.compose.yaml
 
 # --- Docker Runtime Data (Bind Mounts) ---
 # These folders are created/populated on startup and can be massive (GBs).
 ollama/
+models/
 open-webui/
 caddy/
 config/

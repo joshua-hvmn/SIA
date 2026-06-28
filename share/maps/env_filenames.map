@@ -1,0 +1,5 @@
+share/default_files/.env.core.default=share/env/.env.core
+share/default_files/.env.dynamic.default=share/env/.env.dynamic
+share/default_files/.env.secrets.default=share/env/.env.secrets
+share/default_files/base_llama_cpp_tune.env.default=share/model-configs/llama-cpp-configs/base_llama_cpp_tune.env
+share/default_files/base_ollama_tune.env.default=share/model-configs/ollama-configs/base_ollama_tune.env

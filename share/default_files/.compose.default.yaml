@@ -1,0 +1,311 @@
+services:
+  # |----------------------------------------------------------------|
+  # |  Core Services (Always Active)                                 |
+  # |----------------------------------------------------------------|
+  caddy:
+    container_name: caddy
+    image: docker.io/library/caddy:2-alpine
+    restart: unless-stopped
+    profiles:
+      - searxng
+      - ai
+    ports:
+      - "443:443"
+    networks:
+      - SIAintranet
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data:rw
+      - caddy-config:/config:rw
+    environment:
+      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME}
+      - SEARXNG_TLS=${SEARXNG_TLS}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  redis:
+    container_name: redis
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    profiles:
+      - searxng
+    networks:
+      - SIAintranet
+    volumes:
+      - valkey-data2:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  searxng:
+    container_name: searxng
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
+    profiles:
+      - searxng
+    networks:
+      - SIAintranet
+    depends_on:
+      - redis
+    volumes:
+      - ./searxng:/etc/searxng:rw
+      - searxng-data:/var/cache/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
+      - SEARXNG_REDIS_URL=redis://redis:6379/0
+      - DOCKER=true
+      - SEARXNG_SECRET=${SEARXNG_SECRET}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  # |----------------------------------------------------------------|
+  # |  NVIDIA Hardware Profile                                       |
+  # |----------------------------------------------------------------|
+  ollama-nvidia:
+    container_name: ollama
+    image: ollama/ollama
+    runtime: nvidia
+    restart: unless-stopped
+    profiles:
+      - ollama-nvidia
+    networks:
+      - SIAintranet
+    ports: # uncomment if you want to use
+      - "127.0.0.1:11435:11434" # http://localhost:11434/ to diagnose ollama
+    volumes:
+      - ./ollama:/root/.ollama
+      - ./models:/models:rw
+    environment:
+      - USE_CUDA_DOCKER=true
+      - DOCKER=true
+      - USE_CUDA=true
+      - NVIDIA_VISIBLE_DEVICES=all
+      - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
+      - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
+      - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  llama-cpp-server-nvidia:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    container_name: llama-cpp-server
+    restart: unless-stopped
+    profiles:
+      - llama-cpp-nvidia
+    networks:
+      - SIAintranet
+    volumes:
+      - ./models:/models
+      - ./lib/llama_entrypoint.sh:/entrypoint.sh:ro
+    ports:
+      - "8080:8080"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - HF_HUB_CACHE=/models/hf_cache
+      - SIA_LOCAL_MODEL=${SIA_LOCAL_MODEL}
+      - SIA_HF_ARGS=${SIA_HF_ARGS}
+      - LLAMACPP_CTX_SIZE=${LLAMACPP_CTX_SIZE:-8192}
+      - LLAMACPP_N_GL=${LLAMACPP_N_GL:-999}
+      - LLAMACPP_THREADS=${LLAMACPP_THREADS:-8}
+    entrypoint: ["/entrypoint.sh"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  open-webui-nvidia:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:main
+    runtime: nvidia
+    restart: unless-stopped
+    profiles:
+      - webui-nvidia
+    networks:
+      - SIAintranet
+    # ports:
+    #   - "3000:8080"
+    volumes:
+      - ./open-webui:/app/backend/data
+    depends_on:
+      ollama-nvidia:
+        condition: service_started
+        required: false
+      llama-cpp-server-nvidia:
+        condition: service_started
+        required: false
+      searxng:
+        condition: service_started
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OPENAI_API_BASE_URL=http://llama-cpp-server-nvidia:8080/v1
+      - OPENAI_API_KEY=sk-dummy
+      - WEBUI_URL=${WEBUI_URL}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH}
+      - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
+      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+      - OFFLINE_MODE=false
+      - USE_CUDA_DOCKER=true
+      - DOCKER=true
+      - USE_CUDA=true
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # |----------------------------------------------------------------|
+  # |  AMD ROcm Hardware Profile                                     |
+  # |----------------------------------------------------------------|
+  ollama-amd:
+    container_name: ollama
+    image: ollama/ollama:rocm
+    restart: unless-stopped
+    profiles:
+      - ollama-amd
+    networks:
+      - SIAintranet
+    ports: # uncomment if you want to use
+      - "127.0.0.1:11435:11434" # http://localhost:11434/ to diagnose ollama
+    volumes:
+      - ./ollama:/root/.ollama
+      - ./models:/models:rw
+    environment:
+      - DOCKER=true
+      - AMD_VISIBLE_DEVICES=all
+      - HSA_OVERRIDE_GFX_VERSION=10.3.0
+      - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
+      - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
+      - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD}
+    devices: # \
+      - /dev/kfd:/dev/kfd #  Optional if AMD Container Runtime Toolkit present
+      - /dev/dri:/dev/dri # /
+    group_add:
+      - video
+    security_opt:
+      - seccomp=unconfined
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  open-webui-amd:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:main
+    restart: unless-stopped
+    profiles:
+      - webui-amd
+    networks:
+      - SIAintranet
+    # ports:
+    #   - "3000:8080"
+    volumes:
+      - ./open-webui:/app/backend/data
+    depends_on:
+      ollama-amd:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_URL=${WEBUI_URL}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH}
+      - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
+      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+      - OFFLINE_MODE=false
+      - DOCKER=true
+
+  # |----------------------------------------------------------------|
+  # |  CPU Hardware Profile                                          |
+  # |----------------------------------------------------------------|
+  ollama-cpu:
+    container_name: ollama
+    image: ollama/ollama
+    restart: unless-stopped
+    profiles:
+      - ollama-cpu
+    networks:
+      - SIAintranet
+    ports:
+      - "127.0.0.1:11435:11434" # http://localhost:11434/ to diagnose ollama
+    volumes:
+      - ./ollama:/root/.ollama
+      - ./models:/models:rw
+    environment:
+      - DOCKER=true
+      - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
+      - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE}
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE}
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  open-webui-cpu:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:main
+    restart: unless-stopped
+    profiles:
+      - webui-cpu
+    networks:
+      - SIAintranet
+    # ports:
+    #   - "3000:8080"
+    volumes:
+      - ./open-webui:/app/backend/data
+    depends_on:
+      ollama-cpu:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_URL=${WEBUI_URL}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH}
+      - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE}
+      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+      - DOCKER=true
+      - OFFLINE_MODE=false
+
+networks:
+  SIAintranet:
+
+volumes:
+  caddy-data:
+  caddy-config:
+  valkey-data2:
+  searxng-data:

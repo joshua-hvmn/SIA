@@ -37,13 +37,13 @@ generate_secret_key() {
         if [ -z "$ensuresk_secret_key" ]; then
             msg_error "Couldn't find a way to generate a truly random number!"
             msg_debug "$app_name tried OpenSSL, od, and python3!"
-            msg_info "Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $env_file file."
+            msg_info "Please install OpenSSL and try again or manually add a 32 byte 64 digit hex key to the $env_secrets_file file."
             error_exit 3
         fi
     fi
     # Append to .env:
-    edit_kv "SEARXNG_SECRET" "$ensuresk_secret_key" .env
-    msg_info "Secret key was generated with $ensuresk_method, and injected into the .env."
+    edit_kv "SEARXNG_SECRET" "$ensuresk_secret_key" "$env_secrets_file"
+    msg_info "Secret key was generated with $ensuresk_method, and injected into $env_secrets_file"
 
     export SIA_NEEDS_CERT_INSTALL="true"
 
@@ -70,7 +70,7 @@ is_valid_hex() {
 }
 
 validate_env_sec() {
-    vldsec_file="$env_file"
+    vldsec_file="$env_secrets_file"
     [ ! -f "$vldsec_file" ] && return 1
 
     # Extract current key

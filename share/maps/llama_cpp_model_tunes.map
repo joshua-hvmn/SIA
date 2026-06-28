@@ -1,0 +1,3 @@
+# SIA llama.cpp Model → Tune File Mapping
+# Format: model_identifier=tune_base_name (without .env)
+# Auto-populated when downloading models

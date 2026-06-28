@@ -16,10 +16,19 @@ set -eu
 mock_test_mode=0
 
 ## Global Standards (change to change across script)
-searxng_base_url="https://localhost/"   # Only affects messages, not .env
-open_webui_url="https://chat.localhost/" # Only affects messages, not .env
-env_file=".env" # Change if you want to use a different .env file name. (Not sure this would work..)
-fallback_app_version="v3.3.3"
+searxng_base_url="https://localhost/"   # Only affects messages, not env
+open_webui_url="https://chat.localhost/" # Only affects messages, not env
+
+# .env files
+# - if you change these, you must change the associated mapping files in maps/
+env_core_file="share/env/.env.core"
+env_secrets_file="share/env/.env.secrets"
+env_dynamic_file="share/env/.env.dynamic"
+env_default_tune_llama_cpp_file="share/model-configs/llama-cpp-configs/base_llama_cpp_tune.env"
+env_default_tune_ollama_file="share/model-configs/ollama-configs/base_ollama_tune.env"
+compose_file=".compose.yaml"
+
+fallback_app_version="v4.0.0"
 verbosity=2 # default
 term_width_fallback=90
 term_max_width=95
@@ -91,6 +100,9 @@ if [ "${mock_test_mode:-0}" -eq 1 ]; then
     git() {
         printf '%s\n' "[MOCK] git $*"
     }
+    curl() {
+        printf '%s\n' "[MOCK] curl $*"
+    }
 fi
 
 # Main
@@ -101,10 +113,17 @@ if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/n
 fi
 
 ## Relative Paths
-DEFAULTS="$SIA_HOME_DIR/share/env_defaults"
-DEPENDENCIES="$SIA_HOME_DIR/share/dependencies"
-FILES="$SIA_HOME_DIR/share/files"
-PROVIDERS="$SIA_HOME_DIR/share/providers"
+#  Maps
+DEFAULTS="$SIA_HOME_DIR/share/maps/env_filenames.map"
+PROVIDERS="$SIA_HOME_DIR/share/maps/providers.map"
+LLAMA_TUNES="$SIA_HOME_DIR/share/maps/llama_cpp_model_tunes.map"
+#  Lists
+DEPENDENCIES="$SIA_HOME_DIR/share/lists/dependencies"
+FILES="$SIA_HOME_DIR/share/lists/files"
+# Profiles maps not in use, used my manage_profile
+SERVICE_PROFILES="$SIA_HOME_DIR/share/profiles/service_profiles"
+LLM_RUNNER_PROFILES="$SIA_HOME_DIR/share/profiles/llm_runner_profiles"
+HW_PROFILES="$SIA_HOME_DIR/share/profiles/hw_profiles"
 
 ## Source subscripts
 . "$SIA_HOME_DIR/lib/ui.sh"
@@ -116,7 +135,8 @@ PROVIDERS="$SIA_HOME_DIR/share/providers"
 . "$SIA_HOME_DIR/lib/dependencies.sh"
 . "$SIA_HOME_DIR/lib/update.sh"
 . "$SIA_HOME_DIR/lib/caddy-ca-config.sh"
-. "$SIA_HOME_DIR/lib/model_manager.sh"
+. "$SIA_HOME_DIR/lib/ollama_wrapper.sh"
+. "$SIA_HOME_DIR/lib/llama_cpp_wrapper.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"

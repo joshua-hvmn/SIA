@@ -16,6 +16,94 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+## Docker Compose Up wrapper
+#  Usage: sia_compose_up [extra_flags]
+sia_compose_up() {
+    dcup_env_args=""
+
+    # Read env filenames from manifest and build args
+    while IFS='=' read -r dcup_src dcup_dst || [ -n "$dcup_src" ]; do
+        case "$dcup_src" in
+        "" | "#"*) continue ;;
+        esac
+        if [ -f "$dcup_dst" ]; then
+            dcup_env_args="$dcup_env_args --env-file $dcup_dst"
+        fi
+    done <"$DEFAULTS"
+
+    # Llama.cpp tune injection
+    dcup_llm_runner=$(get_llm_runner)
+
+    case "$dcup_llm_runner" in
+    "None" | "")
+        continue
+        ;;
+    *)
+        case "$dcup_llm_runner" in
+        llama-cpp | llamacpp | llama.cpp)
+            dcup_active_model="${SIA_LOCAL_MODEL:-}"
+            if [ -z "$dcup_active_model" ] && [ -f "$env_core_file" ]; then
+                dcup_active_model=$(sed -n 's/^SIA_LOCAL_MODEL=//p' .env.dynamic 2>/dev/null | tr -d '"'\' || true)
+            fi
+
+            # if active model look for tune
+            if [ -n "$dcup_active_model" ]; then
+                dcup_safe_model=$(printf '%s' "$dcup_active_model" | sed 's/\//--/g')
+                dcup_tuning_env="share/model-configs/llama-cpp-configs/${dcup_safe_model}.env"
+
+                if [ -f "$dcup_tuning_env" ]; then
+                    msg_info "Applying tuning profile: $dcup_tuning_env"
+                    dcup_env_args="$dcup_env_args --env-file $dcup_tuning_env"
+                fi
+            fi
+            ;;
+        ollama)
+            # OpenWebUI handles switching, not sure how to detect the active model
+            # and switch tunes on the fly. May not be possible like this.
+            msg_debug "Ollama runner active."
+            ;;
+        *)
+            msg_error "Runner '$dcup_llm_runner' not valid. Please run './sia setup'"
+            error_exit 2
+            ;;
+        esac
+        ;;
+    esac
+    docker compose $dcup_env_args up -d --force-recreate --remove-orphans "$@"
+}
+
+## Get HW Profile
+get_llm_runner() {
+    # Check if already in the environment, fallback to parsing the .env file, default to ollama
+    if [ -n "${SIA_LLM_RUNNER:-}" ]; then
+        printf '%s' "$SIA_LLM_RUNNER"
+    else
+        grep "^SIA_LLM_RUNNER=" "$env_core_file" | cut -d '=' -f 2 || printf '%s' "error"
+    fi
+}
+get_hw_profile() {
+    if [ -n "${SIA_HW_PROFILE:-}" ]; then
+        printf '%s' "$SIA_HW_PROFILE"
+    elif [ -n "${SIA_HW:-}" ]; then
+        printf '%s' "$SIA_HW"
+    else
+        # Look for SIA_HW_PROFILE first, fallback to SIA_HW
+        gethw_hw=$(sed -n 's/^SIA_HW_PROFILE=//p' "$env_core_file" 2>/dev/null)
+        if [ -z "$gethw_hw" ]; then
+            gethw_hw=$(sed -n 's/^SIA_HW=//p' "$env_core_file" 2>/dev/null)
+        fi
+
+        # Strip carriage returns and spaces
+        gethw_hw=$(printf '%s' "$gethw_hw" | tr -d '\r ')
+
+        if [ -n "$gethw_hw" ] && [ "$gethw_hw" != "none" ]; then
+            printf '%s' "$gethw_hw"
+        else
+            printf '%s' "error"
+        fi
+    fi
+}
+
 ## [Y/n]
 #  - Move the '' to the no section to change to default no.
 yes_no() {
@@ -230,67 +318,122 @@ logs_helper() {
 
 ## Setup :
 # - Pass 1 after calling to force inbuilt auto-restart
-# - Asks user to select which compose file to use.
+# - Multi-step setup wizard: Services -> Hardware -> LLM Runner.
 # - Stack will restart automatically when you select or change a setup.
 
 change_setup() {
     chngst_cmd_started="${1:-0}"
-    chngst_sel_yaml=".compose.cpu.yaml"
-    chngst_upper_bound="3"
+    chngst_sel_changed=0
 
-    # Detect current config if there is one
-    if grep -q "^COMPOSE_FILE=" "$env_file" 2>/dev/null; then
-        chngst_sel_yaml=$(sed -n 's/^[[:space:]]*COMPOSE_FILE[[:space:]]*=[[:space:]]*//p' "$env_file")
-    fi
-    # not moved to messages.sh to keep it simple to extend
+    # Check state
+    cur_srv="${SIA_SERVICES:-None}"
+    cur_hw="${SIA_HW:-None}"
+    cur_run="${SIA_LLM_RUNNER:-None}"
+
+    ## PROFILE SETTINGS
+    # -----------------
+    # 1. Services
     msg_line
-    msg_header ${GREEN} "Select a processor"
-    msg_normal "1) CPU only (no discete GPU)"
-    msg_normal "2) NVIDIA GPU"
-    msg_normal "3) AMD GPU"
-    msg_normal "4) Keep current: $chngst_sel_yaml"
+    msg_header ${GREEN} "Step 1: Select Active Services"
+    msg_normal "1) Full SIA stack (AI and SearXNG)"
+    msg_normal "2) SearXNG only (Search Engine)"
+    msg_normal "3) AI only (WebUI, LLM Runner)"
+    msg_normal "4) Keep current [${cur_srv}]"
     back_options
-    msg_normal "x) Exit"
+    msg_normal ""
     msg_line
 
-    # Read choice
-    chngst_choice=$(read_menu_choice "Processor: " 1 4)
-
-    case "$chngst_choice" in
-    1)
-        chngst_sel_yaml=".compose.cpu.yaml"
-        chngst_sel_changed=1
-        ;;
-    2)
-        chngst_sel_yaml=".compose.nvidia.yaml"
-        chngst_sel_changed=1
-        ;;
-    3)
-        chngst_sel_yaml=".compose.amd.yaml"
-        chngst_sel_changed=1
-        ;;
+    srv_choice=$(read_menu_choice "Services: " 1 4)
+    case "$srv_choice" in
+    1) new_srv="full" ;;
+    2) new_srv="searxng" ;;
+    3) new_srv="ai" ;;
     4)
-        msg_info "Keeping current setup."
+        new_srv="${cur_srv}"
+        [ "$new_srv" = "None" ] && new_srv="full"
         ;;
-    b)
-        return 0
-        ;;
-    x)
-        good_exit "Exiting"
-        ;;
+    b) return 0 ;;
+    x) good_exit "Exiting" ;;
     esac
+    [ "$new_srv" != "$cur_srv" ] && chngst_sel_changed=1
 
-    # Validate
-    if [ ! -f "$chngst_sel_yaml" ]; then
-        msg_error "YAML file $chngst_sel_yaml not found!"
-        error_exit 2
+    new_hw="$cur_hw"
+    new_run="$cur_run"
+
+    if [ "$new_srv" = "ai" ] || [ "$new_srv" = full ]; then
+
+        # 2. Hardware profile
+        msg_line
+        msg_header ${GREEN} "Step 2: Select Hardware Optimization"
+        msg_normal "1) CPU only (no discete GPU)"
+        msg_normal "2) NVIDIA GPU (CUDA)"
+        msg_normal "3) AMD GPU (ROCm)"
+        msg_normal "4) Keep current: [${cur_hw}]"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+
+        hw_choice=$(read_menu_choice "Hardware: " 1 4)
+
+        case "$hw_choice" in
+        1) new_hw="cpu" ;;
+        2) new_hw="nvidia" ;;
+        3) new_hw="amd" ;;
+        4) [ "$new_hw" = "None" ] && new_hw="cpu" ;;
+        b) return 0 ;;
+        x) good_exit "Exiting" ;;
+        esac
+        [ "$new_hw" != "$cur_hw" ] && chngst_sel_changed=1
+
+        # 3. LLM Runner
+        msg_line
+        msg_header ${GREEN} "Step 3: Select LLM Runner"
+        msg_normal "1) Ollama"
+        msg_normal "2) llama.cpp"
+        msg_normal "3) Keep current [${cur_run}]"
+        back_options
+        msg_normal "x) Exit"
+        msg_line
+
+        run_choice=$(read_menu_choice "Runner: " 1 3)
+        case "$run_choice" in
+        1) new_run="ollama" ;;
+        2) new_run="llama-cpp" ;;
+        3) [ "$new_run" = "None" ] && new_run="ollama" ;;
+        b) return 0 ;;
+        x) good_exit "Exiting" ;;
+        esac
+        [ "$new_run" != "$cur_run" ] && chngst_sel_changed=1
+    fi
+    # -----------------
+
+    ## INITIALIZATION
+    # -----------------
+    # 1. Save / Inject variables
+    if [ "$chngst_sel_changed" -eq 1 ]; then
+        # A. Inject SIA state variables into environment
+        edit_kv "SIA_SERVICES" "$new_srv" "$env_core_file"
+        edit_kv "SIA_HW_PROFILE" "$new_hw" "$env_core_file"
+        edit_kv "SIA_LLM_RUNNER" "$new_run" "$env_core_file"
+
+        # B. Compile Docker Compose exececution string
+        compiled_profiles=""
+
+        if [ "$new_srv" = "searxng" ] || [ "$new_srv" = "full" ]; then
+            compiled_profiles="searxng"
+        fi
+
+        if [ "$new_srv" = "ai" ] || [ "$new_srv" = "full" ]; then
+            [ -n "$compiled_profiles" ] && compiled_profiles="${compiled_profiles},"
+            compiled_profiles="${compiled_profiles}webui-${new_hw},${new_run}-${new_hw}"
+        fi
+
+        # C. Inject Compose variable and setup complete into environment
+        edit_kv "COMPOSE_PROFILES" "$compiled_profiles" "$env_core_file"
+        edit_kv "SETUP_COMPLETE" "true" "$env_core_file"
     fi
 
-    # Edit env
-    edit_kv "COMPOSE_FILE" "$chngst_sel_yaml" "$env_file"
-    edit_kv "SETUP_COMPLETE" "true" "$env_file"
-
-    # Restart
+    # 2. Restart containers
     if [ "$chngst_cmd_started" -eq 1 ] && [ "$chngst_sel_changed" -eq 1 ]; then
         start_up
     fi
@@ -304,21 +447,21 @@ change_setup() {
 
 start_up() {
     # Check if a compose file is defined, if not: setup, else start/restart
-    if [ ! -s "$env_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_file" 2>/dev/null; then
+    if [ ! -s "$env_core_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_core_file" 2>/dev/null; then
         stmes_first_start
         change_setup 0
     fi
 
-    if grep -q "^PREVIOUSLY_RUN=true" "$env_file" 2>/dev/null; then
+    if grep -q "^PREVIOUSLY_RUN=true" "$env_core_file" 2>/dev/null; then
         msg_success "Valid configuration - Restarting!"
     else
         msg_success "Valid configuration - Starting for the first time, enjoy!"
         # Append to .env:
-        if ! grep -q "^PREVIOUSLY_RUN=true" "$env_file" 2>/dev/null; then
-            edit_kv "PREVIOUSLY_RUN" "true" .env
+        if ! grep -q "^PREVIOUSLY_RUN=true" "$env_core_file" 2>/dev/null; then
+            edit_kv "PREVIOUSLY_RUN" "true" "$env_core_file"
         fi
     fi
-    docker compose up -d --force-recreate
+    sia_compose_up "$@"
 
     # Check if caddy cert needs to be configured
     if [ "${SIA_NEEDS_CERT_INSTALL:-}" = "true" ]; then

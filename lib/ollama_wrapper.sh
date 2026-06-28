@@ -6,9 +6,6 @@
 # |  This tool is released under the MIT License: modify & distribute freely.  |
 # |----------------------------------------------------------------------------|
 
-# This contains all UI and semantic functions but not menu processors
-# Terminal variables are set in the main sia script.
-
 # Check that main was loaded
 if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     printf '%s' "Error: This script is a component of SIA and cannot be run directly."
@@ -24,12 +21,16 @@ OLLAMA_CONTAINER="ollama"
 ollama_exec() {
     check_deps 2>/dev/null || true
 
-    if [ -z "$(docker compose ps -q "$OLLAMA_CONTAINER" 2>/dev/null)" ]; then
-        msg_error "Ollama container isn't running. Please run './sia up' first."
+    if [ -z "$(docker inspect --format='{{.State.Running}}' "$OLLAMA_CONTAINER" 2>/dev/null)" ]; then
+        msg_error "Ollama container ('$OLLAMA_CONTAINER') isn't running. Please run './sia up' first."
         error_exit 1
     fi
 
-    docker exec -it "$OLLAMA_CONTAINER" ollama "$@"
+    if [ -t 0 ]; then
+        docker exec -it "$OLLAMA_CONTAINER" ollama "$@"
+    else
+        docker exec -i "$OLLAMA_CONTAINER" ollama "$@"
+    fi
 }
 
 ## Interactive Menu
@@ -37,7 +38,7 @@ ollama_menu() {
     while true; do
         msg_line
         msg_header ${BLUE} "Ollama Model Manager"
-        msg_normal "1) Run or pull a model (supports standard ollama names and hf.co/ URLS)"
+        msg_normal "1) Run or pull a model (supports standard Ollama names and hf.co/ URLS)"
         msg_normal "2) List installed models"
         msg_normal "3) Remove a model"
         msg_normal "4) Show running models (ps)"

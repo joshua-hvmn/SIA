@@ -18,7 +18,7 @@ fi
 
 env_command_list_all() {
     while true; do
-        envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" | wc -l)
+        envcl_vars_count=$(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_dynamic_file" | wc -l)
         [ "$envcl_vars_count" -eq 0 ] && {
             msg_error "No variables found after filtering."
             error_exit 1
@@ -26,7 +26,7 @@ env_command_list_all() {
 
         msg_line
         msg_header ${YELLOW} "Environment Variables"
-        list_from_file "$env_file"
+        list_from_file "$env_dynamic_file"
         msg_normal "b) Back"
         msg_normal "x) Exit"
         msg_line
@@ -52,12 +52,12 @@ env_command_list_all() {
         envcl_action=$(read_menu_choice "Action (1-4): " 1 4)
 
         envcl_key=$(
-            sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" |
+            sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_dynamic_file" |
                 sed -n "${envcl_choice}p" |
                 sed 's/=.*//'
         )
         envcl_value=$(
-            sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_file" |
+            sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d; /^SEARXNG_SECRET=/d' "$env_dynamic_file" |
                 sed -n "${envcl_choice}p" |
                 sed 's/^[^=]*=//'
         )
@@ -66,13 +66,13 @@ env_command_list_all() {
         1)
             msg_normal "Enter a new value: "
             read -r envcl_new_value
-            edit_kv "$envcl_key" "$envcl_new_value" "$env_file"
+            edit_kv "$envcl_key" "$envcl_new_value" "$env_dynamic_file"
             chngst_sel_changed=1
             ;;
         2)
             msg_normal "Enter a new key: "
             read -r envcl_new_key
-            edit_kv "$envcl_new_key" "$envcl_value" "$env_file"
+            edit_kv "$envcl_new_key" "$envcl_value" "$env_dynamic_file"
             chngst_sel_changed=1
             ;;
         3)
@@ -80,7 +80,7 @@ env_command_list_all() {
             read -r envcl_new_key
             msg_normal "Enter a new value: "
             read -r envcl_new_value
-            edit_kv "$envcl_new_key" "$envcl_new_value" "$env_file"
+            edit_kv "$envcl_new_key" "$envcl_new_value" "$env_dynamic_file"
             chngst_sel_changed=1
             ;;
         4)
@@ -88,8 +88,8 @@ env_command_list_all() {
             read -r envcl_confirm
             case "$envcl_confirm" in
             [yY] | [yY][eE][sS])
-                edit_kv rm "$envcl_key" "$env_file"
-                msg_info "$envcl_key is deleted from the $env_file file."
+                edit_kv rm "$envcl_key" "$env_dynamic_file"
+                msg_info "$envcl_key is deleted from the $env_dynamic_file file."
                 chngst_sel_changed=1
                 ;;
             *)
@@ -126,9 +126,9 @@ env_command_add() {
     fi
 
     # Edit the .env
-    edit_kv "$envcm_key" "$envcm_val" "$env_file"
+    edit_kv "$envcm_key" "$envcm_val" "$env_dynamic_file"
     chngst_sel_changed=1
-    msg_success "Added $envcm_key=$envcm_val to the $env_file file!"
+    msg_success "Added $envcm_key=$envcm_val to the $env_dynamic_file file!"
     msg_info "Run $script_name to restart."
 }
 
@@ -148,9 +148,9 @@ env_command_rm() {
     fi
     case "$envcm_rm_confirm" in
     [yY] | [yY][eE][sS])
-        edit_kv rm "$envcm_key" "$env_file"
+        edit_kv rm "$envcm_key" "$env_dynamic_file"
         chngst_sel_changed=1
-        msg_success "Removed $envcm_key=$envcm_val from the $env_file file!"
+        msg_success "Removed $envcm_key=$envcm_val from the $env_dynamic_file file!"
         msg_info "Run $script_name to restart."
         ;;
     *)
@@ -182,7 +182,7 @@ env_rotate_key_hlpr() {
 
 reset_env() {
     if [ "${verbosity:-0}" -gt 0 ]; then
-        msg_warn "Reset environment (delete and regen $env_file file)? [y/N]"
+        msg_warn "Reset environment (delete and regen env files)? [y/N]"
         printf '%s' "Selection: " >&2
         read -r resetenv_confirm
     else
@@ -197,12 +197,16 @@ reset_env() {
         return 0
         ;;
     esac
-    if [ -f "$DEFAULTS" ]; then
-        [ -f "$env_file" ] && mv "$env_file" archive/
-    else
-        msg_error "Cannot find $env_file template, exiting function."
+    if [ ! -f "$DEFAULTS" ]; then
+        msg_error "Cannot find defaults manifest ($DEFAULTS), exiting."
         return 1
     fi
+    while IFS='=' read -r resetenv_src resetenv_dst || [ -n "$resetenv_src" ]; do
+        case "$resetenv_src" in
+        "" | "#"*) continue ;;
+        esac
+        [ -f "$resetenv_dst" ] && mv "$resetenv_dst" archive/ || true
+    done <"$DEFAULTS"
     create_env_from_template
     pre_start_checks
     msg_success "Environment reset!"
@@ -297,6 +301,55 @@ make_temp() {
 
     umask "$mktmp_umask_old"
     printf '%s\n' "$mktmp_tmp"
+}
+
+## Profile manager
+#  - Usage: manage_profile <add|rm> <docker profile>
+#  - add or remove profiles from the .env
+manage_profile() {
+    [ $# -eq 2 ] || return 2
+    mp_action="$1"
+    mp_profile="$2"
+
+    mp_current=$(sed -n "s/^COMPOSE_PROFILES=//p" "$env_core_file" | tr -d '\r')
+
+    case "$mp_action" in
+    add)
+        # Check if new profile belongs to a mutually exclusive group
+        for profile_group in "$HW_PROFILES" "$LLM_RUNNER_PROFILES"; do
+            if [ -f "$profile_group" ] && grep -q "^${mp_profile}$" "$profile_group" 2>/dev/null; then
+                while IFS= read -r p || [ -n "$p" ]; do
+                    case "$p" in "" | "#"*) continue ;; esac
+
+                    mp_current=$(printf '%s' ",${mp_current}," | sed "s/,${p},/,/g" | sed 's/^,//; s/,$//')
+                done <"$profile_group"
+
+                break
+            fi
+        done
+
+        # check for duplicate
+        case "${mp_current}," in
+        *,"${mp_profile}",*)
+            return 0
+            ;;
+        esac
+
+        if [ -z "$mp_current" ]; then
+            mp_new="$mp_profile"
+        else
+            mp_new="${mp_current},${mp_profile}"
+        fi
+        ;;
+    rm)
+        mp_new=$(printf '%s' ",${mp_current}," | sed "s/,${mp_profile},/,/g" | sed 's/^,//; s/,$//')
+        ;;
+    *)
+        return 1
+        ;;
+    esac
+
+    edit_kv "COMPOSE_PROFILES" "$mp_new" "$env_core_file"
 }
 
 ## Key Value File Editor

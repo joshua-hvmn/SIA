@@ -14,8 +14,6 @@ fi
 
 ## Check command dependencies
 #  - this function represents a clean alternative to arrays and for loops
-#  - adapt if you want true mapping files
-
 check_deps() {
     while IFS= read -r cmd || [ -n "$cmd" ]; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -26,8 +24,8 @@ check_deps() {
 }
 
 ## Check SIA file dependencies
-#  - this function represents a clean alternative to arrays and for loops
-
+#  - repairs missing files. Something is wrong, and it fails to detect files that are present
+#  TODO: add env variable to disable this function
 check_files() {
     mkdir -p share
     mkdir -p lib
@@ -56,32 +54,56 @@ check_files() {
     [ "$chk_errors" -gt 0 ] && return 1 || return 0
 }
 
-## Make user env file
-create_env_from_template() {
-    if [ -f "$DEFAULTS" ]; then
-        if [ ! -s "$env_file" ]; then
-            cp "$DEFAULTS" "$env_file"
-            chmod 600 "$env_file"
+## copy template helper function
+#  - Usage: copy_template <src> <dst> [secure]
+#  secure=1: mkdir -p parent, skip if non-empty, chmod 600
+copy_template() {
+    ct_src="$1"
+    ct_dst="$2"
+    ct_secure="${3:-0}"
+    if [ "$ct_secure" -eq 1 ]; then
+        mkdir -p "$(dirname "$ct_dst")"
+        [ -s "$ct_dst" ] && return 0
+    else
+        [ -f "$ct_dst" ] && return 0
+    fi
+    if cp "$ct_src" "$ct_dst"; then
+        if [ "$ct_secure" -eq 1 ]; then
+            chmod 600 "$ct_dst"
+            msg_debug "Successfully initialized '$ct_dst' with chmod 600 permissions"
+        else
+            msg_debug "Successfully initialized '$ct_dst'"
         fi
     else
-        msg_error "$DEFAULTS not found, cannot restore."
-        error_exit 2
+        msg_error "Unable to copy $ct_src to $ct_dst."
+        return 1
     fi
 }
 
-## Make user compose files
-create_yamls_from_templates() {
-    while IFS='=' read -r yaml_key yaml_val || [ -n "$yaml_key" ]; do
-        case "$yaml_key" in
+## Copy default file
+## Make user env file
+create_env_from_template() {
+    if [ ! -f "$DEFAULTS" ]; then
+        msg_error "$DEFAULTS manifest not found, cannot restore."
+        error_exit 2
+    fi
+    while IFS='=' read -r ceft_src ceft_dst || [ -n "$ceft_src" ]; do
+        case "$ceft_src" in
         "" | "#"*) continue ;;
         esac
+        copy_template "$ceft_src" "$ceft_dst" 1
+    done <"$DEFAULTS"
+}
 
-        if [ ! -f "$yaml_val" ]; then
-            if cp "$yaml_key" "$yaml_val"; then
-                msg_debug "Successfully initialized $yaml_val"
-            else
-                msg_error "Unable to copy $yaml_key to $yaml_val."
-            fi
-        fi
+## Make user compose files
+# - Copies default backups to main directory.
+# - This loop is a remnant of old multi yaml architecture.
+# - I am keeping it in case I need that again.
+create_yamls_from_templates() {
+    while IFS='=' read -r yaml_src yaml_dst || [ -n "$yaml_src" ]; do
+        case "$yaml_src" in
+        "" | "#"*) continue ;;
+        esac
+        copy_template "$yaml_src" "$yaml_dst"
     done <"$PROVIDERS"
 }
