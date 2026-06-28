@@ -113,10 +113,14 @@ if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/n
 fi
 
 ## Relative Paths
-DEFAULTS="$SIA_HOME_DIR/share/maps/env_filenames"
-PROVIDERS="$SIA_HOME_DIR/share/maps/providers"
+#  Maps
+DEFAULTS="$SIA_HOME_DIR/share/maps/env_filenames.map"
+PROVIDERS="$SIA_HOME_DIR/share/maps/providers.map"
+LLAMA_TUNES="$SIA_HOME_DIR/share/maps/llama_cpp_model_tunes.map"
+#  Lists
 DEPENDENCIES="$SIA_HOME_DIR/share/lists/dependencies"
 FILES="$SIA_HOME_DIR/share/lists/files"
+# Profiles maps not in use, used my manage_profile
 SERVICE_PROFILES="$SIA_HOME_DIR/share/profiles/service_profiles"
 LLM_RUNNER_PROFILES="$SIA_HOME_DIR/share/profiles/llm_runner_profiles"
 HW_PROFILES="$SIA_HOME_DIR/share/profiles/hw_profiles"
