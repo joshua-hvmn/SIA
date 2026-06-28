@@ -120,7 +120,10 @@ LLAMA_TUNES="$SIA_HOME_DIR/share/maps/llama_cpp_model_tunes.map"
 #  Lists
 DEPENDENCIES="$SIA_HOME_DIR/share/lists/dependencies"
 FILES="$SIA_HOME_DIR/share/lists/files"
-# Profiles maps not in use, used my manage_profile
+# Relative Paths
+LLAMA_CPP_PRESETS_DIR="$SIA_HOME_DIR/share/model-configs/llama-cpp-configs/presets"
+OLLAMA_PRESETS_DIR="$SIA_HOME_DIR/share/model-configs/ollama-configs/presets"
+# Profiles maps not in use, used by manage_profile
 SERVICE_PROFILES="$SIA_HOME_DIR/share/profiles/service_profiles"
 LLM_RUNNER_PROFILES="$SIA_HOME_DIR/share/profiles/llm_runner_profiles"
 HW_PROFILES="$SIA_HOME_DIR/share/profiles/hw_profiles"
@@ -137,6 +140,7 @@ HW_PROFILES="$SIA_HOME_DIR/share/profiles/hw_profiles"
 . "$SIA_HOME_DIR/lib/caddy-ca-config.sh"
 . "$SIA_HOME_DIR/lib/ollama_wrapper.sh"
 . "$SIA_HOME_DIR/lib/llama_cpp_wrapper.sh"
+. "$SIA_HOME_DIR/lib/setup.sh"
 
 ## Switch to script directory
 cd "$SIA_HOME_DIR"

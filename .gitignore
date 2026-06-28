@@ -10,9 +10,10 @@ share/env/.env.secrets
 share/env/.env.core
 share/env/.env.dynamic
 # Prevent committing individual specialized hardware tuning files
-share/model-configs/llama-cpp-configs/*
-share/model-configs/ollama-configs/*
-
+#share/model-configs/llama-cpp-configs/
+#share/model-configs/ollama-configs/
+#!share/model-configs/llama-cpp-configs/presets/*
+#!share/model-configs/ollama-configs/presets/*
 # Local yaml
 .compose.yaml
 
