@@ -92,7 +92,7 @@ inject_firefox_cert() {
         IFS='
 '
         # Scan up to 6 levels deep to catch native, Flatpak, Snap, and custom CachyOS paths
-        for ff_profile_dir in $(find "$REAL_HOME" -maxdepth 6 -type d -name "*default*" 2>/dev/null); do
+        find "$REAL_HOME" -maxdepth 6 -type d -name "*default*" 2>/dev/null | while IFS= read -r ff_profile_dir; do
 
             # Verify it's an actual NSS database folder, not just a random directory named 'default'
             if [ -f "$ff_profile_dir/cert9.db" ] || [ -f "$ff_profile_dir/cert8.db" ]; then
@@ -124,7 +124,7 @@ inject_chromium_cert() {
         IFS='
 '
         # Scan for the actual nssdb folder across standard and sandboxed paths
-        for chrome_db_dir in $(find "$REAL_HOME" -maxdepth 6 -type d -name "nssdb" 2>/dev/null); do
+        find "$REAL_HOME" -maxdepth 6 -type d -name "nssdb" 2>/dev/null | while IFS= read -r chrome_db_dir; do
             if [ -f "$chrome_db_dir/cert9.db" ] || [ -f "$chrome_db_dir/cert8.db" ]; then
                 icc_target_db="sql:$chrome_db_dir"
                 msg_debug "Updating Chromium DB at: $icc_target_db"

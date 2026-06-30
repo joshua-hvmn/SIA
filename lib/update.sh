@@ -13,15 +13,15 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
 fi
 
 update_docker_images() {
-    yes_no "Are you sure? Updating the Docker images may take a while. "
-    if [ $? -ne 0 ]; then
+    if yes_no "Are you sure? Updating the Docker images may take a while. "; then
+        msg_debug "Updating..."
+    else
         msg_info "Cancelling." && return 0
     fi
 
     docker compose pull || msg_error "Unable to update"
 
-    yes_no "Do you want to delete the old, unused images? (recommended) "
-    if [ $? -eq 0 ]; then
+    if yes_no "Do you want to delete the old, unused images? (recommended) "; then
         msg_info "Running sudo docker image prune -f"
         sudo docker image prune -f
     else
@@ -35,8 +35,9 @@ update_sia() {
         msg_warn "Local changes detected."
     fi
 
-    yes_no "Are you sure you want to update? Updating $app_name will overwrite any changes. "
-    if [ $? -ne 0 ]; then
+    if yes_no "Are you sure you want to update? Updating $app_name will overwrite any changes. "; then
+        msg_debug "Updating SIA via Git..."
+    else
         msg_info "Cancelling." && return 0
     fi
 
