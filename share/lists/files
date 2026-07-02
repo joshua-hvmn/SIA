@@ -5,8 +5,8 @@ share/default_files/base_llama_cpp_tune.env.default
 share/default_files/base_ollama_tune.env.default
 share/default_files/.compose.default.yaml
 share/lists/dependencies
-share/maps/env_filenames
-share/maps/providers
+share/maps/env_filenames.map
+share/maps/providers.map
 share/profiles/hw_profiles
 share/profiles/llm_runner_profiles
 share/profiles/service_profiles

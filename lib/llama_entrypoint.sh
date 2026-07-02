@@ -32,4 +32,4 @@ exec /app/llama-server \
     \
     --flash-attn on \
     --no-mmap \
-    ${SIA_LLAMA_CPP_EXTRA_ARGS} # --alias "${LLAMACPP_ALIAS:-Qwen3.6-35B}" \
+    ${SIA_LLAMA_CPP_EXTRA_ARGS}# TODO: -ub "512" and remove -b? # --alias "${LLAMACPP_ALIAS:-Qwen3.6-35B}" \

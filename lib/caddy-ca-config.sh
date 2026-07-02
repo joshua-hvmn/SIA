@@ -86,13 +86,8 @@ inject_firefox_cert() {
         msg_debug "Locating Firefox profiles dynamically under $REAL_HOME..."
         ff_injected="false"
 
-        # Temporarily set the Internal Field Separator to newline only.
-        # This prevents POSIX sh from splitting macOS filepaths that contain spaces.
-        OLD_IFS="$IFS"
-        IFS='
-'
         # Scan up to 6 levels deep to catch native, Flatpak, Snap, and custom CachyOS paths
-        find "$REAL_HOME" -maxdepth 6 -type d -name "*default*" 2>/dev/null | while IFS= read -r ff_profile_dir; do
+        while IFS= read -r ff_profile_dir; do
 
             # Verify it's an actual NSS database folder, not just a random directory named 'default'
             if [ -f "$ff_profile_dir/cert9.db" ] || [ -f "$ff_profile_dir/cert8.db" ]; then
@@ -101,10 +96,9 @@ inject_firefox_cert() {
                 certutil -d "sql:$ff_profile_dir" -A -t "CT,," -n "SIA Root" -i "$icc_tmp_cert"
                 ff_injected="true"
             fi
-        done
-
-        # Restore standard shell spacing
-        IFS="$OLD_IFS"
+        done <<EOF
+$(find "$REAL_HOME" -maxdepth 6 -type d -name "*default*" 2>/dev/null)
+EOF
 
         if [ "$ff_injected" != "true" ]; then
             msg_error "No active Firefox profile directory found."

@@ -32,11 +32,7 @@ log() {
 
     [ ${verbosity:-2} -lt $log_lvl ] && return 0
 
-    if [ $log_lvl -eq 1 ]; then
-        printf "%b\n" "$*" >&2
-    else
-        printf "%b\n" "$*"
-    fi
+    printf "%b\n" "$*" >&2
 }
 
 # SEMANTIC WRAPPERS

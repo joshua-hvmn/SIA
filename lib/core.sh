@@ -16,6 +16,31 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+## Convert GB to KB
+#  - USAGE: convert_gb_to_kb <GB as int or float>
+convert_gb_to_kb() {
+    cgtk_input_gb="$1"
+    cgtk_output_kb=$(awk "BEGIN {print $cgtk_input_gb * 1048576}")
+    printf '%s' "$cgtk_output_kb"
+}
+
+## Check input is integer
+#  - USAGE:  check_int_is_even <int>
+check_int_is_even() {
+    ci_int_input="$1"
+
+    case "$ci_int_input" in
+    '' | *[!0-9]*)
+        msg_debug "Check: Input ['$ci_int_input'] is not an even number."
+        return 1
+        ;;
+    *)
+        msg_debug "Check: Input ['$ci_int_input'] is an even number, continuing."
+        return 0
+        ;;
+    esac
+}
+
 ## Docker Compose Up wrapper
 #  Usage: sia_compose_up [extra_flags]
 sia_compose_up() {
