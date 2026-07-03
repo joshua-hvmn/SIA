@@ -19,7 +19,7 @@ fi
 ## Convert GB to KB
 #  - USAGE: convert_gb_to_kb <GB as int or float>
 convert_gb_to_kb() {
-    cgtk_input_gb="$1"
+    cgtk_input_gb="${1:-0}"
     cgtk_output_kb=$(awk "BEGIN {print $cgtk_input_gb * 1048576}")
     printf '%s' "$cgtk_output_kb"
 }
@@ -35,6 +35,10 @@ check_int_is_even() {
         return 1
         ;;
     *)
+        if [ $((ci_int_input % 2)) -ne 0 ]; then
+            msg_debug "Check: Input ['$ci_int_input'] is not an even number."
+            return 1
+        fi
         msg_debug "Check: Input ['$ci_int_input'] is an even number, continuing."
         return 0
         ;;
@@ -42,19 +46,24 @@ check_int_is_even() {
 }
 
 ## Docker Compose Up wrapper
-#  Usage: sia_compose_up [extra_flags]
+#  Usage: sia_compose_up [mode] [extra_flags]
 sia_compose_up() {
+    dcup_cmd_mode="${1:-up}"
+    shift || true
+
     dcup_env_args=""
 
     # Read env filenames from manifest and build args
-    while IFS='=' read -r dcup_src dcup_dst || [ -n "$dcup_src" ]; do
-        case "$dcup_src" in
-        "" | "#"*) continue ;;
-        esac
-        if [ -f "$dcup_dst" ]; then
-            dcup_env_args="$dcup_env_args --env-file $dcup_dst"
-        fi
-    done <"$DEFAULTS"
+    if [ -f "${DEFAULTS:-}" ]; then
+        while IFS='=' read -r dcup_src dcup_dst || [ -n "$dcup_src" ]; do
+            case "$dcup_src" in
+            "" | "#"*) continue ;;
+            esac
+            if [ -f "$dcup_dst" ]; then
+                dcup_env_args="$dcup_env_args --env-file $dcup_dst"
+            fi
+        done <"$DEFAULTS"
+    fi
 
     # Llama.cpp tune injection
     dcup_llm_runner=$(get_llm_runner)
@@ -94,16 +103,25 @@ sia_compose_up() {
         esac
         ;;
     esac
-    docker compose $dcup_env_args up -d --force-recreate --remove-orphans "$@"
+    if [ "$dcup_cmd_mode" = "down" ]; then
+        docker compose $dcup_env_args down --remove-orphans "$@"
+    else
+        docker compose $dcup_env_args up -d --force-recreate --remove-orphans "$@"
+    fi
 }
 
-## Get HW Profile
+## Get HW Profil
 get_llm_runner() {
     # Check if already in the environment, fallback to parsing the .env file, default to ollama
     if [ -n "${SIA_LLM_RUNNER:-}" ]; then
         printf '%s' "$SIA_LLM_RUNNER"
     else
-        grep "^SIA_LLM_RUNNER=" "$env_core_file" | cut -d '=' -f 2 || printf '%s' "error"
+        getllm_runner=$(sed -n 's/^SIA_LLM_RUNNER=//p' "$env_core_file" 2>/dev/null)
+        if [ -n "$getllm_runner" ]; then
+            printf '%s' "$getllm_runner"
+        else
+            printf '%s' "error"
+        fi
     fi
 }
 get_hw_profile() {
@@ -280,11 +298,15 @@ read_menu_choice() {
         }
         case "$rdmenu_choice" in
         [bB])
-            printf b
+            printf '%s' "b"
             return 0
             ;;
         [xX])
-            printf x
+            printf '%s' "x"
+            return 0
+            ;;
+        [cC])
+            printf '%s' "c"
             return 0
             ;;
         '' | *[!0-9]*)
@@ -321,14 +343,18 @@ list_from_file() {
 # - not big enough for their own scripts
 
 down_helper() {
+    # Strip the SIA command verb if it was passed through
+    case "${1:-}" in down | -d | --down) shift ;; esac
     # Check dependencies only
     check_deps
     # Stop Stack
     msg_header ${RED} "Stopping $app_name..."
-    docker compose down "$@"
+    sia_compose_up "down" "$@"
 }
 
 logs_helper() {
+    # Strip the SIA command verb if it was passed through
+    case "$1" in logs | -l | --logs) shift ;; esac
     # Check dependencies only
     check_deps
     # Show logs
@@ -347,6 +373,8 @@ logs_helper() {
 # - Checks for previous run for appropriate start/restart messaging.
 
 start_up() {
+    # Strip the SIA command verb if it was passed through
+    case "${1:-}" in start | up | --start | -st) shift ;; esac
     # Check if a compose file is defined, if not: setup, else start/restart
     if [ ! -s "$env_core_file" ] || ! grep -q "^SETUP_COMPLETE=true" "$env_core_file" 2>/dev/null; then
         stmes_first_start
@@ -362,7 +390,7 @@ start_up() {
             edit_kv "PREVIOUSLY_RUN" "true" "$env_core_file"
         fi
     fi
-    sia_compose_up "$@"
+    sia_compose_up "up" "$@"
 
     # Check if caddy cert needs to be configured
     if [ "${SIA_NEEDS_CERT_INSTALL:-}" = "true" ]; then

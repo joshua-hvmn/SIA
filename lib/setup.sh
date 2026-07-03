@@ -106,20 +106,21 @@ select_hardware_profile() {
     shp_det_vendor="${shp_detect_str%%:*}"
     shp_det_vram_kb="${shp_detect_str##*:}"
 
-    shp_det_vram_gb=$((shp_det_vram_kb / 1024 / 1024))
-    shp_cur_vram_gb=$((shp_cur_vram / 1024 / 1024))
+    shp_det_vram_gb=$(((shp_det_vram_kb + (1024 * 1024 / 2)) / (1024 * 1024)))
+    shp_cur_vram_gb=$(((shp_cur_vram + (1024 * 1024 / 2)) / (1024 * 1024)))
 
     msg_line
     msg_header ${GREEN} "Step 2: Select Architecture for GPU Acceleration"
-    msg_normal "System Detected: [ Vendor: ${shp_det_vendor} | VRAM: ${shp_det_vram_gb} GB ]"
-    msg_normal "System detected options will be applied (press enter to continue or type 'n' to manually edit)."
-    msg_info "If you have a GPU, and $app_name did not detect it, Docker may not be able to utilize it. Ensure Docker can utilize GPU acceleration if applicable by installing the necessary dependencies."
+    msg_normal "${BOLD}Automatically detected (enter to accept, 'n' to edit):${NC}
+        ${BLUE}Vendor: ${GREEN}${shp_det_vendor}${NC}
+        ${BLUE}VRAM: ${GREEN}${shp_det_vram_gb} GB${NC}
+    "
+    msg_normal "If you have a GPU, and $app_name did not detect it, Docker may not be able to utilize it. Ensure Docker can utilize GPU acceleration if applicable by installing the necessary dependencies."
     msg_blank
     msg_normal "1) CPU Only (No GPU acceleration)"
     msg_normal "2) NVIDIA GPU (CUDA)"
     msg_normal "3) AMD GPU (ROCm)"
     msg_normal "4) Keep previous: [ Vendor: ${shp_cur_hw} | VRAM: ${shp_cur_vram_gb} GB ]"
-    back_options
     msg_normal "x) Exit"
     msg_line
 
@@ -158,11 +159,8 @@ select_hardware_profile() {
         shp_final_vendor="$shp_det_vendor"
         shp_final_vram="$shp_det_vram_kb"
         ;;
-    b)
-        printf '%s' "GO_BACK"
-        ;;
-    x)
-        good_exit "Exiting"
+    b | x | c)
+        printf '%s' "CANCEL"
         ;;
     esac
 
@@ -197,8 +195,7 @@ select_llm_runner() {
     1) printf '%s' "ollama" ;;
     2) printf '%s' "llama-cpp" ;;
     3) [ "$selrun_cur_run" = "None" ] && [ -z "$selrun_cur_run" ] && printf '%s' "ollama" || printf '%s' "$selrun_cur_run" ;;
-    b) printf '%s' "GO_BACK" ;;
-    x) good_exit "Exiting" ;;
+    b | x | c) printf '%s' "CANCEL" ;;
     esac
 }
 
@@ -217,6 +214,9 @@ select_cpu_cores() {
 
     while true; do
         read -r scc_cores || true
+        case "$scc_cores" in
+        n | c | x) scc_cores="CANCEL" && break ;;
+        esac
         if [ -n "$scc_cores" ] && [ $((scc_cores % 2)) -eq 0 ]; then
             break
         elif [ -n "$scc_cores" ]; then
@@ -277,11 +277,16 @@ read_ram_kb() {
 
     while true; do
         read -r rrkb_ram_input_gb || true
+        case "$rrkb_ram_input_gb" in
+        n | c | x) read_ram_output_kb="CANCEL" && break ;;
+        esac
         if [ -n "$rrkb_ram_input_gb" ] && [ $((rrkb_ram_input_gb % 8)) -eq 0 ]; then
+            read_ram_output_kb=$(convert_gb_to_kb "$rrkb_ram_input_gb")
             break
         elif [ -n "$rrkb_ram_input_gb" ]; then
             msg_warn "Non-standard RAM amount indicated: $rrkb_ram_input_gb GB"
             if yes_no "Are you sure you want to continue with $rrkb_ram_input_gb GB total system RAM?: "; then
+                read_ram_output_kb=$(convert_gb_to_kb "$rrkb_ram_input_gb")
                 break
             else
                 msg_normal "Cancelled selection. Enter the corrected amount of system RAM in GB: "
@@ -291,8 +296,6 @@ read_ram_kb() {
             msg_normal "Please enter the amount of system RAM in gigabytes: "
         fi
     done
-
-    read_ram_output_kb=$(convert_gb_to_kb "$rrkb_ram_input_gb")
 
     [ -n "$read_ram_output_kb" ] && printf '%s' "$read_ram_output_kb" || {
         msg_error "Unknown error, read_ram_kb() in setup.sh failed."
@@ -356,6 +359,7 @@ change_setup() {
     # 1. Services
     chngst_new_srv=$(select_services "$cur_srv")
     if [ "$chngst_new_srv" = "GO_BACK" ]; then
+        chngst_sel_changed=0
         return 0
     elif [ "$chngst_new_srv" != "$cur_srv" ]; then
         chngst_sel_changed=1
@@ -365,9 +369,10 @@ change_setup() {
         # 2. Hardware profile & VRAM
         chngst_hw_result=$(select_hardware_profile "$cur_hw" "$cur_vram")
         if [ "$chngst_hw_result" = "GO_BACK" ]; then
+            chngst_sel_changed=0
             return 0
         fi
-        msg_info "$chngst_hw_result"
+
         chngst_new_hw="${chngst_hw_result%%:*}"
         chngst_new_vram="${chngst_hw_result##*:}"
 
@@ -383,7 +388,8 @@ change_setup() {
 
         # 5. LLM Runner
         chngst_new_run=$(select_llm_runner "$cur_run")
-        if [ "$chngst_new_run" = "GO_BACK" ]; then
+        if [ "$chngst_new_run" = "CANCEL" ]; then
+            chngst_sel_changed=0
             return 0
         elif [ "$chngst_new_run" != "$cur_run" ]; then
             chngst_sel_changed=1
