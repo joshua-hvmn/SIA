@@ -124,11 +124,18 @@ select_hardware_profile() {
     msg_normal "x) Exit"
     msg_line
 
-    if yes_no "Accept autodetected options? "; then
+    yes_no "Accept autodetected options?"
+    case $? in
+    0)
         hw_choice="auto"
-    else
-        hw_choice=$(read_menu_choice "Hardware: " 1 4)
-    fi
+        ;;
+    1)
+        hw_choice=$(read_menu_choice "Hardware choice: " 1 4)
+        ;;
+    2)
+        hw_choice="x"
+        ;;
+    esac
 
     case "$hw_choice" in
     1)
@@ -161,6 +168,7 @@ select_hardware_profile() {
         ;;
     b | x | c)
         printf '%s' "CANCEL"
+        return
         ;;
     esac
 
@@ -221,11 +229,18 @@ select_cpu_cores() {
             break
         elif [ -n "$scc_cores" ]; then
             msg_warn "Odd CPU core count indicated ($scc_cores), almost all CPUs have an even number of cores."
-            if yes_no "Are you sure you want to continue with '$scc_cores' total CPU cores?: "; then
+            yes_no "Are you sure you want to continue with '$scc_cores' total CPU cores?: "
+            case "$?" in
+            0)
                 break
-            else
+                ;;
+            1)
                 msg_normal "Cancelled selection. Enter the corrected amount of CPU cores: "
-            fi
+                ;;
+            2)
+                scc_cores="CANCEL"
+                ;;
+            esac
         else
             msg_error "Input not detected. Please try aqain."
             msg_normal "Please enter the number of the physical cores in your CPU:"
@@ -285,12 +300,19 @@ read_ram_kb() {
             break
         elif [ -n "$rrkb_ram_input_gb" ]; then
             msg_warn "Non-standard RAM amount indicated: $rrkb_ram_input_gb GB"
-            if yes_no "Are you sure you want to continue with $rrkb_ram_input_gb GB total system RAM?: "; then
+            yes_no "Are you sure you want to continue with $rrkb_ram_input_gb GB total system RAM?: "
+            case "$?" in
+            0)
                 read_ram_output_kb=$(convert_gb_to_kb "$rrkb_ram_input_gb")
                 break
-            else
+                ;;
+            1)
                 msg_normal "Cancelled selection. Enter the corrected amount of system RAM in GB: "
-            fi
+                ;;
+            2)
+                read_ram_output_kb="CANCEL"
+                ;;
+            esac
         else
             msg_error "Input not detected. Please try again."
             msg_normal "Please enter the amount of system RAM in gigabytes: "
@@ -358,21 +380,26 @@ change_setup() {
     # -----------------
     # 1. Services
     chngst_new_srv=$(select_services "$cur_srv")
-    if [ "$chngst_new_srv" = "GO_BACK" ]; then
+    case "$chngst_new_srv" in
+    *CANCEL* | *GO_BACK* | *Exiting*)
         chngst_sel_changed=0
         return 0
-    elif [ "$chngst_new_srv" != "$cur_srv" ]; then
+        ;;
+    esac
+
+    if [ "$chngst_new_srv" != "$cur_srv" ]; then
         chngst_sel_changed=1
     fi
 
     if [ "$chngst_new_srv" = "ai" ] || [ "$chngst_new_srv" = full ]; then
         # 2. Hardware profile & VRAM
         chngst_hw_result=$(select_hardware_profile "$cur_hw" "$cur_vram")
-        if [ "$chngst_hw_result" = "GO_BACK" ]; then
+        case "$chngst_hw_result" in
+        *CANCEL*)
             chngst_sel_changed=0
             return 0
-        fi
-
+            ;;
+        esac
         chngst_new_hw="${chngst_hw_result%%:*}"
         chngst_new_vram="${chngst_hw_result##*:}"
 
@@ -380,18 +407,41 @@ change_setup() {
             chngst_sel_changed=1
         fi
 
-        # 3. Detect / Select CPU core count TODO: Add back options like others (really, autodetect should be reliable)
+        # 3. Detect / Select CPU core count
         chngst_new_cpu_cores=$(detect_cpu_cores "sel")
+        case "$chngst_new_cpu_cores" in
+        *CANCEL*)
+            chngst_sel_changed=0
+            return 0
+            ;;
+        esac
+
+        if [ "$chngst_new_cpu_cores" != "$cur_cpu_cores" ]; then
+            chngst_sel_changed=1
+        fi
 
         # 4. Detect / Select System RAM
         chngst_new_sys_ram=$(detect_ram_kb "read")
+        case "$chngst_new_sys_ram" in
+        *CANCEL*)
+            chngst_sel_changed=0
+            return 0
+            ;;
+        esac
+
+        if [ "$chngst_new_sys_ram" != "$cur_sys_ram" ]; then
+            chngst_sel_changed=1
+        fi
 
         # 5. LLM Runner
         chngst_new_run=$(select_llm_runner "$cur_run")
-        if [ "$chngst_new_run" = "CANCEL" ]; then
+        case "$chngst_new_run" in
+        *CANCEL*)
             chngst_sel_changed=0
             return 0
-        elif [ "$chngst_new_run" != "$cur_run" ]; then
+            ;;
+        esac
+        if [ "$chngst_new_run" != "$cur_run" ]; then
             chngst_sel_changed=1
         fi
     else

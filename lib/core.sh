@@ -152,7 +152,7 @@ get_hw_profile() {
 yes_no() {
     yes_no_msg="${1:-''}"
     while true; do
-        msg_normal "$yes_no_msg [Y/n]"
+        msg_normal "$yes_no_msg [Y/n/x]" >&2
         read -r response
 
         case "$response" in
@@ -162,8 +162,11 @@ yes_no() {
         '' | [yY] | [yY]es | [yY][eE][sS])
             return 0
             ;;
+        [xX] | [cC])
+            return 2
+            ;;
         *)
-            echo "Invalid response"
+            msg_error "Invalid response: $response"
             ;;
         esac
     done
