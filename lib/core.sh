@@ -109,7 +109,7 @@ sia_compose_up() {
     fi
 }
 
-## Get HW Profil
+## Get LLM Runner
 get_llm_runner() {
     # Check if already in the environment, fallback to parsing the .env file, default to ollama
     if [ -n "${SIA_LLM_RUNNER:-}" ]; then
@@ -123,6 +123,7 @@ get_llm_runner() {
         fi
     fi
 }
+## Get HW Profile
 get_hw_profile() {
     if [ -n "${SIA_HW_PROFILE:-}" ]; then
         printf '%s' "$SIA_HW_PROFILE"
@@ -140,6 +141,19 @@ get_hw_profile() {
 
         if [ -n "$gethw_hw" ] && [ "$gethw_hw" != "none" ]; then
             printf '%s' "$gethw_hw"
+        else
+            printf '%s' "error"
+        fi
+    fi
+}
+## Get Current Services
+get_cur_services() {
+    if [ -n "${SIA_SERVICES:-}" ]; then
+        printf '%s' "$SIA_SERVICES"
+    else
+        get_cur_srv=$(sed -n 's/^SIA_SERVICES=//p' "$env_core_file" 2>/dev/null)
+        if [ -n "$get_cur_srv" ]; then
+            printf '%s' "$get_cur_srv"
         else
             printf '%s' "error"
         fi
@@ -415,4 +429,11 @@ pre_start_checks() {
 
     # Generate or repair SearXNG secret key
     check_seckey_main
+
+    SIA_SERVICES=$(get_cur_services)
+    SIA_HW_PROFILE=$(get_hw_profile)
+    SIA_LLM_RUNNER=$(get_llm_runner)
+    export SIA_SERVICES
+    export SIA_HW_PROFILE
+    export SIA_LLM_RUNNER
 }

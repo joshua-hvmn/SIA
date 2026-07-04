@@ -463,6 +463,12 @@ change_setup() {
         edit_kv "SIA_CPU_CORES" "$chngst_new_cpu_cores" "$env_core_file"
         edit_kv "SIA_SYSTEM_MEMORY" "$chngst_new_sys_ram" "$env_core_file"
         edit_kv "SIA_LLM_RUNNER" "$chngst_new_run" "$env_core_file"
+        export SIA_SERVICES="$chngst_new_srv"
+        export SIA_HW_PROFILE="$chngst_new_hw"
+        export SIA_VRAM_KB="$chngst_new_vram"
+        export SIA_CPU_CORES="$chngst_new_cpu_cores"
+        export SIA_SYSTEM_MEMORY="$chngst_new_sys_ram"
+        export SIA_LLM_RUNNER="$chngst_new_run"
 
         # B. Compile Docker Compose exececution string
         compiled_profiles=""
