@@ -65,8 +65,14 @@ sia_compose_up() {
         done <"$DEFAULTS"
     fi
 
-    # Llama.cpp tune injection
-    dcup_llm_runner=$(get_llm_runner)
+    case "$SIA_SERVICES" in
+    ai | full)
+        dcup_llm_runner=$(get_llm_runner)
+        ;;
+    *)
+        dcup_llm_runner="None"
+        ;;
+    esac
 
     case "$dcup_llm_runner" in
     "None" | "")

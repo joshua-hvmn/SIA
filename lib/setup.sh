@@ -79,9 +79,9 @@ detect_gpu_hardware() {
     printf '%s:%s' "$dgh_vendor" "$dgh_vram_kb"
 }
 
-## User prompt for VRAM in GB, convert to KB
+## User prompt for VRAM in GiB, convert to KiB
 read_vram_kb() {
-    msg_normal "Please enter the total amount of GPU VRAM in gigabytes: "
+    msg_normal "Please enter the total amount of GPU VRAM in gibibytes: "
 
     while true; do
         read -r rrvkb_vram_input_gb || true
@@ -89,7 +89,7 @@ read_vram_kb() {
             break
         else
             msg_error "Invalid input. Please enter a number."
-            msg_normal "Please enter the amount of GPU VRAM in gigabytes: "
+            msg_normal "Please enter the amount of GPU VRAM in gibibytes: "
         fi
     done
 
@@ -113,14 +113,15 @@ select_hardware_profile() {
     msg_header ${GREEN} "Step 2: Select Architecture for GPU Acceleration"
     msg_normal "${BOLD}Automatically detected (enter to accept, 'n' to edit):${NC}
         ${BLUE}Vendor: ${GREEN}${shp_det_vendor}${NC}
-        ${BLUE}VRAM: ${GREEN}${shp_det_vram_gb} GB${NC}
+        ${BLUE}VRAM:   ${GREEN}${shp_det_vram_gb} GiB${NC}
     "
-    msg_normal "If you have a GPU, and $app_name did not detect it, Docker may not be able to utilize it. Ensure Docker can utilize GPU acceleration if applicable by installing the necessary dependencies."
+    msg_normal "If you have a GPU, and $app_name did not detect it, Docker might not utilize your GPU."
+    msg_normal "Install the necessary dependencies, if applicable."
     msg_blank
     msg_normal "1) CPU Only (No GPU acceleration)"
     msg_normal "2) NVIDIA GPU (CUDA)"
     msg_normal "3) AMD GPU (ROCm)"
-    msg_normal "4) Keep previous: [ Vendor: ${shp_cur_hw} | VRAM: ${shp_cur_vram_gb} GB ]"
+    msg_normal "4) Keep previous: [ Vendor: ${shp_cur_hw} | VRAM: ${shp_cur_vram_gb} GiB ]"
     msg_normal "x) Exit"
     msg_line
 
@@ -456,7 +457,9 @@ change_setup() {
     # -----------------
     # 1. Save / Inject variables
     if [ "$chngst_sel_changed" -eq 1 ]; then
-        # A. Inject SIA state variables into environment
+        # A. Stop stack before changing environment
+        sia_compose_up "down"
+        # B. Inject SIA state variables into environment
         edit_kv "SIA_SERVICES" "$chngst_new_srv" "$env_core_file"
         edit_kv "SIA_HW_PROFILE" "$chngst_new_hw" "$env_core_file"
         edit_kv "SIA_VRAM_KB" "$chngst_new_vram" "$env_core_file"
@@ -470,7 +473,7 @@ change_setup() {
         export SIA_SYSTEM_MEMORY="$chngst_new_sys_ram"
         export SIA_LLM_RUNNER="$chngst_new_run"
 
-        # B. Compile Docker Compose exececution string
+        # C. Compile Docker Compose exececution string
         compiled_profiles=""
 
         if [ "$chngst_new_srv" = "searxng" ] || [ "$chngst_new_srv" = "full" ]; then
@@ -482,14 +485,14 @@ change_setup() {
             compiled_profiles="${compiled_profiles}ai,webui-${chngst_new_hw},${chngst_new_run}-${chngst_new_hw}"
         fi
 
-        # C. Inject Compose variable and setup complete into environment
+        # D. Inject Compose variable and setup complete into environment
         edit_kv "COMPOSE_PROFILES" "$compiled_profiles" "$env_core_file"
         export COMPOSE_PROFILES="$compiled_profiles"
         edit_kv "SETUP_COMPLETE" "true" "$env_core_file"
     fi
 
     # 2. Restart containers
-    if [ "$chngst_cmd_started" -eq 1 ] && [ "$chngst_sel_changed" -eq 1 ]; then
+    if [ "$chngst_sel_changed" -eq 1 ]; then
         start_up
     fi
     return 0
