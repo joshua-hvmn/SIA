@@ -70,7 +70,6 @@ sia_compose_up() {
 
     case "$dcup_llm_runner" in
     "None" | "")
-        return
         ;;
     *)
         case "$dcup_llm_runner" in

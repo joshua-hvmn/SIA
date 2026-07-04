@@ -473,11 +473,12 @@ change_setup() {
 
         if [ "$chngst_new_srv" = "ai" ] || [ "$chngst_new_srv" = "full" ]; then
             [ -n "$compiled_profiles" ] && compiled_profiles="${compiled_profiles},"
-            compiled_profiles="${compiled_profiles}webui-${chngst_new_hw},${chngst_new_run}-${chngst_new_hw}"
+            compiled_profiles="${compiled_profiles}ai,webui-${chngst_new_hw},${chngst_new_run}-${chngst_new_hw}"
         fi
 
         # C. Inject Compose variable and setup complete into environment
         edit_kv "COMPOSE_PROFILES" "$compiled_profiles" "$env_core_file"
+        export COMPOSE_PROFILES="$compiled_profiles"
         edit_kv "SETUP_COMPLETE" "true" "$env_core_file"
     fi
 
