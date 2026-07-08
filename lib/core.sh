@@ -16,6 +16,13 @@ if [ "${SIA_MAIN_LOADED:-}" != "true" ]; then
     error_exit 1
 fi
 
+## Convert KB to GB
+#  - USAGE: convert_kb_to_gb <KB as int or float>
+convert_kb_to_gb() {
+    cktg_input_kb="${1:-0}"
+    cktg_output_gb=$(awk "BEGIN {print $cktg_input_kb / 1048576}")
+    printf '%s' "$cktg_output_gb"
+}
 ## Convert GB to KB
 #  - USAGE: convert_gb_to_kb <GB as int or float>
 convert_gb_to_kb() {

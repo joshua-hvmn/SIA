@@ -18,6 +18,12 @@ LCMODELS_DIR="./models"
 HF_CACHE_DIR="$LCMODELS_DIR/hf_cache"
 LLAMACPP_CONTAINER="llama-cpp-server"
 
+## Autotune function
+llamacpp_autotune() {
+    lcat_model_target="$1"
+
+}
+
 ## Run command
 llamacpp_run() {
     msg_line
